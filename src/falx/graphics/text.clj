@@ -7,4 +7,4 @@
 (defn draw!
   [text x y]
   (let [^SpriteBatch batch @app/sprite-batch]
-    (.draw @font batch (float x) (float y))))
+    (.draw @font batch (str text) (float x) (float y))))

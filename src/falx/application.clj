@@ -40,6 +40,10 @@
   []
   (.getFramesPerSecond Gdx/graphics))
 
+(defn get-frame-id
+  []
+  (.getFrameId Gdx/graphics))
+
 (defn get-delta-time
   []
   (.getDeltaTime Gdx/graphics))
