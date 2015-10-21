@@ -1,6 +1,7 @@
 (ns falx.graphics.widgets
   (:require [falx.graphics.image :as image]
             [falx.graphics.text :as text]
+            [falx.graphics.shape :as shape]
             [falx.frame :as frame]
             [falx.mouse :as mouse]
             [falx.application :as app]))
@@ -83,7 +84,19 @@
 
 (defn centered-text
   ([text x y w h]
-    (static-text text x y)))
+   (let [[x2 y2] (text/get-centered-point text x y w h)]
+     (static-text text x2 y2))))
+
+(defrecord Box [x y w h thickness]
+  IWidget
+  (-draw! [this frame x2 y2]
+    (shape/draw-box! x2 y2 w h thickness)))
+
+(defn box
+  ([x y w h]
+    (box x y w h shape/*default-box-thickness*))
+  ([x y w h thickness]
+    (->Box x y w h thickness)))
 
 (defn mouse-captured?
   [frame x y w h]
@@ -113,6 +126,7 @@
 
 (defn text-button
   [text x y w h]
-  (-> [(centered-text text 0 0 w h)]
+  (-> [(box 0 0 w h)
+       (centered-text text 0 0 w h)]
       panel
       (change-color-on-hover :green x y w h)))

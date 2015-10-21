@@ -15,8 +15,10 @@
     (screen/clear!)
     (camera/use-game-camera!)
     (camera/use-ui-camera!)
-    (widgets/draw! widgets/fps-counter frame)
-    (widgets/draw! (widgets/text-button "foobar" 32 32 64 64) frame)))
+    (-> [widgets/fps-counter
+         (widgets/text-button "foobar" 32 32 64 32)]
+        widgets/panel
+        (widgets/draw! frame))))
 
 (defn -main
   [& args]

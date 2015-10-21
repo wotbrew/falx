@@ -88,5 +88,3 @@
      (.setColor batch# n#)
      ~@forms
      (.setColor batch# o#)))
-
-
