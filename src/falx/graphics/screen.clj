@@ -1,4 +1,5 @@
 (ns falx.graphics.screen
+  (:require [falx.application :as app])
   (:import (org.lwjgl.opengl GL20 GL11)
            (com.badlogic.gdx Gdx)))
 
@@ -19,11 +20,13 @@
 (defn set-size!
   ([size]
     (let [[w h] size]
-      (size w h)))
+      (set-size! w h)))
   ([width height]
-   (.setDisplayMode Gdx/graphics width height (fullscreen?))))
+   (app/on-render-thread
+     (.setDisplayMode Gdx/graphics width height (fullscreen?)))))
 
 
 (defn set-title!
   [title]
-  (.setTitle Gdx/graphics (str title)))
+  (app/on-render-thread
+    (.setTitle Gdx/graphics (str title))))

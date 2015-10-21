@@ -7,7 +7,8 @@
             [falx.graphics.camera :as camera]
             [falx.graphics.image :as image]
             [falx.graphics.screen :as screen]
-            [falx.graphics.widgets :as widgets]))
+            [falx.ui.widgets :as widgets]
+            [falx.ui.screens.main :as main]))
 
 (defn run-frame!
   []
@@ -15,11 +16,15 @@
     (screen/clear!)
     (camera/use-game-camera!)
     (camera/use-ui-camera!)
-    (-> [widgets/fps-counter
-         (widgets/text-button "foobar" 32 32 64 32)]
+    (-> [(main/get-menu (screen/get-size))
+         widgets/fps-counter]
         widgets/panel
         (widgets/draw! frame))))
 
+(def screen-size [1024 768])
+
 (defn -main
   [& args]
-  (app/application #'run-frame!))
+  (app/application #'run-frame!)
+  (screen/set-size! screen-size)
+  (camera/set-size! screen-size))

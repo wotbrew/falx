@@ -1,6 +1,7 @@
 (ns falx.graphics.text
   (:require [falx.application :as app]
-            [falx.graphics.color :as color])
+            [falx.graphics.color :as color]
+            [falx.rect :as rect])
   (:import (com.badlogic.gdx.graphics.g2d BitmapFont SpriteBatch BitmapFont$TextBounds)
            (com.badlogic.gdx.graphics Color)))
 
@@ -22,9 +23,8 @@
     (let [[x y w h] rect]
       (get-centered-point text x y w h)))
   ([text x y w h]
-    (let [[w2 h2] (measure text)]
-      [(int (+ x (/ (- w w2) 2)))
-       (int (+ y (/ (- h h2) 2)))])))
+   (let [[w2 h2] (measure text)]
+     (rect/get-centered-rect-point x y w h w2 h2))))
 
 (defmacro with-color
   [color & forms]

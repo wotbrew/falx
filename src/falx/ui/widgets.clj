@@ -1,4 +1,4 @@
-(ns falx.graphics.widgets
+(ns falx.ui.widgets
   (:require [falx.graphics.image :as image]
             [falx.graphics.text :as text]
             [falx.graphics.shape :as shape]
@@ -24,7 +24,7 @@
   ([widget frame [x2 y2]]
    (get-input-events widget frame x2 y2))
   ([widget frame x y]
-    (-get-input-events widget frame (+ x (:x widget)) (+ x (:y widget)))))
+    (-get-input-events widget frame (+ x (:x widget)) (+ y (:y widget)))))
 
 (defn draw!
   ([widget frame]
@@ -32,7 +32,7 @@
   ([widget frame [x y]]
     (draw! widget frame x y))
   ([widget frame x y]
-    (-draw! widget frame (+ x (:x widget)) (+ x (:y widget)))))
+    (-draw! widget frame (+ x (:x widget)) (+ y (:y widget)))))
 
 (defrecord Panel [x y coll]
   IWidget
@@ -47,6 +47,18 @@
    (panel 0 0 coll))
   ([x y coll]
    (->Panel x y coll)))
+
+(defn vertical-panel
+  ([n coll]
+   (vertical-panel n 0 0 coll))
+  ([n x y coll]
+   (panel x y (map-indexed (fn [i m] (update m :y (fnil + 0) (* i n))) coll))))
+
+(defn horizontal-panel
+  ([n coll]
+   (horizontal-panel n 0 0 coll))
+  ([n x y coll]
+   (panel x y (map-indexed (fn [i m] (update m :x (fnil + 0) (* i n))) coll))))
 
 (defrecord Image [x y w h sprite]
   IWidget
@@ -93,6 +105,9 @@
     (shape/draw-box! x2 y2 w h thickness)))
 
 (defn box
+  ([rect]
+   (let [[x y w h] rect]
+     (box x y w h)))
   ([x y w h]
     (box x y w h shape/*default-box-thickness*))
   ([x y w h thickness]

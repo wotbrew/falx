@@ -46,6 +46,6 @@
     (draw-box! x y w h *default-box-thickness*))
   ([x y w h thickness]
     (draw-horizontal-line! x y w thickness)
-    (draw-horizontal-line! x (+ y h) w thickness)
+    (draw-horizontal-line! x (+ y h -1) w thickness)
     (draw-vertical-line! x y h thickness)
-    (draw-vertical-line! (+ x w) y h thickness)))
+    (draw-vertical-line! (+ x w -1) y h thickness)))

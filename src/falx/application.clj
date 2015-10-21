@@ -22,13 +22,15 @@
 
 (defn on-render-thread-call
   [f]
-  (let [p (promise)
-        f' (fn [] (deliver p (try (f) (catch Throwable e [::error e]))))]
-    (.postRunnable Gdx/app f')
-    (let [r @p]
-      (if (and (vector? r) (= (first r) ::error))
-        (throw (second r))
-        r))))
+  (if *on-render-thread*
+    (delay (f))
+    (let [p (promise)
+          f' (fn [] (deliver p (try (f) (catch Throwable e [::error e]))))]
+      (.postRunnable Gdx/app f')
+      (let [r @p]
+        (if (and (vector? r) (= (first r) ::error))
+          (throw (second r))
+          r)))))
 
 (defmacro on-render-thread
   [& body]
