@@ -1,6 +1,9 @@
 (ns falx.graphics.widgets
   (:require [falx.graphics.image :as image]
-            [falx.graphics.text :as text]))
+            [falx.graphics.text :as text]
+            [falx.frame :as frame]
+            [falx.mouse :as mouse]
+            [falx.application :as app]))
 
 (defprotocol IWidget
   (-draw! [this frame x y]))
@@ -68,9 +71,48 @@
   ([text-fn x y]
     (->DynamicText x y text-fn)))
 
+(def fps-counter
+  (dynamic-text (fn [_]
+                  (app/get-fps))))
+
 (defn static-text
   ([text]
     (static-text text 0 0))
   ([text x y]
     (dynamic-text (constantly text) x y)))
 
+(defn centered-text
+  ([text x y w h]
+    (static-text text x y)))
+
+(defn mouse-captured?
+  [frame x y w h]
+  (mouse/in-rectangle? (frame/get-screen-mouse frame) x y w h))
+
+(defrecord ChangeDrawOnHover [x y w h widget f]
+  IWidget
+  (-draw! [this frame x2 y2]
+    (if (mouse-captured? frame x2 y2 w h)
+      (f frame x2 y2)
+      (draw! widget frame x2 y2)))
+  IWidgetInput
+  (-get-input-events [this frame x2 y2]
+    (get-input-events widget frame x2 y2)))
+
+(defn change-color-on-hover
+  ([widget color x y w h]
+    (->ChangeDrawOnHover
+      x y w h
+      widget
+      (fn [frame x2 y2]
+        (image/with-color
+          color
+          (text/with-color
+            color
+            (draw! widget frame x2 y2)))))))
+
+(defn text-button
+  [text x y w h]
+  (-> [(centered-text text 0 0 w h)]
+      panel
+      (change-color-on-hover :green x y w h)))

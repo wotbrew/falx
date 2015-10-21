@@ -2,7 +2,8 @@
   (:require [clojure.java.io :as io]
             [clojure.edn :as edn]
             [falx.application :as app]
-            [falx.rect :as rect])
+            [falx.rect :as rect]
+            [falx.graphics.color :as color])
   (:import (com.badlogic.gdx.files FileHandle)
            (com.badlogic.gdx.graphics Texture Color)
            (com.badlogic.gdx.graphics.g2d TextureRegion SpriteBatch)))
@@ -83,7 +84,7 @@
   [color & forms]
   `(let [^SpriteBatch batch# @app/sprite-batch
          o# (.getColor batch#)
-         ^Color n# ~color]
+         ^Color n# (color/find-color ~color)]
      (.setColor batch# n#)
      ~@forms
      (.setColor batch# o#)))
