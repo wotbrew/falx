@@ -8,22 +8,30 @@
 (def button-size [480 32])
 
 (def button-width (size/get-width button-size))
+
 (def button-height (size/get-height button-size))
+0
+(defn button
+  [text & opts]
+  (delay (apply widgets/button
+           0 0 button-width button-height
+           :text text
+           opts)))
 
 (def new-adventure
-  (widgets/text-button "- New Adventure -" 0 0 button-width button-height))
+  (button "- New Adventure -" :on-click-fn (constantly :foo)))
 
 (def continue-adventure
-  (widgets/text-button "- Continue Adventure -" 0 0 button-width button-height))
+  (button "- Continue Adventure -"))
 
 (def roster
-  (widgets/text-button "- Roster -" 0 0 button-width button-height))
+  (button "- Roster -"))
 
 (def settings
-  (widgets/text-button "- Settings -" 0 0 button-width button-height))
+  (button "- Settings -"))
 
 (def exit
-  (widgets/text-button "- Exit -" 0 0 button-width button-height))
+  (button "- Exit -"))
 
 (def buttons
   [new-adventure
@@ -45,7 +53,7 @@
   (let [[x y] (menu-box-rect screen-size)]
     (widgets/vertical-panel
       button-height x y
-      buttons)))
+      (mapv deref buttons))))
 
 (def get-menu
   (memoize menu))

@@ -12,14 +12,16 @@
 
 (defn run-frame!
   []
-  (let [frame (frame/update!)]
+  (let [frame (frame/refresh!)]
     (screen/clear!)
     (camera/use-game-camera!)
     (camera/use-ui-camera!)
-    (-> [(main/get-menu (screen/get-size))
-         widgets/fps-counter]
-        widgets/panel
-        (widgets/draw! frame))))
+    (let [ui (-> [(main/get-menu (screen/get-size))
+                  widgets/fps-counter]
+                 widgets/panel)]
+      (widgets/draw! ui frame)
+      (when-some [x (seq (widgets/get-input-events ui frame))]
+        (info x)))))
 
 (def screen-size [1024 768])
 

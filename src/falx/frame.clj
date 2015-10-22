@@ -10,20 +10,21 @@
 
 (def get-keys ::keys)
 
-(defn update-screen-mouse
-  [frame]
-  (update frame ::screen-mouse mouse/update-point))
-
-(defn update-mouse
-  [frame]
-  (update-screen-mouse frame))
-
 (def frame (atom default))
 
 (defn get-current
   []
   @frame)
 
-(defn update!
+(defn refresh-screen-mouse
+  [frame]
+  (update frame ::screen-mouse mouse/refresh))
+
+(defn refresh
+  [frame]
+  (-> frame
+      refresh-screen-mouse))
+
+(defn refresh!
   []
-  (swap! frame update-mouse))
+  (swap! frame refresh))

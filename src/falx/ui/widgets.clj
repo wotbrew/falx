@@ -145,3 +145,23 @@
        (centered-text text 0 0 w h)]
       panel
       (change-color-on-hover :green x y w h)))
+
+(defrecord OnClick [x y w h f]
+  IWidgetInput
+  (-get-input-events [this frame x2 y2]
+    (when (and (mouse-captured? frame x2 y2 w h)
+               (mouse/left-clicked? (frame/get-screen-mouse frame)))
+      (let [r (f frame)]
+        (if (sequential? r)
+          r
+          [r])))))
+
+(defn on-click
+  [f x y w h]
+  (->OnClick x y w h f))
+
+(defn button
+  [x y w h & {:keys [text on-click-fn]}]
+  (panel (concat [(text-button (or text "") x y w h)]
+                 (when on-click-fn
+                   [(on-click on-click-fn x y w h)]))))
