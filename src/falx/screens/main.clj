@@ -1,9 +1,9 @@
-(ns falx.ui.screens.main
+(ns falx.ui.main
   (:require [falx.ui.widgets :as widgets]
             [falx.size :as size]
             [falx.rect :as rect]
             [falx.game :as game]
-            [falx.ui.events :as ui-events]))
+            [falx.ui :as ui]))
 
 (def button-size [480 32])
 
@@ -23,16 +23,28 @@
     "- New Adventure -"
     :on-click-fn
     (fn [frame]
-      )))
+      (ui/change-screen-event :screen/new))))
 
 (def continue-adventure
-  (button "- Continue Adventure -"))
+  (button
+    "- Continue Adventure -"
+    :on-click-fn
+    (fn [frame]
+      (ui/change-screen-event :screen/continue))))
 
 (def roster
-  (button "- Roster -"))
+  (button
+    "- Roster -"
+    :on-click-fn
+    (fn [frame]
+      (ui/change-screen-event :screen/roster))))
 
 (def settings
-  (button "- Settings -"))
+  (button
+    "- Settings -"
+    :on-click-fn
+    (fn [frame]
+      (ui/change-screen-event :screen/settings))))
 
 (def exit
   (button "- Exit -"))
@@ -59,6 +71,10 @@
       button-height x y
       (mapv deref buttons))))
 
-(defn main
+(defn widget
   [size]
   (menu size))
+
+(defmethod ui/get-screen-widget :screen/main
+  [ui]
+  (widget (ui/get-size ui)))

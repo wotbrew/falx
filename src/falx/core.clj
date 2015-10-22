@@ -9,14 +9,12 @@
             [falx.graphics.image :as image]
             [falx.graphics.screen :as screen]
             [falx.ui.widgets :as widgets]
-            [falx.ui :as ui]
-            [falx.ui.screens.main :as main]))
+            [falx.ui :as ui]))
 
 (defn run-frame!
   []
   (let [frame (frame/refresh!)
-        ui @ui/ui
-        screen (ui/get-screen ui)]
+        screen (ui/get-current-screen-widget)]
     (screen/clear!)
     (camera/use-game-camera!)
     (camera/use-ui-camera!)
@@ -31,4 +29,5 @@
   (app/application #'run-frame!)
   (screen/set-size! screen-size)
   (camera/set-size! screen-size)
-  (ui/init! screen-size))
+  (ui/set-size! screen-size)
+  (ui/change-screen! :screen/main))
