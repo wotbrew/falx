@@ -38,12 +38,9 @@
 
 (defmulti get-screen-widget ::screen)
 
-(def warning-screen
-  (delay (widgets/static-text "You should never see this")))
-
-(defmethod get-screen-widget ::warning
+(defmethod get-screen-widget :default
   [ui]
-  @warning-screen)
+  (widgets/static-text (str "Undefined screen: " (::screen ui))))
 
 (defn get-ui
   []

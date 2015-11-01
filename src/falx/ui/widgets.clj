@@ -34,19 +34,25 @@
   ([widget frame x y]
     (-draw! widget frame (+ x (:x widget)) (+ y (:y widget)))))
 
-(defrecord Panel [x y coll]
+(defrecord Panel [x y coll-fn]
   IWidget
   (-draw! [this frame x2 y2]
-    (run! #(draw! % frame x2 y2) coll))
+    (run! #(draw! % frame x2 y2) (coll-fn frame)))
   IWidgetInput
   (-get-input-events [this frame x2 y2]
-    (mapcat #(get-input-events % frame x2 y2) coll)))
+    (mapcat #(get-input-events % frame x2 y2) (coll-fn frame))))
+
+(defn dynamic-panel
+  ([coll-fn]
+    (dynamic-panel 0 0 coll-fn))
+  ([x y coll-fn]
+    (->Panel x y coll-fn)))
 
 (defn panel
   ([coll]
    (panel 0 0 coll))
   ([x y coll]
-   (->Panel x y coll)))
+   (dynamic-panel x y (constantly coll))))
 
 (defn vertical-panel
   ([n coll]

@@ -1,7 +1,7 @@
 (ns falx.graphics.screen
   (:require [falx.application :as app])
   (:import (org.lwjgl.opengl GL20 GL11)
-           (com.badlogic.gdx Gdx)))
+           (com.badlogic.gdx Gdx Graphics$DisplayMode)))
 
 (defn clear!
   []
@@ -25,8 +25,26 @@
    (app/on-render-thread
      (.setDisplayMode Gdx/graphics width height (fullscreen?)))))
 
+(defn set-fullscreen!
+  []
+  (let [[w h] (get-size)]
+    (app/on-render-thread
+      (.setDisplayMode Gdx/graphics w h true))))
+
+(defn set-windowed!
+  []
+  (let [[w h] (get-size)]
+    (app/on-render-thread
+      (.setDisplayMode Gdx/graphics w h false))))
 
 (defn set-title!
   [title]
   (app/on-render-thread
     (.setTitle Gdx/graphics (str title))))
+
+(defn get-valid-sizes
+  []
+  (->> (for [^Graphics$DisplayMode dm (.getDisplayModes Gdx/graphics)]
+         [(.width dm) (.height dm)])
+       distinct
+       sort))
