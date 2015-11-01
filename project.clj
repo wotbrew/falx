@@ -4,7 +4,6 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.7.0"]
-                 [org.clojure/core.async "0.1.346.0-17112a-alpha"]
                  [org.clojure/tools.logging "0.3.1"]
                  [com.badlogicgames.gdx/gdx "1.5.0"]
                  [com.badlogicgames.gdx/gdx-backend-lwjgl "1.5.0"]

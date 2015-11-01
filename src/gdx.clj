@@ -8,6 +8,8 @@
             [gdx.font :as font]
             [gdx.texture-region :as region]
             [gdx.texture :as texture]
+            [gdx.mouse :as mouse]
+            [gdx.keyboard :as keyboard]
             [clojure.java.io :as io])
   (:import (com.badlogic.gdx.graphics.g2d SpriteBatch TextureRegion)
            (java.util Map)))
@@ -31,6 +33,10 @@
   (app/start! app)
   (sync-display! (:display app))
   nil)
+
+(defn get-mouse
+  []
+  (mouse/get-mouse))
 
 (def ^:dynamic *sprite-batch* nil)
 
@@ -56,9 +62,15 @@
   (camera/ortho-camera
     :flip-y? true))
 
+(def keyboard-state (atom (keyboard/get-keyboard)))
+
+(def mouse-state (atom (mouse/get-mouse)))
+
 (defmacro defrender
   [& body]
   `(app/defrender
+     (swap! keyboard-state keyboard/get-next-keyboard)
+     (swap! mouse-state mouse/get-next-mouse)
      (using-default-batch
        (using-camera
          ~default-camera
@@ -137,10 +149,6 @@
 (defmethod draw-map! :resource/texture-region
   [region x y context]
   (-draw! (region/find region) x y context))
-
-(def fist (sprite
-            (io/resource "tiles/Skill.png")
-            [0 0 32 32]))
 
 (defrender
   (try
