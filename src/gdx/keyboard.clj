@@ -1,5 +1,6 @@
 (ns gdx.keyboard
-  (:require [clojure.set :as set])
+  (:require [clojure.set :as set]
+            [clojure.string :as str])
   (:import (com.badlogic.gdx Gdx Input Input$Keys)))
 
 (defn ^Input get-input
@@ -13,34 +14,14 @@
     (.isKeyPressed input gdx-key)
     false))
 
-
-(def gdx-number-key->key
-  (->> (for [n (range 0 10)
-             ]
-         [(+ Input$Keys/NUM_0 n) (keyword (str "num-" n))])
-       (into {})))
-
-(def gdx-char-key->key
-  (->> (for [n (range Input$Keys/A (inc Input$Keys/Z))]
-         [n (keyword (str (char (+ n 68))))])
-       (into {})))
-
-(def gdx-f-key->key
-  (->> (for [n (range Input$Keys/F1 (inc Input$Keys/F12))]
-         [n (keyword (str "f" (- n 243)))])
-       (into {})))
-
 (def gdx-key->key
-  (merge
-    gdx-number-key->key
-    gdx-char-key->key
-    gdx-f-key->key
-    { Input$Keys/SHIFT_LEFT :left-shift
-     Input$Keys/SHIFT_RIGHT :right-shift
-     Input$Keys/CONTROL_LEFT :left-ctrl
-     Input$Keys/CONTROL_RIGHT  :right-ctrl
-     Input$Keys/SPACE  :space
-     Input$Keys/BACKSPACE    :backspace }))
+  (->> (for [field (.getFields Input$Keys)
+             :let [n (.getName field)
+                   v (.getInt field nil)]]
+         [v (keyword (-> n
+                         str/lower-case
+                         (str/replace #"_" "-")))])
+       (into {})))
 
 (def key->gdx-key
   (reduce-kv #(assoc %1 %3 %2) {} gdx-key->key))

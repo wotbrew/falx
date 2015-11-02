@@ -48,9 +48,27 @@
   [key]
   (gdx-button-pressed? (key->gdx-button key)))
 
+(defn get-delta-x
+  []
+  (if-some [input (get-input)]
+    (.getDeltaX input)
+    0))
+
+(defn get-delta-y
+  []
+  (if-some [input (get-input)]
+    (.getDeltaY input)
+    0))
+
+(defn get-delta
+  []
+  [(get-delta-x)
+   (get-delta-y)])
+
 (defn get-mouse
   []
   {:point (get-point)
+   :delta (get-delta)
    :pressed (into #{} (filter button-pressed?) all-buttons)})
 
 (defn get-next-mouse

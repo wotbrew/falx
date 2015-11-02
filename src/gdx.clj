@@ -124,7 +124,8 @@
 (defmulti draw-map! (fn [m x y context] (:type m)))
 
 (defmethod draw-map! :default
-  [& _])
+  [m x y context]
+  (-draw! (pr-str m) x y context))
 
 (extend-protocol IDraw
   Object
@@ -153,7 +154,9 @@
 (defrender
   (try
     (draw! "foobar" [500 400])
-    (draw! (app/get-fps) [32 32])
+    (draw! (app/get-fps) [0 0])
+    (draw! @mouse-state [0 32])
+    (draw! @keyboard-state [0 64])
     (catch Throwable e
       (println e)
       (Thread/sleep 10000))))
