@@ -2,7 +2,7 @@
   (:require [gdx.app :as app]
             [clojure.java.io :as io])
   (:refer-clojure :exclude [find])
-  (:import (com.badlogic.gdx.graphics.g2d BitmapFont)))
+  (:import (com.badlogic.gdx.graphics.g2d BitmapFont BitmapFont$TextBounds)))
 
 (defn font
   [& {:keys [file flip-y?] :as opts}]
@@ -33,3 +33,14 @@
       (swap! cache dissoc font)
       (.dispose f))))
 
+(defn get-bounds
+  [font s]
+  (let [^BitmapFont gdx-font (find font)
+        ^BitmapFont$TextBounds bounds (.getMultiLineBounds gdx-font (str s))]
+    [(.-width bounds) (.-height bounds)]))
+
+(defn get-bounds-wrapped
+  [font s width]
+  (let [^BitmapFont gdx-font (find font)
+        ^BitmapFont$TextBounds bounds (.getWrappedBounds gdx-font (str s) (float width))]
+    [(.-width bounds) (.-height bounds)]))
