@@ -30,13 +30,7 @@
 
 (defn start-app!
   [app]
-  (app/start! app)
-  (sync-display! (:display app))
-  nil)
-
-(defn get-mouse
-  []
-  (mouse/get-mouse))
+  (app/start! app))
 
 (def ^:dynamic *sprite-batch* nil)
 
