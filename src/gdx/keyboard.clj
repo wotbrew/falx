@@ -37,6 +37,10 @@
   []
   {:pressed (into #{} (filter key-pressed? all-keys))})
 
+(def default
+  {:pressed #{}
+   :hit #{}})
+
 (defn get-next-keyboard
   [previous-keyboard]
   (let [now (get-keyboard)]

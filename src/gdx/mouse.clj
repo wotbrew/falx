@@ -71,6 +71,11 @@
    :delta (get-delta)
    :pressed (into #{} (filter button-pressed?) all-buttons)})
 
+(def default
+  {:point [0 0]
+   :delta [0 0]
+   :pressed #{}})
+
 (defn get-next-mouse
   [previous-mouse]
   (let [now (get-mouse)]

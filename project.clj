@@ -12,6 +12,6 @@
                  [log4j/log4j "1.2.17"]]
   :repositories [["sonatype"
                   "https://oss.sonatype.org/content/repositories/releases/"]]
-  :main ^:skip-aot falx.core
+  :main ^:skip-aot falx
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all}})

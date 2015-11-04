@@ -1,4 +1,4 @@
-(ns gdx
+(ns clj-gdx
   (:require [gdx.app :as app]
             [gdx.display :as display]
             [gdx.batch :as batch]
@@ -17,6 +17,14 @@
 (def default-display display/default)
 
 (def default-app app/default)
+
+(defn get-fps
+  []
+  (app/get-fps))
+
+(defn get-delta-time
+  []
+  (app/get-delta-time))
 
 (defn get-display
   []
@@ -58,18 +66,24 @@
 
 (def keyboard-state (atom (keyboard/get-keyboard)))
 
+(def default-keyboard keyboard/default)
+
 (def mouse-state (atom (mouse/get-mouse)))
+
+(def default-mouse mouse/default)
 
 (defmacro defrender
   [& body]
   `(app/defrender
-     (swap! keyboard-state keyboard/get-next-keyboard)
-     (swap! mouse-state mouse/get-next-mouse)
-     (using-default-batch
-       (using-camera
-         ~default-camera
-         (gl/clear!)
-         ~@body))))
+     (try
+       (swap! keyboard-state keyboard/get-next-keyboard)
+       (swap! mouse-state mouse/get-next-mouse)
+       (using-default-batch
+         (using-camera
+           ~default-camera
+           (gl/clear!)
+           ~@body))
+       (catch Throwable e#))))
 
 (defn font
   ([]
@@ -144,13 +158,3 @@
 (defmethod draw-map! :resource/texture-region
   [region x y context]
   (-draw! (region/find region) x y context))
-
-(defrender
-  (try
-    (draw! "foobar" [500 400])
-    (draw! (app/get-fps) [0 0])
-    (draw! @mouse-state [0 32])
-    (draw! @keyboard-state [0 64])
-    (catch Throwable e
-      (println e)
-      (Thread/sleep 10000))))

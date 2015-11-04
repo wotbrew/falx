@@ -1,62 +1,108 @@
 (ns falx.ui
-  (:require [falx.ui.widgets :as widgets]
-            [falx.event :as event]
-            [falx.size :as size]))
+  (:require [falx.sprite :as sprite]
+            [clj-gdx :as gdx]))
 
-(def default {::screen ::warning
-              ::size   size/default})
+(defprotocol IWidget
+  (draw! [this]))
 
-(def get-screen ::screen)
+(defprotocol IUpdateWidget
+  (update-widget [this game]))
 
-(def get-size ::size)
+(defprotocol IInputWidget
+  (get-input-events [this game]))
 
-(defonce ui (atom default))
+(extend-type Object
+  IUpdateWidget
+  (update-widget [this _]
+    this)
+  IInputWidget
+  (get-input-events [this _]
+    nil))
 
-(defn change-screen
-  [ui screen]
-  (assoc ui ::screen screen))
+(defrecord WithUpdate [widget f]
+  IWidget
+  (draw! [this]
+    (draw! widget))
+  IUpdateWidget
+  (update-widget [this game]
+    (update this :widget f game))
+  IInputWidget
+  (get-input-events [this game]
+    (get-input-events widget game)))
 
-(defn update!
-  [f & args]
-  (swap! ui #(apply f % args)))
+(defn with-update
+  [widget f]
+  (->WithUpdate widget f))
 
-(defn update-state!
-  [f & args]
-  (update! #(update ::state f args)))
+(defrecord Mouse [mouse sprite]
+  IWidget
+  (draw! [this]
+    (gdx/draw! sprite (:point mouse)))
+  IUpdateWidget
+  (update-widget [this game]
+    (assoc this :mouse (:mouse game))))
 
-(def draw! widgets/draw!)
-
-(def get-input-events widgets/get-input-events)
-
-(defn change-screen!
-  [screen]
-  (update! change-screen screen))
-
-(defn set-size!
-  [size]
-  (update! assoc ::size size))
-
-(defmulti get-screen-widget ::screen)
-
-(defmethod get-screen-widget :default
-  [ui]
-  (widgets/static-text (str "Undefined screen: " (::screen ui))))
-
-(defn get-ui
+(defn mouse
   []
-  @ui)
+  (map->Mouse {:name :mouse
+               :mouse gdx/default-mouse
+               :sprite sprite/mouse}))
 
-(defn get-current-screen-widget
-  []
-  (get-screen-widget (get-ui)))
+(defrecord Label [point
+                  context
+                  text]
+  IWidget
+  (draw! [this]
+    (gdx/draw! (str text) point context)))
 
-(defn change-screen-event
-  [screen]
-  {:event/type :event/change-screen
-   :screen screen})
+(defn label
+  ([point text]
+    (label point text {}))
+  ([point text context]
+    (map->Label {:point point
+                 :text text
+                 :context context})))
 
-(event/register-handler!
-  :event/change-screen
-  :change-screen
-  (fn [event]
-    (change-screen! (:screen event))))
+(defrecord TextButton [rect
+                       text
+                       hover-over?
+                       ;;events
+                       on-click-event])
+
+(defn text-button
+  [rect text & {:as opts}]
+  (map->TextButton (assoc opts
+                     :text text
+                     :rect rect)))
+
+(defn fps-label
+  ([point]
+    (fps-label point {}))
+  ([point context]
+    (-> (label point "" context)
+        (with-update (fn [w game]
+                       (assoc w :text (:fps game))))
+        (assoc :name :fps-label))))
+
+(defrecord Panel [widgets]
+  IWidget
+  (draw! [this]
+    (run! draw! widgets))
+  IInputWidget
+  (get-input-events [this game]
+    (mapcat #(get-input-events % game) widgets))
+  IUpdateWidget
+  (update-widget [this game]
+    (update this :widgets
+            (fn [widgets]
+              (mapv #(update-widget % game) widgets)))))
+
+(defn panel
+  [& widgets]
+  (->Panel (vec widgets)))
+
+(def ui
+  (panel
+    (fps-label [0 0])
+    (label [64 64] "foobar")
+    (mouse)))
