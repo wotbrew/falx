@@ -17,8 +17,11 @@
 (def circle
   (misc* 0 0))
 
-(def pixel
+(def star
   (misc* 1 0))
+
+(def pixel
+  (misc* 0 1))
 
 (def bread
   (misc* 1 1))

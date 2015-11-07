@@ -1,6 +1,6 @@
 (ns falx
   (:require [clj-gdx :as gdx]
-            [falx.ui :as ui]))
+            [falx.graphics :as graphics]))
 
 (def default-game
   {:mouse    gdx/default-mouse
@@ -23,19 +23,17 @@
          :fps (gdx/get-fps)
          :delta (gdx/get-delta-time)))
 
-(def ui-state
-  (agent ui/ui))
+(def ui
+  (atom {:type :ui/text-button
+          :text "foo"}))
 
 (gdx/defrender
   (try
-    (let [game (swap! game-state get-next-game)
-          ui @ui-state
-          input-events (future (ui/get-input-events ui game))]
-      (send ui-state ui/update-widget game)
+    (let [game (swap! game-state get-next-game)]
+      (swap! ui falx.screen/update-text-button game [32 32 64 32])
       (gdx/using-camera
         (:ui-camera game)
-        (ui/draw! ui))
-      (deref input-events))
+        (graphics/draw-in! @ui [32 32 64 32])))
     (catch Throwable e
       (println e)
       (Thread/sleep 5000))))
@@ -43,6 +41,6 @@
 (def app
   gdx/default-app)
 
-(defn main
+(defn -main
   [& args]
   (gdx/start-app! app))

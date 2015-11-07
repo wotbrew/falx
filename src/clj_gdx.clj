@@ -9,8 +9,7 @@
             [gdx.texture-region :as region]
             [gdx.texture :as texture]
             [gdx.mouse :as mouse]
-            [gdx.keyboard :as keyboard]
-            [clojure.java.io :as io])
+            [gdx.keyboard :as keyboard])
   (:import (com.badlogic.gdx.graphics.g2d SpriteBatch TextureRegion)
            (java.util Map)))
 
@@ -95,6 +94,18 @@
 (def default-font
   (font))
 
+(defn get-string-bounds
+  ([s]
+   (get-string-bounds s default-font))
+  ([s font]
+   (font/get-bounds font s)))
+
+(defn get-string-wrapped-bounds
+  ([s width]
+   (get-string-wrapped-bounds s width default-font))
+  ([s width font]
+   (font/get-bounds-wrapped font s width)))
+
 (defn sprite
   [file rect]
   (let [texture (texture/texture file)]
@@ -118,6 +129,23 @@
   `(let [context# ~context]
      (using-color (:color context#) ~@body)))
 
+(defmacro using-font-color
+  [font color & body]
+  `(let [c# ~color]
+     (if c#
+       (font/using-color-float-bits
+         ~font
+         (:float-bits c# (color/get-float-bits c#))
+         ~@body)
+       (do ~@body))))
+
+(defmacro using-font-context
+  [context & body]
+  `(let [context# ~context]
+     (using-font-color (:font context# default-font)
+                       (:color context#)
+                       ~@body)))
+
 (defprotocol IDraw
   (-draw! [this x y context]))
 
@@ -138,11 +166,13 @@
 (extend-protocol IDraw
   Object
   (-draw! [this x y context]
-    (batch/draw-string!
-      *sprite-batch*
-      (font/find (:font context default-font))
-      this
-      x y))
+    (using-font-context
+      context
+      (batch/draw-string!
+        *sprite-batch*
+        (font/find (:font context default-font))
+        this
+        x y)))
   nil
   (-draw! [this x y context]
     (-draw! "?" x y context))
@@ -158,3 +188,49 @@
 (defmethod draw-map! :resource/texture-region
   [region x y context]
   (-draw! (region/find region) x y context))
+
+(defprotocol IDrawIn
+  (-draw-in! [this x y w h context]))
+
+(defn draw-in!
+  ([thing rect]
+   (draw-in! thing rect {}))
+  ([thing rect context]
+   (let [x (nth rect 0)
+         y (nth rect 1)
+         w (nth rect 2)
+         h (nth rect 3)]
+     (-draw-in! thing x y w h context))))
+
+(defmulti draw-map-in! (fn [m x y w h context]
+                         (:type m)))
+
+(defmethod draw-map-in! :default
+  [m x y w h context]
+  (-draw-in! (pr-str m) x y w h context))
+
+(extend-protocol IDrawIn
+  Object
+  (-draw-in! [this x y w h context]
+    (using-font-context
+      context
+      (batch/draw-string-wrapped!
+        *sprite-batch*
+        (font/find (:font context default-font))
+        this
+        x y w)))
+  nil
+  (-draw-in! [this x y w h context]
+    (-draw-in! "?" x y w h context))
+  Map
+  (-draw-in! [this x y w h context]
+    (draw-map-in! this x y w h context))
+  TextureRegion
+  (-draw-in! [this x y w h context]
+    (using-texture-region-context
+      context
+      (batch/draw-texture-region! *sprite-batch* this x y w h))))
+
+(defmethod draw-map-in! :resource/texture-region
+  [region x y w h context]
+  (-draw-in! (region/find region) x y w h context))

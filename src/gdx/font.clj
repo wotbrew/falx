@@ -2,7 +2,8 @@
   (:require [gdx.app :as app]
             [clojure.java.io :as io])
   (:refer-clojure :exclude [find])
-  (:import (com.badlogic.gdx.graphics.g2d BitmapFont BitmapFont$TextBounds)))
+  (:import (com.badlogic.gdx.graphics.g2d BitmapFont BitmapFont$TextBounds)
+           (com.badlogic.gdx.graphics Color)))
 
 (defn font
   [& {:keys [file flip-y?] :as opts}]
@@ -17,9 +18,9 @@
 (defn load!
   [font]
   (app/on-render-thread
-    (or (get @cache font))
-    (-> (swap! cache assoc font (BitmapFont. (boolean (:flip-y? font))))
-        (get font))))
+    (or (get @cache font)
+        (-> (swap! cache assoc font (BitmapFont. (boolean (:flip-y? font))))
+            (get font)))))
 
 (defn find
   [font]
@@ -44,3 +45,22 @@
   (let [^BitmapFont gdx-font (find font)
         ^BitmapFont$TextBounds bounds (.getWrappedBounds gdx-font (str s) (float width))]
     [(.-width bounds) (.-height bounds)]))
+
+
+(defn set-color-float-bits!
+  [^BitmapFont gdx-font float-bits]
+  (.setColor gdx-font (float float-bits)))
+
+(defn get-color-float-bits
+  [^BitmapFont gdx-font]
+  (let [^Color color (.getColor gdx-font)]
+    (.toFloatBits color)))
+
+(defmacro using-color-float-bits
+  [font float-bits & body]
+  `(let [f# (find ~font)
+         old-color# (get-color-float-bits f#)]
+     (set-color-float-bits! f# ~float-bits)
+     (let [r# (do ~@body)]
+       (set-color-float-bits! f# old-color#)
+       r#)))
