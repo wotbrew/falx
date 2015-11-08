@@ -33,8 +33,7 @@
 
 (defn texture
   [file]
-  {:type :resource/texture
-   :file (.getPath (io/as-file file))})
+  {:file (.getPath (io/as-file file))})
 
 (defonce cache (atom nil))
 

@@ -11,8 +11,7 @@
                           flip-y?]
                    :as opts}]
   (merge
-    {:type    :resource/texture-region
-     :texture texture
+    {:texture texture
      :rect    rect}
     opts))
 

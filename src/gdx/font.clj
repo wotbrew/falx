@@ -8,7 +8,6 @@
 (defn font
   [& {:keys [file flip-y?] :as opts}]
   (merge
-    {:type :resource/font}
     opts
     (when file
       {:file (.getPath (io/as-file file))})))

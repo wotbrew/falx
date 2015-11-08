@@ -1,5 +1,4 @@
 (ns gdx.batch
-  (:require [gdx.app :as app])
   (:import (com.badlogic.gdx.graphics.g2d SpriteBatch TextureRegion BitmapFont)
            (com.badlogic.gdx.graphics Color)
            (com.badlogic.gdx.math Matrix4)))

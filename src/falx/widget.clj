@@ -11,8 +11,7 @@
 (defmulti draw-widget! :type)
 
 (defmethod draw-widget! :default
-  [m]
-  (graphics/draw-in! m (:rect m rect/default)))
+  [m])
 
 (defmulti update-widget* (fn [m game] (:type m)))
 
@@ -58,7 +57,7 @@
 
 (defmethod draw-widget! :ui/sprite
   [m]
-  (graphics/draw-in! (:sprite m) (:rect m) (:context m)))
+  (graphics/draw-sprite! (:sprite m) (:rect m) (:context m)))
 
 (def basic-mouse
   (-> (sprite [0 0 32 32] sprite/mouse)
@@ -77,7 +76,7 @@
 
 (defmethod draw-widget! :ui/label
   [m]
-  (graphics/draw-centered-string! (:rect m) (:text m) (:context m)))
+  (graphics/draw-string-centered! (:rect m) (:text m) (:context m)))
 
 (defn debug-label
   [rect f]
@@ -156,7 +155,7 @@
   [m]
   (let [{:keys [rect]} m]
     (graphics/draw-box! rect {:color theme/gray})
-    (graphics/draw-centered-string! rect (:text m ""))))
+    (graphics/draw-string-centered! rect (:text m ""))))
 
 (defn edit-string [])
 

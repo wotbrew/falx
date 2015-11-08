@@ -67,8 +67,8 @@
       (gdx/using-camera
         (:ui-camera game)
         (widget/draw-widget!
-         #_ui
-          (create/screen game))))
+         ui
+          #_(create/screen game))))
     (catch Throwable e
       (println e)
       (Thread/sleep 5000))))

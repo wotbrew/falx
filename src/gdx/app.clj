@@ -1,8 +1,7 @@
 (ns gdx.app
   (:require [gdx.display :as display]
             [gdx.dispatch :as dispatch])
-  (:import (com.badlogic.gdx ApplicationListener Gdx Graphics)
-           (com.badlogic.gdx.backends.lwjgl LwjglApplicationConfiguration LwjglApplication)))
+  (:import (com.badlogic.gdx ApplicationListener Gdx Graphics)))
 
 (def on-render-fn (atom nil))
 (def on-create-fn (atom nil))
