@@ -25,6 +25,10 @@
   []
   (app/get-delta-time))
 
+(defn get-frame-id
+  []
+  (app/get-frame-id))
+
 (defn get-display
   []
   (app/on-render-thread

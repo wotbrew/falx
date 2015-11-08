@@ -1,7 +1,7 @@
 (ns gdx.keyboard
   (:require [clojure.set :as set]
             [clojure.string :as str])
-  (:import (com.badlogic.gdx Gdx Input Input$Keys)))
+  (:import (com.badlogic.gdx Gdx Input Input$Keys Input$TextInputListener)))
 
 (defn ^Input get-input
   []
@@ -14,6 +14,10 @@
     (.isKeyPressed input gdx-key)
     false))
 
+(def prefer-keys
+  (set/union
+    (set (map str "qwertyuiopasdfghjklzxcvbnm"))))
+
 (def gdx-key->key
   (->> (for [field (.getFields Input$Keys)
              :let [n (.getName field)
@@ -21,6 +25,7 @@
          [v (keyword (-> n
                          str/lower-case
                          (str/replace #"_" "-")))])
+       (sort-by #(if (prefer-keys (name (second %))) 1 0))
        (into {})))
 
 (def key->gdx-key
@@ -47,3 +52,22 @@
     (assoc now
       :hit (set/difference (:pressed previous-keyboard #{})
                            (:pressed now #{})))))
+
+(defn get-string
+  ([title]
+    (get-string title ""))
+  ([title hint]
+    (get-string title hint ""))
+  ([title hint s]
+   (let [p (promise)
+         listener (reify Input$TextInputListener
+                    (input [this s]
+                      (deliver p s))
+                    (canceled [this]
+                      (deliver p nil)))
+         input (get-input)]
+     (if input
+       (do
+         (.getTextInput input listener (str title) (str s) (str hint))
+         p)
+       (delay nil)))))

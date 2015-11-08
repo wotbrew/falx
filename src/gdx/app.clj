@@ -109,3 +109,8 @@
   []
   (when-some [gfx (get-graphics)]
     (.getDeltaTime gfx)))
+
+(defn get-frame-id
+  []
+  (when-some [gfx (get-graphics)]
+    (.getFrameId gfx)))

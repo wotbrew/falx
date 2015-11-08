@@ -10,10 +10,8 @@
 
 (defn title-text
   [rect]
-  (widget/panel
-    [(widget/box rect)
-     (-> (widget/label rect ":: FALX ::")
-         (assoc :context {:color theme/red}))]))
+  (-> (widget/label rect ":: FALX ::")
+      (assoc :context {:color theme/red})))
 
 (defn new-adventure-button
   [rect]

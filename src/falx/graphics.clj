@@ -73,6 +73,10 @@
   [rect text]
   (draw-text-button! rect (str "- " text " -") {:color theme/white}))
 
+(defn draw-selected-text-button!
+  [rect text]
+  (draw-text-button! rect (str "- " text " -") {:color theme/green}))
+
 (defn draw-disabled-text-button!
   [rect text]
   (draw-text-button! rect text {:color theme/gray}))

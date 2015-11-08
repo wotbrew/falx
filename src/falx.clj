@@ -8,6 +8,8 @@
              [roster :as roster]
              [create :as create]]))
 
+(def max-fps 60)
+
 (def default-game
   {:mouse    gdx/default-mouse
    :keyboard gdx/default-keyboard
@@ -15,7 +17,8 @@
    :ui-camera gdx/default-camera
    :game-camera gdx/default-camera
    :delta 0.0
-   :fps 0})
+   :fps 0
+   :max-fps 60})
 
 (def game-state
   (atom default-game))
@@ -27,6 +30,7 @@
     :keyboard @gdx/keyboard-state
     :display (gdx/get-display)
     :fps (gdx/get-fps)
+    :frame-id (gdx/get-frame-id)
     :delta (gdx/get-delta-time)))
 
 (def default-ui (roster/screen default-game))
@@ -62,13 +66,16 @@
         (run! event/publish! (widget/get-input-events ui game)))
       (gdx/using-camera
         (:ui-camera game)
-        (widget/draw-widget! ui)))
+        (widget/draw-widget!
+         #_ui
+          (create/screen game))))
     (catch Throwable e
       (println e)
       (Thread/sleep 5000))))
 
 (def app
-  gdx/default-app)
+  (assoc gdx/default-app
+    :max-foreground-fps max-fps))
 
 (defn -main
   [& args]

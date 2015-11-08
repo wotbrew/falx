@@ -2,8 +2,10 @@
   (:require [falx.graphics :as graphics]
             [falx.rect :as rect]
             [falx.mouse :as mouse]
-            [clj-gdx :as gdx]
-            [falx.sprite :as sprite]))
+            [falx.keyboard :as keyboard]
+            [falx.sprite :as sprite]
+            [falx.theme :as theme]
+            [clojure.string :as str]))
 
 
 (defmulti draw-widget! :type)
@@ -47,6 +49,24 @@
 (defmethod get-input-events :ui/panel
   [m game]
   (mapcat #(get-input-events % game) (:coll m)))
+
+(defn sprite
+  [rect sprite]
+  {:type :ui/sprite
+   :rect rect
+   :sprite sprite})
+
+(defmethod draw-widget! :ui/sprite
+  [m]
+  (graphics/draw-in! (:sprite m) (:rect m) (:context m)))
+
+(def basic-mouse
+  (-> (sprite [0 0 32 32] sprite/mouse)
+      (assoc
+        :on-update
+        (fn [m game]
+          (assoc m :rect (let [[x y] (-> game :mouse :point)]
+                           [x y 32 23]))))))
 
 (defn label
   [rect text]
@@ -92,6 +112,7 @@
     (cond
       (:disabled? m) (graphics/draw-disabled-text-button! rect text)
       (:highlighted? m) (graphics/draw-highlighted-text-button! rect text)
+      (:selected? m) (graphics/draw-selected-text-button! rect text)
       :else (graphics/draw-text-button! rect text))))
 
 (defmethod update-widget* :ui/text-button
@@ -124,3 +145,55 @@
        (filler [x y 32 h])
        (filler [(+ x w -32) y 32 h])
        (filler [x (+ y h -32) w 32])])))
+
+(defn text-input-box
+  [rect]
+  {:type :ui/text-input
+   :rect rect
+   :entered-text "foobar"})
+
+(defmethod draw-widget! :ui/text-input
+  [m]
+  (let [{:keys [rect]} m]
+    (graphics/draw-box! rect {:color theme/gray})
+    (graphics/draw-centered-string! rect (:text m ""))))
+
+(defn edit-string [])
+
+(defmulti edit-string (fn [s k kboard] k))
+
+(defmethod edit-string :default
+  [s k kboard]
+  (if-some [char (keyboard/key->string k)]
+    (str s (if (keyboard/shift-pressed? kboard)
+             (str/upper-case char)
+             char))
+    s))
+
+(defmethod edit-string :space
+  [s k kboard]
+  (str s " "))
+
+(defmethod edit-string :backspace
+  [s k kboard]
+  (apply str (butlast s)))
+
+(defmethod edit-string :forward-del
+  [s k kboard]
+  (apply str (butlast s)))
+
+(defmethod update-widget* :ui/text-input
+  [m game]
+  (let [max-fps (:max-fps game 60)
+        d (mod (:frame-id game 0) max-fps)
+        text (:entered-text m "")
+        keyboard (:keyboard game)
+        hit (:hit keyboard)
+        text' (reduce #(edit-string %1 %2 keyboard) text hit)]
+    (assoc m
+      :text (if (< d (/ max-fps 2)) (str text "_") (str text "  "))
+      :entered-text text')))
+
+(defmethod get-input-events :ui/text-input
+  [m game]
+  nil)

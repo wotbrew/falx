@@ -1,5 +1,6 @@
 (ns gdx.texture-region
-  (:require [gdx.texture :as texture])
+  (:require [gdx.texture :as texture]
+            [gdx.batch :as batch])
   (:refer-clojure :exclude [find])
   (:import (com.badlogic.gdx.graphics.g2d TextureRegion)
            (com.badlogic.gdx.graphics Texture)

@@ -15,8 +15,8 @@
      (contains-point? x y w h x2 y2)))
   ([x y w h x2 y2]
    (and
-     (<= x x2 (+ x w 1))
-     (<= y y2 (+ y h 1)))))
+     (< x x2 (+ x w 1))
+     (< y y2 (+ y h 1)))))
 
 (defn center-rect
   ([rect size]
