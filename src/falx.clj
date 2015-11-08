@@ -1,6 +1,12 @@
 (ns falx
   (:require [clj-gdx :as gdx]
-            [falx.graphics :as graphics]))
+            [falx.screen.menu :as menu]
+            [falx.widget :as widget]
+            [falx.event :as event]
+            [falx.screen
+             [menu]
+             [roster :as roster]
+             [create :as create]]))
 
 (def default-game
   {:mouse    gdx/default-mouse
@@ -17,23 +23,46 @@
 (defn get-next-game
   [game]
   (assoc game
-         :mouse @gdx/mouse-state
-         :keyboard @gdx/keyboard-state
-         :display (gdx/get-display)
-         :fps (gdx/get-fps)
-         :delta (gdx/get-delta-time)))
+    :mouse @gdx/mouse-state
+    :keyboard @gdx/keyboard-state
+    :display (gdx/get-display)
+    :fps (gdx/get-fps)
+    :delta (gdx/get-delta-time)))
 
-(def ui
-  (atom {:type :ui/text-button
-          :text "foo"}))
+(def default-ui (roster/screen default-game))
+
+(def ui-state (agent default-ui))
+
+(event/defhandler
+  :event/goto-menu
+  :goto-menu
+  (fn [_]
+    (send ui-state (constantly (menu/screen @game-state)))))
+
+(event/defhandler
+  :event/goto-roster
+  :goto-roster
+  (fn [_]
+    (send ui-state (constantly (roster/screen @game-state)))))
+
+(event/defhandler
+  :event/goto-create
+  :goto-create
+  (fn [_]
+    (send ui-state (constantly (create/screen @game-state)))))
+
 
 (gdx/defrender
   (try
-    (let [game (swap! game-state get-next-game)]
-      (swap! ui falx.screen/update-text-button game [32 32 64 32])
+    (await ui-state)
+    (let [game (swap! game-state get-next-game)
+          ui @ui-state]
+      (send ui-state widget/update-widget game)
+      (future
+        (run! event/publish! (widget/get-input-events ui game)))
       (gdx/using-camera
         (:ui-camera game)
-        (graphics/draw-in! @ui [32 32 64 32])))
+        (widget/draw-widget! ui)))
     (catch Throwable e
       (println e)
       (Thread/sleep 5000))))
