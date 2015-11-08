@@ -1,5 +1,5 @@
 (ns falx.widget
-  (:require [falx.graphics :as graphics]
+  (:require [falx.draw :as draw]
             [falx.rect :as rect]
             [falx.mouse :as mouse]
             [falx.keyboard :as keyboard]
@@ -57,7 +57,7 @@
 
 (defmethod draw-widget! :ui/sprite
   [m]
-  (graphics/draw-sprite! (:sprite m) (:rect m) (:context m)))
+  (draw/sprite! (:sprite m) (:rect m) (:context m)))
 
 (def basic-mouse
   (-> (sprite [0 0 32 32] sprite/mouse)
@@ -76,7 +76,7 @@
 
 (defmethod draw-widget! :ui/label
   [m]
-  (graphics/draw-string-centered! (:rect m) (:text m) (:context m)))
+  (draw/centered-string! (:rect m) (:text m) (:context m)))
 
 (defn debug-label
   [rect f]
@@ -96,7 +96,7 @@
 
 (defmethod draw-widget! :ui/box
   [m]
-  (graphics/draw-box! (:rect m) (:context m)))
+  (draw/box! (:rect m) (:context m)))
 
 (defn text-button
   [text rect]
@@ -108,11 +108,7 @@
   [m]
   (let [{:keys [rect text]} m
         rect (or rect rect/default)]
-    (cond
-      (:disabled? m) (graphics/draw-disabled-text-button! rect text)
-      (:highlighted? m) (graphics/draw-highlighted-text-button! rect text)
-      (:selected? m) (graphics/draw-selected-text-button! rect text)
-      :else (graphics/draw-text-button! rect text))))
+    (draw/text-button! m rect)))
 
 (defmethod update-widget* :ui/text-button
   [m game]
@@ -134,7 +130,7 @@
 
 (defmethod draw-widget! :ui/filler
   [m]
-  (graphics/draw-tiled! sprite/blank (:rect m)))
+  (draw/tiled-sprites! sprite/blank (:rect m)))
 
 (defn filler-border
   [rect]
@@ -154,8 +150,8 @@
 (defmethod draw-widget! :ui/text-input
   [m]
   (let [{:keys [rect]} m]
-    (graphics/draw-box! rect {:color theme/gray})
-    (graphics/draw-string-centered! rect (:text m ""))))
+    (draw/box! rect {:color theme/gray})
+    (draw/centered-string! rect (:text m ""))))
 
 (defn edit-string [])
 
