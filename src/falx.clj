@@ -6,7 +6,8 @@
             [falx.screen
              [menu]
              [roster :as roster]
-             [create :as create]]))
+             [create :as create]]
+            [falx.draw :as draw]))
 
 (def max-fps 60)
 
@@ -66,7 +67,7 @@
         (run! event/publish! (widget/get-input-events ui game)))
       (gdx/using-camera
         (:ui-camera game)
-        (widget/draw-widget!
+        (draw/widget!
          ui
           #_(create/screen game))))
     (catch Throwable e

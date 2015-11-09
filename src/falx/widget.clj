@@ -7,11 +7,51 @@
             [falx.theme :as theme]
             [clojure.string :as str]))
 
+(defmulti on-hover-enter (fn [m game] (:type m)))
 
-(defmulti draw-widget! :type)
+(defmethod on-hover-enter :default
+  [m game]
+  m)
 
-(defmethod draw-widget! :default
-  [m])
+(defmulti on-hover-exit (fn [m game] (:type m)))
+
+(defmethod on-hover-exit :default
+  [m game]
+  m)
+
+(defmulti on-click (fn [m game] (:type m)))
+
+(defmethod on-click :default
+  [m game]
+  m)
+
+(defmulti on-frame (fn [m game] (:type m)))
+
+(defmethod on-frame :default
+  [m game]
+  m)
+
+(defmulti process-frame (fn [m game]))
+
+(defmethod process-frame :default
+  [m game]
+  (let [mouse-in? (mouse/in? (:rect m) (:mouse game))]
+    (cond->
+      m
+      ;;
+      (and mouse-in? (not (:hovering? m)))
+      (-> (assoc :hovering? true)
+          (on-hover-enter game))
+      ;;
+      (and (not mouse-in?) (:hovering? m))
+      (-> (dissoc :hovering?)
+          (on-hover-exit game))
+      ;;
+      (and mouse-in? (mouse/clicked? (:mouse game)))
+      (on-click game)
+
+      :always
+      (on-frame game))))
 
 (defmulti update-widget* (fn [m game] (:type m)))
 
@@ -37,10 +77,6 @@
   {:type :ui/panel
    :coll coll})
 
-(defmethod draw-widget! :ui/panel
-  [m]
-  (run! draw-widget! (:coll m)))
-
 (defmethod update-widget* :ui/panel
   [m game]
   (update m :coll (partial mapv #(update-widget % game))))
@@ -54,10 +90,6 @@
   {:type :ui/sprite
    :rect rect
    :sprite sprite})
-
-(defmethod draw-widget! :ui/sprite
-  [m]
-  (draw/sprite! (:sprite m) (:rect m) (:context m)))
 
 (def basic-mouse
   (-> (sprite [0 0 32 32] sprite/mouse)
@@ -73,10 +105,6 @@
    :rect rect
    :text text
    :context {}})
-
-(defmethod draw-widget! :ui/label
-  [m]
-  (draw/centered-string! (:rect m) (:text m) (:context m)))
 
 (defn debug-label
   [rect f]
@@ -94,21 +122,12 @@
    :rect rect
    :context {}})
 
-(defmethod draw-widget! :ui/box
-  [m]
-  (draw/box! (:rect m) (:context m)))
-
 (defn text-button
   [text rect]
   {:type :ui/text-button
    :text text
    :rect rect})
 
-(defmethod draw-widget! :ui/text-button
-  [m]
-  (let [{:keys [rect text]} m
-        rect (or rect rect/default)]
-    (draw/text-button! m rect)))
 
 (defmethod update-widget* :ui/text-button
   [m game]
@@ -128,10 +147,6 @@
   {:type :ui/filler
    :rect rect})
 
-(defmethod draw-widget! :ui/filler
-  [m]
-  (draw/tiled-sprites! sprite/blank (:rect m)))
-
 (defn filler-border
   [rect]
   (let [[x y w h] rect]
@@ -146,12 +161,6 @@
   {:type :ui/text-input
    :rect rect
    :entered-text "foobar"})
-
-(defmethod draw-widget! :ui/text-input
-  [m]
-  (let [{:keys [rect]} m]
-    (draw/box! rect {:color theme/gray})
-    (draw/centered-string! rect (:text m ""))))
 
 (defn edit-string [])
 
