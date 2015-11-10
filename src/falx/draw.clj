@@ -2,7 +2,8 @@
   (:require [clj-gdx :as gdx]
             [falx.sprite :as sprite]
             [falx.theme :as theme]
-            [falx.rect :as rect]))
+            [falx.rect :as rect])
+  (:import (clojure.lang IPersistentVector)))
 
 ;; ================================
 ;; STRINGS
@@ -22,7 +23,6 @@
 ;; SPRITES
 
 (def sprite! gdx/draw-sprite!)
-
 
 (defn tiled-sprites!
   ([sprite rect]
@@ -48,38 +48,48 @@
 
 (defn box!
   ([rect]
-   (box! rect {}))
+   (box! rect {} {} {} {}))
   ([rect context]
+   (box! rect context context context context))
+  ([rect tcontext lcontext rcontext bcontext]
    (let [[x y w h] rect
-         s sprite/pixel]
-     (gdx/using-sprite-options
-       context
-       (sprite! s x y w 1)
-       (sprite! s x y 1 h)
-       (sprite! s (+ x w) y 1 h)
-       (sprite! s x (+ y h) w 1)))))
+         s sprite/pixel
+         tthickness (:thickness tcontext 1)
+         lthickness (:thickness lcontext 1)
+         rthickness (:thickness rcontext 1)
+         bthickness (:thickness bcontext 1)]
+     (sprite! s x y w tthickness tcontext)
+     (sprite! s x y lthickness h lcontext)
+     (sprite! s (+ x w (- rthickness)) y rthickness h rcontext)
+     (sprite! s x (+ y h (- bthickness)) w bthickness bcontext))))
 
 ;; ===================================
 ;; MAPS
 
-(defmulti thing! (fn [m rect] (:type m)))
+(defn- mtype-or-class [o] )
+
+(defmulti thing! (fn [o rect] (or (:type o) (class o))))
 
 (defmethod thing! :default
   [m rect])
 
-(defmulti disabled! (fn [m rect] (:type m)))
+(defmethod thing! IPersistentVector
+  [v rect]
+  (run! #(thing! % rect) v))
+
+(defmulti disabled! (fn [o rect]  (or (:type o) (class o))))
 
 (defmethod disabled! :default
   [m rect]
   (thing! m rect))
 
-(defmulti highlighted! (fn [m rect] (:type m)))
+(defmulti highlighted! (fn [o rect] (or (:type o) (class o))))
 
 (defmethod highlighted! :default
   [m rect]
   (thing! m rect))
 
-(defmulti selected! (fn [m rect] (:type m)))
+(defmulti selected! (fn [o rect] (or (:type o) (class o))))
 
 (defmethod selected! :default
   [m rect]
@@ -107,24 +117,30 @@
   ([rect text context]
    (text-button! rect text context context))
   ([rect text box-context text-context]
-   (box! rect box-context)
+   (let [color (:color box-context)
+         shaded {:color (theme/mult color theme/dark-gray)}]
+     (box! rect box-context box-context shaded shaded))
    (centered-string! rect text text-context)))
 
 (defmethod thing! :ui/text-button
   [m rect]
-  (text-button! rect (:text m "")))
+  (text-button! rect (:text m "") {:color theme/light-gray
+                                   :thickness 2}))
 
 (defmethod highlighted! :ui/text-button
   [{:keys [text]} rect]
-  (text-button! rect (str "- " text " -") {:color theme/white}))
+  (text-button! rect (str "- " text " -") {:color theme/white
+                                           :thickness 2}))
 
 (defmethod selected! :ui/text-button
   [{:keys [text]} rect]
-  (text-button! rect (str "- " text " -") {:color theme/white}))
+  (text-button! rect (str "- " text " -") {:color theme/green
+                                           :thickness 2}))
 
 (defmethod disabled! :ui/text-button
   [{:keys [text]} rect]
-  (text-button! rect text {:color theme/dark-gray}))
+  (text-button! rect text {:color theme/dark-gray
+                           :thickness 2}))
 
 ;; ==================================
 ;; PANEL

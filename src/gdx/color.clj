@@ -31,6 +31,11 @@
      :blue  blue
      :alpha alpha}))
 
+(defn mult
+  [a b]
+  (compile
+    (merge-with * a b)))
+
 (defn gdx-color->map
   [gdx-color]
   (color (.-r gdx-color)

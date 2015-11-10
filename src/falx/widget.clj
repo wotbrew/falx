@@ -188,14 +188,15 @@
 
 (defmethod update-widget* :ui/text-input
   [m game]
-  (let [max-fps (:max-fps game 60)
-        d (mod (:frame-id game 0) max-fps)
+  (let [current-delta (:delta m 0)
+        delta (:delta game 0)
         text (:entered-text m "")
         keyboard (:keyboard game)
         hit (:hit keyboard)
         text' (reduce #(edit-string %1 %2 keyboard) text hit)]
     (assoc m
-      :text (if (< d (/ max-fps 2)) (str text "_") (str text "  "))
+      :delta (if (< current-delta 1) (+ current-delta delta) 0)
+      :text (if (< current-delta 0.5) (str text "_") (str text "  "))
       :entered-text text')))
 
 (defmethod get-input-events :ui/text-input

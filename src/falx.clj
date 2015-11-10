@@ -19,7 +19,7 @@
    :game-camera gdx/default-camera
    :delta 0.0
    :fps 0
-   :max-fps 60})
+   :max-fps max-fps})
 
 (def game-state
   (atom default-game))

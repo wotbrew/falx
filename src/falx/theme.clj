@@ -14,6 +14,10 @@
 
 (def green color/green)
 
+(def mult color/mult)
+
+(def dark-green (mult color/green color/gray))
+
 (def yellow color/yellow)
 
 (def red color/red)
