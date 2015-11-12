@@ -108,16 +108,16 @@
 
 (def dwarf* (partial sprite "Dwarf"))
 
-(def dwarf-male
+(def dwarf-female
   (dwarf* 0 0))
 
-(def dwarf-female
+(def dwarf-male
   (dwarf* 1 0))
 
 (def human* (partial sprite "Human"))
 
-(def human-male
+(def human-female
   (human* 0 0))
 
-(def human-female
+(def human-male
   (human* 1 0))

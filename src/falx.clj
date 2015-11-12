@@ -79,7 +79,8 @@
       (gdx/using-camera
         (:ui-camera game)
         (draw/widget!
-         ui)
+         #_(create/screen @game-state)
+          ui)
         (draw/string! (:fps game) [0 0 64 32])))
     (catch Throwable e
       (println e)

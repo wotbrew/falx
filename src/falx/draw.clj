@@ -184,3 +184,24 @@
   [m rect]
   (sprite! (:sprite m) rect (:context m)))
 
+;; ==============================
+;; SPRITE BUTTON
+
+(defmethod thing! :ui/sprite-button
+  [m rect]
+  (sprite! (:sprite m) rect {:color theme/gray}))
+
+(defmethod hovering! :ui/sprite-button
+  [m rect]
+  (when (:selected? m)
+    (sprite! sprite/circle rect {:color theme/green}))
+  (sprite! (:sprite m) rect {:color theme/white}))
+
+(defmethod disabled! :ui/sprite-button
+  [m rect]
+  (sprite! (:sprite m) rect {:color theme/gray}))
+
+(defmethod selected! :ui/sprite-button
+  [m rect]
+  (sprite! sprite/circle rect {:color theme/green})
+  (sprite! (:sprite m) rect {:color theme/white}))

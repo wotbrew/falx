@@ -127,6 +127,15 @@
    :sprite sprite})
 
 ;; ======================
+;; SPRITE BUTTON
+
+(defn sprite-button
+  [rect sprite]
+  {:type :ui/sprite-button
+   :rect rect
+   :sprite sprite})
+
+;; ======================
 ;; BASIC MOUSE
 
 (derive :ui/mouse :ui/sprite)
