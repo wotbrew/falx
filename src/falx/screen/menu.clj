@@ -15,26 +15,51 @@
 
 (defn new-adventure-button
   [rect]
-  (widget/text-button "New Adventure" rect))
+  (widget/text-button "(N)ew Adventure" rect))
+
+;; =========
+;; CONTINUE BUTTON
+
+(derive :menu/continue-button :ui/text-button)
+
+(defmethod widget/on-frame :menu/continue-button
+  [m game]
+  (assoc m :disabled? (empty? (:saves game))))
 
 (defn continue-adventure-button
   [rect]
-  (-> (widget/text-button "Continue Adventure" rect)
-      (assoc :on-update (fn [m game]
-                          (assoc m :disabled? (empty? (:saves game)))))))
+  {:type :menu/continue-button
+   :text "(C)ontinue Adventure"
+   :rect rect})
+
+;; ===============
+;; ROSTER BUTTON
+
+(derive :menu/roster-button :ui/text-button)
+
+(defmethod widget/get-click-event :menu/roster-button
+  [m game]
+  {:type :event/goto-roster})
 
 (defn roster-button
   [rect]
-  (-> (widget/text-button "Roster" rect)
-      (assoc :click-event {:type :event/goto-roster})))
+  {:type :menu/roster-button
+   :text "(R)oster"
+   :rect rect})
+
+;; ===============
+;; SETTINGS BUTTON
 
 (defn settings-button
   [rect]
-  (widget/text-button "Settings" rect))
+  (widget/text-button "(S)ettings" rect))
+
+;; ===============
+;; QUIT BUTTON
 
 (defn quit-button
   [rect]
-  (widget/text-button "Quit" rect))
+  (widget/text-button "(Q)uit" rect))
 
 (defn buttons
   [rect]
@@ -53,8 +78,7 @@
   ([game size]
    (let [[x y w h :as r] (centered-rect size)]
      (-> (widget/panel
-           [(widget/fps-label [0 0 64 32])
-            (widget/filler-border (rect/extend r 32))
+           [(widget/filler-border (rect/extend r 32))
             (title-text [x y w 32])
             (buttons [x (+ y 32) w (- h 32)])])
-         (widget/update-widget game)))))
+         (widget/process-frame game)))))

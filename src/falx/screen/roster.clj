@@ -13,30 +13,65 @@
   (-> (widget/label rect ":: ROSTER ::")
       (assoc :context {:color theme/red})))
 
+;; =================
+;; MENU BUTTON
+
+(derive :roster/menu-button :ui/text-button)
+
+(defmethod widget/get-click-event :roster/menu-button
+  [m game]
+  {:type :event/goto-menu})
+
 (defn menu-button
   [rect]
-  (-> (widget/text-button "(M)enu" rect)
-      (assoc :click-event {:type :event/goto-menu})))
+  {:type :roster/menu-button
+   :text "(M)enu"
+   :rect rect})
+
+;; ================
+;; CREATE BUTTON
+
+(derive :roster/create-button :ui/text-button)
+
+(defmethod widget/get-click-event :roster/create-button
+  [m game]
+  {:type :event/goto-create})
 
 (defn create-button
   [rect]
-  (-> (widget/text-button "(C)reate" rect)
-      (assoc :click-event {:type :event/goto-create})))
+  {:type :roster/create-button
+   :text "(C)reate"
+   :rect rect})
+
+;; ==============
+;; KILL BUTTON
+
+(derive :roster/kill-button :ui/text-button)
+
+(defmethod widget/process-frame :roster/kill-button
+  [m game]
+  (assoc m :disabled? (nil? (-> game :roster :selected))))
 
 (defn kill-button
   [rect]
-  (-> (widget/text-button "(K)ill" rect)
-      (assoc :on-update (fn [m game]
-                          (assoc m
-                            :disabled? (nil? (-> game :roster :selected)))))))
+  {:type :roster/kill-button
+   :text "(K)ill"
+   :rect rect})
+
+;; ===============
+;; DETAILS BUTTON
+
+(derive :roster/details-button :ui/text-button)
+
+(defmethod widget/process-frame :roster/details-button
+  [m game]
+  (assoc m :disabled? (nil? (-> game :roster :selected))))
 
 (defn details-button
   [rect]
-  (-> (widget/text-button "(D)etails" rect)
-      (assoc :on-update (fn [m game]
-                          (assoc m
-                            :disabled? (nil? (-> game :roster :selected)))))))
-
+  {:type :roster/details-button
+   :text "(D)etails"
+   :rect rect})
 
 (defn buttons
   [rect]
@@ -55,9 +90,8 @@
    (let [[width height] size
          [x y w h :as r] (centered-rect size)]
      (-> (widget/panel
-           [(widget/fps-label [0 0 64 32])
-            (widget/filler-border (rect/extend r 32))
+           [(widget/filler-border (rect/extend r 32))
             (title-text [x y w 32])
             (buttons [x (+ y 32) w 32])])
-         (widget/update-widget
+         (widget/process-frame
            game)))))

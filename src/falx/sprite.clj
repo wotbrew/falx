@@ -106,4 +106,18 @@
   (mouse* 3 0))
 
 
+(def dwarf* (partial sprite "Dwarf"))
 
+(def dwarf-male
+  (dwarf* 0 0))
+
+(def dwarf-female
+  (dwarf* 1 0))
+
+(def human* (partial sprite "Human"))
+
+(def human-male
+  (human* 0 0))
+
+(def human-female
+  (human* 1 0))

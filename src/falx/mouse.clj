@@ -8,3 +8,8 @@
 (defn clicked?
   [mouse]
   (contains? (:hit mouse) :left))
+
+(defn rect
+  [mouse]
+  (let [[x y] (:point mouse)]
+    [x y 32 32]))

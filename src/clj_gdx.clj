@@ -109,6 +109,14 @@
   ([s width font]
    (font/get-bounds-wrapped font s width)))
 
+(defn get-string
+  ([title]
+   (get-string title "" ""))
+  ([title hint]
+   (get-string title hint ""))
+  ([title hint s]
+   (keyboard/get-string title hint s)))
+
 (defn sprite
   [file rect]
   (let [texture (texture/texture file)]

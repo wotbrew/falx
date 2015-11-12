@@ -3,6 +3,7 @@
             [falx.screen.menu :as menu]
             [falx.widget :as widget]
             [falx.event :as event]
+            [falx.action :as action]
             [falx.screen
              [menu]
              [roster :as roster]
@@ -34,7 +35,7 @@
     :frame-id (gdx/get-frame-id)
     :delta (gdx/get-delta-time)))
 
-(def default-ui (roster/screen default-game))
+(def default-ui (menu/screen default-game))
 
 (def ui-state (agent default-ui))
 
@@ -56,20 +57,30 @@
   (fn [_]
     (send ui-state (constantly (create/screen @game-state)))))
 
+(defn publish-ui-events!
+  [ui game]
+  (run! event/publish! (widget/get-input-events ui game)))
+
+(defn react-to-ui!
+  [ui game]
+  (let [actions (widget/get-input-actions ui game)]
+    (swap! game-state #(reduce action/react % actions))))
 
 (gdx/defrender
   (try
     (await ui-state)
     (let [game (swap! game-state get-next-game)
           ui @ui-state]
-      (send ui-state widget/update-widget game)
+      (send ui-state widget/process-frame game)
       (future
-        (run! event/publish! (widget/get-input-events ui game)))
+        (publish-ui-events! ui game))
+      (future
+        (react-to-ui! ui game))
       (gdx/using-camera
         (:ui-camera game)
         (draw/widget!
-         ui
-          #_(create/screen game))))
+         ui)
+        (draw/string! (:fps game) [0 0 64 32])))
     (catch Throwable e
       (println e)
       (Thread/sleep 5000))))

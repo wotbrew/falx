@@ -66,8 +66,6 @@
 ;; ===================================
 ;; MAPS
 
-(defn- mtype-or-class [o] )
-
 (defmulti thing! (fn [o rect] (or (:type o) (class o))))
 
 (defmethod thing! :default
@@ -83,9 +81,9 @@
   [m rect]
   (thing! m rect))
 
-(defmulti highlighted! (fn [o rect] (or (:type o) (class o))))
+(defmulti hovering! (fn [o rect] (or (:type o) (class o))))
 
-(defmethod highlighted! :default
+(defmethod hovering! :default
   [m rect]
   (thing! m rect))
 
@@ -104,7 +102,7 @@
   ([m rect]
     (cond
       (:disabled? m) (disabled! m rect)
-      (:highlighted? m) (highlighted! m rect)
+      (:hovering? m) (hovering! m rect)
       (:selected? m) (selected! m rect)
       :else (thing! m rect))))
 
@@ -127,7 +125,7 @@
   (text-button! rect (:text m "") {:color theme/light-gray
                                    :thickness 2}))
 
-(defmethod highlighted! :ui/text-button
+(defmethod hovering! :ui/text-button
   [{:keys [text]} rect]
   (text-button! rect (str "- " text " -") {:color theme/white
                                            :thickness 2}))

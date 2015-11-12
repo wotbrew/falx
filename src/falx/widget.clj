@@ -31,11 +31,12 @@
   [m game]
   m)
 
-(defmulti process-frame (fn [m game]))
+(defmulti process-frame (fn [m game] (:type m)))
 
 (defmethod process-frame :default
   [m game]
-  (let [mouse-in? (mouse/in? (:rect m) (:mouse game))]
+  (let [mouse-in? (mouse/in? (:mouse game) (:rect m rect/default))
+        clicked? (and mouse-in? (mouse/clicked? (:mouse game)))]
     (cond->
       m
       ;;
@@ -47,43 +48,77 @@
       (-> (dissoc :hovering?)
           (on-hover-exit game))
       ;;
-      (and mouse-in? (mouse/clicked? (:mouse game)))
-      (on-click game)
+      clicked?
+      (-> (assoc :clicked? true)
+          (on-click game))
+      ;;
+      (and (not clicked?) (:clicked? m))
+      (dissoc :clicked?)
 
       :always
       (on-frame game))))
 
-(defmulti update-widget* (fn [m game] (:type m)))
+(defn- mcond
+  [coll x]
+  (if (some? x)
+    (conj coll x)
+    coll))
 
-(defn update-widget
-  [m game]
-  (cond->
-    m
-    (:on-update m) ((:on-update m) game)
-    :always (update-widget* game)))
-
-(defmethod update-widget* :default
-  [m _]
-  m)
+;; ================================
+;; INPUT EVENTS
 
 (defmulti get-input-events (fn [m game] (:type m)))
 
+(defmulti get-click-event (fn [m game] (:type m)))
+
+(defmethod get-click-event :default
+  [_ _])
+
 (defmethod get-input-events :default
-  [_ _]
-  nil)
+  [m game]
+  (cond->
+    []
+    ;;
+    (:clicked? m) (mcond (get-click-event m game))))
+
+;; ==========================
+;; INPUT ACTIONS
+
+(defmulti get-input-actions (fn [m game] (:type m)))
+
+(defmulti get-click-action (fn [m game] (:type m)))
+
+(defmethod get-click-action :default
+  [m game])
+
+(defmethod get-input-actions :default
+  [m game]
+  (cond->
+    []
+    (:clicked? m) (mcond (get-click-action m game))))
+
+;; ===========================
+;; PANEL
 
 (defn panel
   [coll]
   {:type :ui/panel
    :coll coll})
 
-(defmethod update-widget* :ui/panel
+(defmethod process-frame :ui/panel
   [m game]
-  (update m :coll (partial mapv #(update-widget % game))))
+  (update m :coll (partial mapv #(process-frame % game))))
 
 (defmethod get-input-events :ui/panel
   [m game]
   (mapcat #(get-input-events % game) (:coll m)))
+
+(defmethod get-input-actions :ui/panel
+  [m game]
+  (mapcat #(get-input-actions % game) (:coll m)))
+
+;;=======================
+;; SPRITE
 
 (defn sprite
   [rect sprite]
@@ -91,13 +126,22 @@
    :rect rect
    :sprite sprite})
 
+;; ======================
+;; BASIC MOUSE
+
+(derive :ui/mouse :ui/sprite)
+
+(defmethod process-frame :ui/mouse
+  [m game]
+  (assoc m :rect (mouse/rect (:mouse game))))
+
 (def basic-mouse
-  (-> (sprite [0 0 32 32] sprite/mouse)
-      (assoc
-        :on-update
-        (fn [m game]
-          (assoc m :rect (let [[x y] (-> game :mouse :point)]
-                           [x y 32 23]))))))
+  {:type :ui/mouse
+   :rect rect/default
+   :sprite sprite/mouse})
+
+;; ================
+;; LABEL
 
 (defn label
   [rect text]
@@ -106,15 +150,8 @@
    :text text
    :context {}})
 
-(defn debug-label
-  [rect f]
-  (assoc (label rect "Initializing...")
-    :on-update (fn [m game]
-                 (assoc m :text (f game)))))
-
-(defn fps-label
-  [rect]
-  (debug-label rect #(str "fps: " (:fps % 0))))
+;; ===============
+;; BOX
 
 (defn box
   [rect]
@@ -122,25 +159,17 @@
    :rect rect
    :context {}})
 
+;; ================
+;; BUTTON
+
 (defn text-button
   [text rect]
   {:type :ui/text-button
    :text text
    :rect rect})
 
-
-(defmethod update-widget* :ui/text-button
-  [m game]
-  (cond
-    (:disabled? m) m
-    :else
-    (assoc m :highlighted? (mouse/in? (:mouse game) (:rect m rect/default)))))
-
-(defmethod get-input-events :ui/text-button
-  [m game]
-  (when (and (:highlighted? m) (mouse/clicked? (:mouse game)))
-    (when-some [ie (:click-event m)]
-      [ie])))
+;; =================
+;; FILLER
 
 (defn filler
   [rect]
@@ -156,11 +185,14 @@
        (filler [(+ x w -32) y 32 h])
        (filler [x (+ y h -32) w 32])])))
 
+;; =================
+;; TEXT INPUT
+
 (defn text-input-box
   [rect]
   {:type :ui/text-input
    :rect rect
-   :entered-text "foobar"})
+   :entered-text ""})
 
 (defn edit-string [])
 
@@ -186,7 +218,7 @@
   [s k kboard]
   (apply str (butlast s)))
 
-(defmethod update-widget* :ui/text-input
+(defmethod on-frame :ui/text-input
   [m game]
   (let [current-delta (:delta m 0)
         delta (:delta game 0)
@@ -199,6 +231,8 @@
       :text (if (< current-delta 0.5) (str text "_") (str text "  "))
       :entered-text text')))
 
-(defmethod get-input-events :ui/text-input
-  [m game]
-  nil)
+;;focus
+;;focused?
+;;click-event
+;;on-focused-key-hit [k keyboard]
+;;on-focus [k
