@@ -74,12 +74,18 @@
 (defmethod get-click-event :default
   [_ _])
 
+(defmulti get-hover-event (fn [m game] (:type m)))
+
+(defmethod get-hover-event :default
+  [m game])
+
 (defmethod get-input-events :default
   [m game]
   (cond->
     []
     ;;
-    (:clicked? m) (mcond (get-click-event m game))))
+    (:clicked? m) (mcond (get-click-event m game))
+    (:hovering? m) (mcond (get-hover-event m game))))
 
 ;; ==========================
 ;; INPUT ACTIONS
@@ -91,10 +97,16 @@
 (defmethod get-click-action :default
   [m game])
 
+(defmulti get-hover-action (fn [m game] (:type m)))
+
+(defmethod get-hover-action :default
+  [m game])
+
 (defmethod get-input-actions :default
   [m game]
   (cond->
     []
+    (:hovering? m) (mcond (get-hover-action m game))
     (:clicked? m) (mcond (get-click-action m game))))
 
 ;; ===========================

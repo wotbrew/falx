@@ -57,6 +57,14 @@
   (fn [_]
     (send ui-state (constantly (create/screen @game-state)))))
 
+(def hover-text (atom {}))
+
+(event/defhandler
+  :event/set-hover-text
+  :set-hover-text
+  (fn [action]
+    (swap! hover-text (:text action))))
+
 (defn publish-ui-events!
   [ui game]
   (run! event/publish! (widget/get-input-events ui game)))
