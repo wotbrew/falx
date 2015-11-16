@@ -86,7 +86,8 @@
             (fn [{:keys [widget state]}]
               (let [w (widget/process-frame widget game state)]
                 {:widget w
-                 :state (widget/update-state state w)})))
+                 :state  (-> (widget/update-state state w)
+                             (assoc :hover-text (widget/get-hover-text w game)))})))
       (future
         (publish-ui-events! widget game))
       (future

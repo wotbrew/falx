@@ -205,3 +205,13 @@
   [m rect]
   (sprite! sprite/circle rect {:color theme/green})
   (sprite! (:sprite m) rect {:color theme/white}))
+
+;; =================================
+;; HOVER TEXT
+
+(defmethod thing! :ui/hover-text
+  [m rect]
+  (when-some [text (:text m)]
+    (sprite! sprite/pixel (rect/extend rect 4) {:color theme/dark-gray})
+    (box! (rect/extend rect 4) {:color theme/yellow})
+    (centered-string! rect text)))

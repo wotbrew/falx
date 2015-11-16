@@ -41,6 +41,11 @@
   [m game]
   {:type :event/goto-roster})
 
+(defmethod widget/get-hover-text :menu/roster-button
+  [m game]
+  (when (:hovering? m)
+    "Roster!"))
+
 (defn roster-button
   [rect]
   {:type :menu/roster-button
@@ -80,5 +85,6 @@
      (-> (widget/panel
            [(widget/filler-border (rect/extend r 32))
             (title-text [x y w 32])
-            (buttons [x (+ y 32) w (- h 32)])])
+            (buttons [x (+ y 32) w (- h 32)])
+            widget/hover-text])
          (widget/process-frame game st)))))

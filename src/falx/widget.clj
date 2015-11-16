@@ -5,7 +5,8 @@
             [falx.keyboard :as keyboard]
             [falx.sprite :as sprite]
             [falx.theme :as theme]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [clj-gdx :as gdx]))
 
 (defmulti update-state (fn [st m] (:type m)))
 
@@ -65,10 +66,12 @@
       (on-frame game st))))
 
 (defn- mcond
-  [coll x]
-  (if (some? x)
-    (conj coll x)
-    coll))
+  ([coll x]
+   (if (some? x)
+     (conj coll x)
+     coll))
+  ([coll x & xs]
+    (reduce mcond (mcond coll x) xs)))
 
 ;; ================================
 ;; INPUT EVENTS
@@ -115,6 +118,13 @@
     (:hovering? m) (mcond (get-hover-action m game))
     (:clicked? m) (mcond (get-click-action m game))))
 
+;; ==========================
+
+(defmulti get-hover-text (fn [m game] (:type m)))
+
+(defmethod get-hover-text :default
+  [m game])
+
 ;; ===========================
 ;; PANEL
 
@@ -138,6 +148,10 @@
 (defmethod get-input-actions :ui/panel
   [m game]
   (mapcat #(get-input-actions % game) (:coll m)))
+
+(defmethod get-hover-text :ui/panel
+  [m game]
+  (some #(get-hover-text % game) (:coll m)))
 
 ;;=======================
 ;; SPRITE
@@ -215,6 +229,25 @@
        (filler [x y 32 h])
        (filler [(+ x w -32) y 32 h])
        (filler [x (+ y h -32) w 32])])))
+
+;; =================
+;; HOVER TEXT
+
+(def hover-text
+  {:type :ui/hover-text
+   :rect [0 0 32 32]})
+
+(defmethod on-frame :ui/hover-text
+  [m game st]
+  (let [[x y] (-> game :mouse :point)
+        x (+ 16 x)
+        y (+ 16 y)
+        text (:hover-text st)]
+    (if (some? text)
+      (let [[w h] (gdx/get-string-wrapped-bounds text 256)]
+        (assoc m :rect [x y w h]
+                 :text text))
+      (dissoc m :text))))
 
 ;; =================
 ;; TEXT INPUT
