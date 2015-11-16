@@ -67,28 +67,20 @@
       [(name-label [x y 64 h])
        (name-input-box [(+ x 64 16) y (- w 64 16) h])])))
 
-;; ============
-;; GENDERS
-
-(action/defreaction
-  ::set-gender
-  :set-gender
-  (fn [game action]
-    (assoc-in game [::state :gender] (:gender action :male))))
-
 ;; =============
 ;; MALE BUTTON
 
 (derive :create/male-button :ui/text-button)
 
 (defmethod widget/on-frame :create/male-button
-  [m game]
-  (assoc m :selected? (-> game ::state :gender (= :male))))
+  [m game st]
+  (assoc m :selected? (-> st ::gender (= :male))))
 
-(defmethod widget/get-click-action :create/male-button
-  [m game]
-  {:type ::set-gender
-   :gender :male})
+(defmethod widget/update-state :create/male-button
+  [st m]
+  (if (:clicked? m)
+    (assoc st ::gender :male)
+    st))
 
 (defn male-button
   [rect]
@@ -102,13 +94,14 @@
 (derive :create/female-button :ui/text-button)
 
 (defmethod widget/on-frame :create/female-button
-  [m game]
-  (assoc m :selected? (-> game ::state :gender (not= :male))))
+  [m game st]
+  (assoc m :selected? (-> st ::gender (not= :male))))
 
-(defmethod widget/get-click-action :create/female-button
-  [m game]
-  {:type ::set-gender
-   :gender :female})
+(defmethod widget/update-state :create/female-button
+  [st m]
+  (if (:clicked? m)
+    (assoc st ::gender :female)
+    st))
 
 (defn female-button
   [rect]
@@ -137,20 +130,15 @@
 (derive :create/race-button :ui/sprite-button)
 
 (defmethod widget/on-frame :create/race-button
-  [m game]
-  (assoc m :sprite (race/get-body-sprite (:race m) (::state game))
-           :selected? (-> game ::state :race (or race/human) (= (:race m)))))
+  [m game st]
+  (assoc m :sprite (race/get-body-sprite (:race m) (::gender st))
+           :selected? (-> st ::race (or race/human) (= (:race m)))))
 
-(defmethod widget/get-click-action :create/race-button
-  [m game]
-  {:type ::set-race
-   :race (:race m)})
-
-(action/defreaction
-  ::set-race
-  :set-race
-  (fn [game action]
-    (assoc-in game [::state :race] (:race action))))
+(defmethod widget/update-state :create/race-button
+  [st m]
+  (if (:clicked? m)
+    (assoc st ::race (:race m))
+    st))
 
 (defn race-button
   [rect race]
@@ -172,9 +160,9 @@
 
 
 (defn screen
-  ([game]
-   (screen game (-> game :ui-camera :size)))
-  ([game size]
+  ([game st]
+   (screen game st (-> game :ui-camera :size)))
+  ([game st size]
    (let [[x y w h :as r] (centered-rect size)]
      (-> (widget/panel
            [(widget/filler-border (rect/extend r 32))
@@ -185,4 +173,5 @@
             (bottom-right-buttons [(+ x w -256) (+ y h -32) 256 32])
             widget/basic-mouse])
          (widget/process-frame
-           game)))))
+           game
+           st)))))

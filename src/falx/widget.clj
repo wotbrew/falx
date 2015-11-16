@@ -7,6 +7,12 @@
             [falx.theme :as theme]
             [clojure.string :as str]))
 
+(defmulti update-state (fn [st m] (:type m)))
+
+(defmethod update-state :default
+  [st m]
+  st)
+
 (defmulti on-hover-enter (fn [m game] (:type m)))
 
 (defmethod on-hover-enter :default
@@ -25,16 +31,16 @@
   [m game]
   m)
 
-(defmulti on-frame (fn [m game] (:type m)))
+(defmulti on-frame (fn [m game st] (:type m)))
 
 (defmethod on-frame :default
-  [m game]
+  [m game st]
   m)
 
-(defmulti process-frame (fn [m game] (:type m)))
+(defmulti process-frame (fn [m game st] (:type m)))
 
 (defmethod process-frame :default
-  [m game]
+  [m game st]
   (let [mouse-in? (mouse/in? (:mouse game) (:rect m rect/default))
         clicked? (and mouse-in? (mouse/clicked? (:mouse game)))]
     (cond->
@@ -56,7 +62,7 @@
       (dissoc :clicked?)
 
       :always
-      (on-frame game))))
+      (on-frame game st))))
 
 (defn- mcond
   [coll x]
@@ -105,9 +111,13 @@
   {:type :ui/panel
    :coll coll})
 
+(defmethod update-state :ui/panel
+  [st m]
+  (reduce update-state st (:coll m)))
+
 (defmethod process-frame :ui/panel
-  [m game]
-  (update m :coll (partial mapv #(process-frame % game))))
+  [m game st]
+  (update m :coll (partial mapv #(process-frame % game st))))
 
 (defmethod get-input-events :ui/panel
   [m game]
@@ -141,7 +151,7 @@
 (derive :ui/mouse :ui/sprite)
 
 (defmethod process-frame :ui/mouse
-  [m game]
+  [m game st]
   (assoc m :rect (mouse/rect (:mouse game))))
 
 (def basic-mouse
@@ -228,7 +238,7 @@
   (apply str (butlast s)))
 
 (defmethod on-frame :ui/text-input
-  [m game]
+  [m game st]
   (let [current-delta (:delta m 0)
         delta (:delta game 0)
         text (:entered-text m "")
@@ -239,9 +249,3 @@
       :delta (if (< current-delta 1) (+ current-delta delta) 0)
       :text (if (< current-delta 0.5) (str text "_") (str text "  "))
       :entered-text text')))
-
-;;focus
-;;focused?
-;;click-event
-;;on-focused-key-hit [k keyboard]
-;;on-focus [k

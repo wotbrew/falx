@@ -35,7 +35,10 @@
     :frame-id (gdx/get-frame-id)
     :delta (gdx/get-delta-time)))
 
-(def default-ui (menu/screen default-game))
+(def default-ui (menu/screen default-game {}))
+
+(def widget-state (agent {:widget default-ui
+                          :state {}}))
 
 (def ui-state (agent default-ui))
 
@@ -43,19 +46,19 @@
   :event/goto-menu
   :goto-menu
   (fn [_]
-    (send ui-state (constantly (menu/screen @game-state)))))
+    (send widget-state #(assoc % :widget (menu/screen @game-state (:state %))))))
 
 (event/defhandler
   :event/goto-roster
   :goto-roster
   (fn [_]
-    (send ui-state (constantly (roster/screen @game-state)))))
+    (send widget-state #(assoc % :widget (roster/screen @game-state (:state %))))))
 
 (event/defhandler
   :event/goto-create
   :goto-create
   (fn [_]
-    (send ui-state (constantly (create/screen @game-state)))))
+    (send widget-state #(assoc % :widget (create/screen @game-state (:state %))))))
 
 (defn publish-ui-events!
   [ui game]
@@ -68,19 +71,22 @@
 
 (gdx/defrender
   (try
-    (await ui-state)
+    (await widget-state)
     (let [game (swap! game-state get-next-game)
-          ui @ui-state]
-      (send ui-state widget/process-frame game)
+          {:keys [widget]} @widget-state]
+      (send widget-state
+            (fn [{:keys [widget state]}]
+              (let [w (widget/process-frame widget game state)]
+                {:widget w
+                 :state (widget/update-state state w)})))
       (future
-        (publish-ui-events! ui game))
+        (publish-ui-events! widget game))
       (future
-        (react-to-ui! ui game))
+        (react-to-ui! widget game))
       (gdx/using-camera
         (:ui-camera game)
         (draw/widget!
-         #_(create/screen @game-state)
-          ui)
+          widget)
         (draw/string! (:fps game) [0 0 64 32])))
     (catch Throwable e
       (println e)

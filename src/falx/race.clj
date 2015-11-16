@@ -10,8 +10,8 @@
    :female-body-sprite sprite/dwarf-female})
 
 (defn get-body-sprite
-  [race creature]
-  (case (:gender creature)
+  [race gender]
+  (case gender
     :male (:male-body-sprite race)
     (:female-body-sprite race)))
 

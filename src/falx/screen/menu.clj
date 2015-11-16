@@ -23,7 +23,7 @@
 (derive :menu/continue-button :ui/text-button)
 
 (defmethod widget/on-frame :menu/continue-button
-  [m game]
+  [m game st]
   (assoc m :disabled? (empty? (:saves game))))
 
 (defn continue-adventure-button
@@ -73,12 +73,12 @@
       (mapv (fn [f rect] (f rect)) coll rects))))
 
 (defn screen
-  ([game]
-   (screen game (-> game :ui-camera :size)))
-  ([game size]
+  ([game st]
+   (screen game st (-> game :ui-camera :size)))
+  ([game st size]
    (let [[x y w h :as r] (centered-rect size)]
      (-> (widget/panel
            [(widget/filler-border (rect/extend r 32))
             (title-text [x y w 32])
             (buttons [x (+ y 32) w (- h 32)])])
-         (widget/process-frame game)))))
+         (widget/process-frame game st)))))
