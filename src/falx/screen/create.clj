@@ -103,6 +103,11 @@
     (assoc st ::gender :female)
     st))
 
+(defmethod widget/get-hover-event :create/female-button
+  [m game]
+  {:type :event/set-hover-text
+   :text "Female"})
+
 (defn female-button
   [rect]
   {:type :create/female-button
@@ -147,6 +152,28 @@
    :sprite (race/get-body-sprite race {})
    :rect rect})
 
+;; ===========
+;; RACE SCROLL LEFT
+
+(derive :create/race-scroll-left :ui/text-button)
+
+(defn race-scroll-left
+  [rect]
+  {:type :create/race-scroll-left
+   :text "<"
+   :rect rect})
+
+;; ===========
+;; RACE SCROLL RIGHT
+
+(derive :create/race-scroll-right :ui/text-button)
+
+(defn race-scroll-right
+  [rect]
+  {:type :create/race-scroll-right
+   :text ">"
+   :rect rect})
+
 ;; =============
 ;; RACE ROW
 
@@ -154,9 +181,11 @@
   [rect]
   (let [[x y w h] rect]
     (widget/panel
-      (cons (widget/label [x y 64 h] "Race:")
-            (for [[i race] (map-indexed vector race/all)]
-              (race-button [(+ x 64 (* i 48)) y 48 48] race))))))
+      (into [(widget/label [x y 64 h] "Race:")
+             (race-scroll-left [(+ x 64 16) y 36 32])
+             (race-scroll-right [(+ x 96 32 (* 5 32)) y 36 32])]
+            (for [[i race] (map-indexed vector (take 4 race/all))]
+              (race-button [(+ x 96 32 (* i 48)) y 32 32] race))))))
 
 
 (defn screen
@@ -169,7 +198,7 @@
             (title-text [x y w 32])
             (name-row [x (+ y 32) (+ 64 256) 32])
             (gender-row [(+ x 96 256) (+ y 32) (+ 64 256) 32])
-            (race-row [x (+ y 64 16) w 48])
+            (race-row [x (+ y 64 16) w 32])
             (bottom-right-buttons [(+ x w -256) (+ y h -32) 256 32])
             widget/basic-mouse])
          (widget/process-frame
