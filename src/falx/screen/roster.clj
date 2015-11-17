@@ -49,8 +49,8 @@
 (derive :roster/kill-button :ui/text-button)
 
 (defmethod widget/on-frame :roster/kill-button
-  [m game st]
-  (assoc m :disabled? (nil? (-> st ::selected))))
+  [m game]
+  (assoc m :disabled? (nil? (-> game :ui ::selected))))
 
 (defn kill-button
   [rect]
@@ -64,8 +64,8 @@
 (derive :roster/details-button :ui/text-button)
 
 (defmethod widget/on-frame :roster/details-button
-  [m game st]
-  (assoc m :disabled? (nil? (-> st ::selected))))
+  [m game]
+  (assoc m :disabled? (nil? (-> game :ui ::selected))))
 
 (defn details-button
   [rect]
@@ -84,9 +84,9 @@
       (mapv (fn [f rect] (f rect)) coll rects))))
 
 (defn screen
-  ([game st]
-   (screen game st (-> game :ui-camera :size)))
-  ([game st size]
+  ([game]
+   (screen game (-> game :ui-camera :size)))
+  ([game size]
    (let [[width height] size
          [x y w h :as r] (centered-rect size)]
      (-> (widget/panel
@@ -94,4 +94,4 @@
             (title-text [x y w 32])
             (buttons [x (+ y 32) w 32])])
          (widget/process-frame
-           game st)))))
+           game)))))

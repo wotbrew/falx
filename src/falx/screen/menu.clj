@@ -23,7 +23,7 @@
 (derive :menu/continue-button :ui/text-button)
 
 (defmethod widget/on-frame :menu/continue-button
-  [m game st]
+  [m game]
   (assoc m :disabled? (empty? (:saves game))))
 
 (defn continue-adventure-button
@@ -44,7 +44,7 @@
 (defmethod widget/get-hover-text :menu/roster-button
   [m game]
   (when (:hovering? m)
-    "Roster!"))
+    "Create and manage your characters"))
 
 (defn roster-button
   [rect]
@@ -78,13 +78,13 @@
       (mapv (fn [f rect] (f rect)) coll rects))))
 
 (defn screen
-  ([game st]
-   (screen game st (-> game :ui-camera :size)))
-  ([game st size]
+  ([game]
+   (screen game (-> game :ui-camera :size)))
+  ([game size]
    (let [[x y w h :as r] (centered-rect size)]
      (-> (widget/panel
            [(widget/filler-border (rect/extend r 32))
             (title-text [x y w 32])
             (buttons [x (+ y 32) w (- h 32)])
             widget/hover-text])
-         (widget/process-frame game st)))))
+         (widget/process-frame game)))))

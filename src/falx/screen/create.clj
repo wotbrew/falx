@@ -67,20 +67,28 @@
       [(name-label [x y 64 h])
        (name-input-box [(+ x 64 16) y (- w 64 16) h])])))
 
+;; ============
+;; SET GENDER
+
+(action/defreaction
+  ::set-gender
+  :set-gender
+  (fn [m {:keys [gender]}]
+    (assoc-in m [:ui ::gender] gender)))
+
 ;; =============
 ;; MALE BUTTON
 
 (derive :create/male-button :ui/text-button)
 
 (defmethod widget/on-frame :create/male-button
-  [m game st]
-  (assoc m :selected? (-> st ::gender (= :male))))
+  [m game]
+  (assoc m :selected? (-> game :ui ::gender (= :male))))
 
-(defmethod widget/update-state :create/male-button
-  [st m]
-  (if (:clicked? m)
-    (assoc st ::gender :male)
-    st))
+(defmethod widget/get-click-action :create/male-button
+  [m game]
+  {:type ::set-gender
+   :gender :male})
 
 (defn male-button
   [rect]
@@ -94,19 +102,13 @@
 (derive :create/female-button :ui/text-button)
 
 (defmethod widget/on-frame :create/female-button
-  [m game st]
-  (assoc m :selected? (-> st ::gender (not= :male))))
-
-(defmethod widget/update-state :create/female-button
-  [st m]
-  (if (:clicked? m)
-    (assoc st ::gender :female)
-    st))
-
-(defmethod widget/get-hover-event :create/female-button
   [m game]
-  {:type :event/set-hover-text
-   :text "Female"})
+  (assoc m :selected? (-> game :ui ::gender (not= :male))))
+
+(defmethod widget/get-click-action :create/female-button
+  [m game]
+  {:type ::set-gender
+   :gender :female})
 
 (defn female-button
   [rect]
@@ -135,15 +137,20 @@
 (derive :create/race-button :ui/sprite-button)
 
 (defmethod widget/on-frame :create/race-button
-  [m game st]
-  (assoc m :sprite (race/get-body-sprite (:race m) (::gender st))
-           :selected? (-> st ::race (or race/human) (= (:race m)))))
+  [m game]
+  (assoc m :sprite (race/get-body-sprite (:race m) (-> game :ui ::gender))
+           :selected? (-> game :ui ::race (or race/human) (= (:race m)))))
 
-(defmethod widget/update-state :create/race-button
-  [st m]
-  (if (:clicked? m)
-    (assoc st ::race (:race m))
-    st))
+(defmethod widget/get-click-action :create/race-button
+  [m game]
+  {:type ::set-race
+   :race (:race m)})
+
+(action/defreaction
+  ::set-race
+  :set-race
+  (fn [m {:keys [race]}]
+    (assoc-in m [:ui ::race] race)))
 
 (defn race-button
   [rect race]
@@ -189,9 +196,9 @@
 
 
 (defn screen
-  ([game st]
-   (screen game st (-> game :ui-camera :size)))
-  ([game st size]
+  ([game]
+   (screen game (-> game :ui-camera :size)))
+  ([game size]
    (let [[x y w h :as r] (centered-rect size)]
      (-> (widget/panel
            [(widget/filler-border (rect/extend r 32))
@@ -202,5 +209,4 @@
             (bottom-right-buttons [(+ x w -256) (+ y h -32) 256 32])
             widget/basic-mouse])
          (widget/process-frame
-           game
-           st)))))
+           game)))))

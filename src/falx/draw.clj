@@ -212,6 +212,6 @@
 (defmethod thing! :ui/hover-text
   [m rect]
   (when-some [text (:text m)]
-    (sprite! sprite/pixel (rect/extend rect 4) {:color theme/dark-gray})
-    (box! (rect/extend rect 4) {:color theme/yellow})
+    (sprite! sprite/pixel (rect/extend rect 8) {:color theme/hover-box})
+    (box! (rect/extend rect 8) {:color theme/yellow})
     (centered-string! rect text)))

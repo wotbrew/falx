@@ -21,3 +21,9 @@
 (def yellow color/yellow)
 
 (def red color/red)
+
+(def black color/black)
+
+;;
+
+(def hover-box (color/with-alpha black 0.5))

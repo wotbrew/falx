@@ -36,6 +36,11 @@
   (compile
     (merge-with * a b)))
 
+(defn with-alpha
+  [color n]
+  (compile
+    (assoc color :alpha n)))
+
 (defn gdx-color->map
   [gdx-color]
   (color (.-r gdx-color)

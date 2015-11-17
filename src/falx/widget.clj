@@ -8,11 +8,6 @@
             [clojure.string :as str]
             [clj-gdx :as gdx]))
 
-(defmulti update-state (fn [st m] (:type m)))
-
-(defmethod update-state :default
-  [st m]
-  st)
 
 (defmulti on-hover-enter (fn [m game] (:type m)))
 
@@ -32,16 +27,16 @@
   [m game]
   m)
 
-(defmulti on-frame (fn [m game st] (:type m)))
+(defmulti on-frame (fn [m game] (:type m)))
 
 (defmethod on-frame :default
-  [m game st]
+  [m game]
   m)
 
-(defmulti process-frame (fn [m game st] (:type m)))
+(defmulti process-frame (fn [m game] (:type m)))
 
 (defmethod process-frame :default
-  [m game st]
+  [m game]
   (let [mouse-in? (mouse/in? (:mouse game) (:rect m rect/default))
         clicked? (and mouse-in? (mouse/clicked? (:mouse game)))]
     (cond->
@@ -63,7 +58,7 @@
       (dissoc :clicked?)
 
       :always
-      (on-frame game st))))
+      (on-frame game))))
 
 (defn- mcond
   ([coll x]
@@ -133,13 +128,9 @@
   {:type :ui/panel
    :coll coll})
 
-(defmethod update-state :ui/panel
-  [st m]
-  (reduce update-state st (:coll m)))
-
 (defmethod process-frame :ui/panel
-  [m game st]
-  (update m :coll (partial mapv #(process-frame % game st))))
+  [m game]
+  (update m :coll (partial mapv #(process-frame % game))))
 
 (defmethod get-input-events :ui/panel
   [m game]
@@ -177,7 +168,7 @@
 (derive :ui/mouse :ui/sprite)
 
 (defmethod process-frame :ui/mouse
-  [m game st]
+  [m game]
   (assoc m :rect (mouse/rect (:mouse game))))
 
 (def basic-mouse
@@ -238,13 +229,13 @@
    :rect [0 0 32 32]})
 
 (defmethod on-frame :ui/hover-text
-  [m game st]
+  [m game]
   (let [[x y] (-> game :mouse :point)
         x (+ 16 x)
         y (+ 16 y)
-        text (:hover-text st)]
+        text (:hover-text (:ui game))]
     (if (some? text)
-      (let [[w h] (gdx/get-string-wrapped-bounds text 256)]
+      (let [[w h] (gdx/get-string-wrapped-bounds text 160)]
         (assoc m :rect [x y w h]
                  :text text))
       (dissoc m :text))))
@@ -283,7 +274,7 @@
   (apply str (butlast s)))
 
 (defmethod on-frame :ui/text-input
-  [m game st]
+  [m game]
   (let [current-delta (:delta m 0)
         delta (:delta game 0)
         text (:entered-text m "")

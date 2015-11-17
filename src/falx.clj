@@ -35,38 +35,27 @@
     :frame-id (gdx/get-frame-id)
     :delta (gdx/get-delta-time)))
 
-(def default-ui (menu/screen default-game {}))
+(def default-ui (menu/screen default-game))
 
-(def widget-state (agent {:widget default-ui
-                          :state {}}))
-
-(def ui-state (agent default-ui))
+(def widget-state (agent default-ui))
 
 (event/defhandler
   :event/goto-menu
   :goto-menu
   (fn [_]
-    (send widget-state #(assoc % :widget (menu/screen @game-state (:state %))))))
+    (send widget-state (constantly (menu/screen @game-state)))))
 
 (event/defhandler
   :event/goto-roster
   :goto-roster
   (fn [_]
-    (send widget-state #(assoc % :widget (roster/screen @game-state (:state %))))))
+    (send widget-state (constantly (roster/screen @game-state)))))
 
 (event/defhandler
   :event/goto-create
   :goto-create
   (fn [_]
-    (send widget-state #(assoc % :widget (create/screen @game-state (:state %))))))
-
-(def hover-text (atom {}))
-
-(event/defhandler
-  :event/set-hover-text
-  :set-hover-text
-  (fn [action]
-    (swap! hover-text (:text action))))
+    (send widget-state (constantly (create/screen @game-state)))))
 
 (defn publish-ui-events!
   [ui game]
@@ -81,17 +70,11 @@
   (try
     (await widget-state)
     (let [game (swap! game-state get-next-game)
-          {:keys [widget]} @widget-state]
-      (send widget-state
-            (fn [{:keys [widget state]}]
-              (let [w (widget/process-frame widget game state)]
-                {:widget w
-                 :state  (-> (widget/update-state state w)
-                             (assoc :hover-text (widget/get-hover-text w game)))})))
-      (future
-        (publish-ui-events! widget game))
-      (future
-        (react-to-ui! widget game))
+          widget @widget-state]
+      (send widget-state widget/process-frame game)
+      (publish-ui-events! widget game)
+      (react-to-ui! widget game)
+      (swap! game-state assoc-in [:ui :hover-text] (widget/get-hover-text widget game))
       (gdx/using-camera
         (:ui-camera game)
         (draw/widget!
