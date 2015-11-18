@@ -3,6 +3,14 @@
             [falx.widget :as widget]
             [falx.theme :as theme]))
 
+(defn get-state
+  [game]
+  (-> game :ui :roster))
+
+(defn update-state
+  [game f & args]
+  (update-in game [:ui :roster] #(apply f % args)))
+
 (defn centered-rect
   [size]
   (let [[width height] size]
@@ -17,31 +25,27 @@
 ;; MENU BUTTON
 
 (derive :roster/menu-button :ui/text-button)
-
-(defmethod widget/get-click-event :roster/menu-button
-  [m game]
-  {:type :event/goto-menu})
+(derive :roster/menu-button :ui/nav-button)
 
 (defn menu-button
   [rect]
   {:type :roster/menu-button
    :text "(M)enu"
-   :rect rect})
+   :rect rect
+   :screen-key :menu})
 
 ;; ================
 ;; CREATE BUTTON
 
 (derive :roster/create-button :ui/text-button)
-
-(defmethod widget/get-click-event :roster/create-button
-  [m game]
-  {:type :event/goto-create})
+(derive :roster/create-button :ui/nav-button)
 
 (defn create-button
   [rect]
   {:type :roster/create-button
    :text "(C)reate"
-   :rect rect})
+   :rect rect
+   :screen-key :create})
 
 ;; ==============
 ;; KILL BUTTON
@@ -50,7 +54,7 @@
 
 (defmethod widget/on-frame :roster/kill-button
   [m game]
-  (assoc m :disabled? (nil? (-> game :ui ::selected))))
+  (assoc m :disabled? (nil? (:selected (get-state game)))))
 
 (defn kill-button
   [rect]
@@ -65,7 +69,7 @@
 
 (defmethod widget/on-frame :roster/details-button
   [m game]
-  (assoc m :disabled? (nil? (-> game :ui ::selected))))
+  (assoc m :disabled? (nil? (:selected (get-state game)))))
 
 (defn details-button
   [rect]
@@ -84,16 +88,18 @@
       (mapv (fn [f rect] (f rect)) coll rects))))
 
 (defn screen
-  ([game]
-   (screen game (-> game :ui-camera :size)))
-  ([game size]
-   (let [[width height] size
-         [x y w h :as r] (centered-rect size)]
-     (-> (widget/panel
-           [(widget/filler-border (rect/extend r 32))
-            (title-text [x y w 32])
-            (buttons [x (+ y 32) w 32])
-            widget/hover-text
-            widget/basic-mouse])
-         (widget/process-frame
-           game)))))
+  [game size]
+  (let [[width height] size
+        [x y w h :as r] (centered-rect size)]
+    (-> (widget/panel
+          [(widget/filler-border (rect/extend r 32))
+           (title-text [x y w 32])
+           (buttons [x (+ y 32) w 32])
+           widget/hover-text
+           widget/basic-mouse])
+        (widget/process-frame
+          game))))
+
+(defmethod widget/get-screen :roster
+  [_ game size]
+  (screen game size))

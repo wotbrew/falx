@@ -21,6 +21,7 @@
 ;; CONTINUE BUTTON
 
 (derive :menu/continue-button :ui/text-button)
+(derive :menu/continue-button :ui/nav-button)
 
 (defmethod widget/on-frame :menu/continue-button
   [m game]
@@ -30,16 +31,14 @@
   [rect]
   {:type :menu/continue-button
    :text "(C)ontinue Adventure"
-   :rect rect})
+   :rect rect
+   :screen-key :continue})
 
 ;; ===============
 ;; ROSTER BUTTON
 
 (derive :menu/roster-button :ui/text-button)
-
-(defmethod widget/get-click-event :menu/roster-button
-  [m game]
-  {:type :event/goto-roster})
+(derive :menu/roster-button :ui/nav-button)
 
 (defmethod widget/get-hover-text :menu/roster-button
   [m game]
@@ -50,7 +49,8 @@
   [rect]
   {:type :menu/roster-button
    :text "(R)oster"
-   :rect rect})
+   :rect rect
+   :screen-key :roster})
 
 ;; ===============
 ;; SETTINGS BUTTON
@@ -78,14 +78,16 @@
       (mapv (fn [f rect] (f rect)) coll rects))))
 
 (defn screen
-  ([game]
-   (screen game (-> game :ui-camera :size)))
-  ([game size]
-   (let [[x y w h :as r] (centered-rect size)]
-     (-> (widget/panel
-           [(widget/filler-border (rect/extend r 32))
-            (title-text [x y w 32])
-            (buttons [x (+ y 32) w (- h 32)])
-            widget/hover-text
-            widget/basic-mouse])
-         (widget/process-frame game)))))
+  [game size]
+  (let [[x y w h :as r] (centered-rect size)]
+    (-> (widget/panel
+          [(widget/filler-border (rect/extend r 32))
+           (title-text [x y w 32])
+           (buttons [x (+ y 32) w (- h 32)])
+           widget/hover-text
+           widget/basic-mouse])
+        (widget/process-frame game))))
+
+(defmethod widget/get-screen :menu
+  [_ game size]
+  (screen game size))

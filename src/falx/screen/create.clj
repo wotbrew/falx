@@ -29,16 +29,14 @@
 ;; CANCEL BUTTON
 
 (derive :create/cancel-button :ui/text-button)
-
-(defmethod widget/get-click-event :create/cancel-button
-  [m game]
-  {:type :event/goto-roster})
+(derive :create/cancel-button :ui/nav-button)
 
 (defn cancel-button
   [rect]
   {:type :create/cancel-button
    :text "Cancel (Esc)"
-   :rect rect})
+   :rect rect
+   :screen-key :roster})
 
 ;;=============
 ;; OK BUTTON
@@ -224,18 +222,20 @@
               (race-button [(+ x 96 32 (* i 48)) y 32 32] race))))))
 
 (defn screen
-  ([game]
-   (screen game (-> game :ui-camera :size)))
-  ([game size]
-   (let [[x y w h :as r] (centered-rect size)]
-     (-> (widget/panel
-           [(widget/filler-border (rect/extend r 32))
-            (title-text [x y w 32])
-            (name-row [x (+ y 32) (+ 64 256) 32])
-            (gender-row [(+ x 96 256) (+ y 32) (+ 64 256) 32])
-            (race-row [x (+ y 64 16) w 32])
-            (bottom-right-buttons [(+ x w -256) (+ y h -32) 256 32])
-            widget/hover-text
-            widget/basic-mouse])
-         (widget/process-frame
-           game)))))
+  [game size]
+  (let [[x y w h :as r] (centered-rect size)]
+    (-> (widget/panel
+          [(widget/filler-border (rect/extend r 32))
+           (title-text [x y w 32])
+           (name-row [x (+ y 32) (+ 64 256) 32])
+           (gender-row [(+ x 96 256) (+ y 32) (+ 64 256) 32])
+           (race-row [x (+ y 64 16) w 32])
+           (bottom-right-buttons [(+ x w -256) (+ y h -32) 256 32])
+           widget/hover-text
+           widget/basic-mouse])
+        (widget/process-frame
+          game))))
+
+(defmethod widget/get-screen :create
+  [_ game size]
+  (screen game size))

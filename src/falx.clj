@@ -5,9 +5,9 @@
             [falx.event :as event]
             [falx.action :as action]
             [falx.screen
-             [menu]
-             [roster :as roster]
-             [create :as create]]
+             [menu :as menu]
+             [roster]
+             [create]]
             [falx.draw :as draw]))
 
 (def max-fps 60)
@@ -35,27 +35,17 @@
     :frame-id (gdx/get-frame-id)
     :delta (gdx/get-delta-time)))
 
-(def default-ui (menu/screen default-game))
+(def default-ui (menu/screen default-game (:size (:ui-camera @game-state))))
 
 (def widget-state (agent default-ui))
 
 (event/defhandler
-  :event/goto-menu
-  :goto-menu
-  (fn [_]
-    (send widget-state (constantly (menu/screen @game-state)))))
-
-(event/defhandler
-  :event/goto-roster
-  :goto-roster
-  (fn [_]
-    (send widget-state (constantly (roster/screen @game-state)))))
-
-(event/defhandler
-  :event/goto-create
-  :goto-create
-  (fn [_]
-    (send widget-state (constantly (create/screen @game-state)))))
+  :event/goto
+  :goto
+  (fn [event]
+    (let [game @game-state
+          widget (widget/get-screen (:screen-key event) game (:size (:ui-camera game)))]
+      (send widget-state (constantly widget)))))
 
 (defn publish-ui-events!
   [ui game]

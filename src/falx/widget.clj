@@ -8,7 +8,6 @@
             [clojure.string :as str]
             [clj-gdx :as gdx]))
 
-
 (defmulti on-hover-enter (fn [m game] (:type m)))
 
 (defmethod on-hover-enter :default
@@ -256,8 +255,6 @@
    :rect rect
    :entered-text ""})
 
-(defn edit-string [])
-
 (defmulti edit-string (fn [s k kboard] k))
 
 (defmethod edit-string :default
@@ -292,3 +289,21 @@
       :delta (if (< current-delta 1) (+ current-delta delta) 0)
       :text (if (< current-delta 0.5) (str text "_") (str text "  "))
       :entered-text text')))
+
+;; ================
+;; NAVIGATION BUTTON
+
+(defmethod get-click-event :ui/nav-button
+  [m game]
+  (when (not (:disabled? m))
+    {:type       :event/goto
+     :screen-key (:screen-key m)}))
+
+;; ================
+;; SCREEN
+
+(defmulti get-screen (fn [key game rect] key))
+
+(defmethod get-screen :default
+  [key game rect]
+  (label rect (format "Unknown Screen %s, make sure ns is loaded" key)))
