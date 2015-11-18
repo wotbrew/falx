@@ -42,12 +42,35 @@
 ;; OK BUTTON
 
 (derive :create/ok-button :ui/text-button)
+(derive :create/ok-button :ui/nav-button)
 
 (defn ok-button
   [rect]
   {:type :create/ok-button
    :text "Ok (Enter)"
-   :rect rect})
+   :rect rect
+   :screen-key :roster})
+
+(action/defreaction
+  ::create-character
+  :create-character
+  (fn [m {:keys [entity]}]
+    (update m :roster (fnil conj []) entity)))
+
+(defmethod widget/get-click-action :create/ok-button
+  [m game]
+  (let [{:keys [gender race name]}
+        (merge
+          {:gender gender/male
+           :race   race/human
+           :name   "???"}
+          (get-state game))]
+    {:type   ::create-character
+     :entity {:type :entity/creature
+              :player? true
+              :gender gender
+              :race   race
+              :name   name}}))
 
 ;; ==============
 

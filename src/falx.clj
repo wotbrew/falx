@@ -10,7 +10,7 @@
              [create]]
             [falx.draw :as draw]))
 
-(def max-fps 60)
+(def max-fps 0)
 
 (def default-game
   {:mouse    gdx/default-mouse
@@ -62,8 +62,8 @@
     (let [game (swap! game-state get-next-game)
           widget @widget-state]
       (send widget-state widget/process-frame game)
-      (publish-ui-events! widget game)
       (react-to-ui! widget game)
+      (publish-ui-events! widget game)
       (swap! game-state assoc-in [:ui :hover-text] (widget/get-hover-text widget game))
       (gdx/using-camera
         (:ui-camera game)
@@ -76,6 +76,7 @@
 
 (def app
   (assoc gdx/default-app
+    :max-background-fps max-fps
     :max-foreground-fps max-fps))
 
 (defn -main

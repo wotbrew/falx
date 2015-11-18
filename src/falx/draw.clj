@@ -39,9 +39,9 @@
        (if (< i_ i)
          (do
            (sprite! sprite
-                         (+ x (* i_ w2))
-                         (+ y (* j_ h2))
-                         w2 h2 context)
+                    (+ x (* i_ w2))
+                    (+ y (* j_ h2))
+                    w2 h2 context)
            (recur (inc i_) j_))
          (when (< j_ (dec j))
            (recur 0 (inc j_))))))))

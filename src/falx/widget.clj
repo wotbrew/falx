@@ -129,7 +129,8 @@
 
 (defmethod process-frame :ui/panel
   [m game]
-  (update m :coll (partial mapv #(process-frame % game))))
+  (-> (on-frame m game)
+      (update :coll (partial mapv #(process-frame % game)))))
 
 (defmethod get-input-events :ui/panel
   [m game]
