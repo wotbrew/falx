@@ -4,7 +4,16 @@
             [falx.rect :as rect]
             [falx.sprite :as sprite]
             [falx.race :as race]
-            [falx.action :as action]))
+            [falx.action :as action]
+            [falx.gender :as gender]))
+
+(defn get-state
+  [game]
+  (-> game :ui :create))
+
+(defn update-state
+  [game f & args]
+  (update-in game [:ui :create] #(apply f % args)))
 
 (defn centered-rect
   [size]
@@ -32,7 +41,7 @@
    :rect rect})
 
 ;;=============
-;; CREATE BUTTON
+;; OK BUTTON
 
 (derive :create/ok-button :ui/text-button)
 
@@ -68,31 +77,44 @@
        (name-input-box [(+ x 64 16) y (- w 64 16) h])])))
 
 ;; ============
-;; SET GENDER
+;; GENDER BUTTON
+
+(defmethod widget/get-click-action :create/gender-button
+  [m game]
+  {:type ::set-gender
+   :gender (:gender m)})
 
 (action/defreaction
   ::set-gender
   :set-gender
   (fn [m {:keys [gender]}]
-    (assoc-in m [:ui ::gender] gender)))
+    (update-state m assoc :gender gender)))
+
+(defmethod widget/on-frame :create/gender-button
+  [m game]
+  (let [gender (:gender m)
+        selected-gender (:gender (get-state game) gender/male)]
+    (assoc m :selected? (= gender selected-gender))))
+
+(defmethod widget/get-hover-text :create/gender-button
+  [m game]
+  (when (:hovering? m)
+    (format
+      "%s
+    ----------
+    Has no impact on character attributes"
+      (:name (:gender m)))))
 
 ;; =============
 ;; MALE BUTTON
 
 (derive :create/male-button :ui/text-button)
-
-(defmethod widget/on-frame :create/male-button
-  [m game]
-  (assoc m :selected? (-> game :ui ::gender (= :male))))
-
-(defmethod widget/get-click-action :create/male-button
-  [m game]
-  {:type ::set-gender
-   :gender :male})
+(derive :create/male-button :create/gender-button)
 
 (defn male-button
   [rect]
   {:type :create/male-button
+   :gender gender/male
    :text "M"
    :rect rect})
 
@@ -100,19 +122,12 @@
 ;; FEMALE BUTTON
 
 (derive :create/female-button :ui/text-button)
-
-(defmethod widget/on-frame :create/female-button
-  [m game]
-  (assoc m :selected? (-> game :ui ::gender (not= :male))))
-
-(defmethod widget/get-click-action :create/female-button
-  [m game]
-  {:type ::set-gender
-   :gender :female})
+(derive :create/female-button :create/gender-button)
 
 (defn female-button
   [rect]
   {:type :create/female-button
+   :gender gender/female
    :text "F"
    :rect rect})
 
@@ -138,8 +153,11 @@
 
 (defmethod widget/on-frame :create/race-button
   [m game]
-  (assoc m :sprite (race/get-body-sprite (:race m) (-> game :ui ::gender))
-           :selected? (-> game :ui ::race (or race/human) (= (:race m)))))
+  (let [{:keys [gender race]} (get-state game)
+        race (or race race/human)
+        widget-race (:race m)]
+    (assoc m :sprite (race/get-body-sprite widget-race gender)
+             :selected? (= race widget-race))))
 
 (defmethod widget/get-click-action :create/race-button
   [m game]
@@ -150,7 +168,18 @@
   ::set-race
   :set-race
   (fn [m {:keys [race]}]
-    (assoc-in m [:ui ::race] race)))
+    (update-state m assoc :race race)))
+
+(defn get-race-hover-text
+  [race]
+  (str (:name race "???")
+       "\n-------------\n"
+       (:description race "???")))
+
+(defmethod widget/get-hover-text :create/race-button
+  [m game]
+  (when (:hovering? m)
+    (get-race-hover-text (:race m))))
 
 (defn race-button
   [rect race]
@@ -194,7 +223,6 @@
             (for [[i race] (map-indexed vector (take 4 race/all))]
               (race-button [(+ x 96 32 (* i 48)) y 32 32] race))))))
 
-
 (defn screen
   ([game]
    (screen game (-> game :ui-camera :size)))
@@ -207,6 +235,7 @@
             (gender-row [(+ x 96 256) (+ y 32) (+ 64 256) 32])
             (race-row [x (+ y 64 16) w 32])
             (bottom-right-buttons [(+ x w -256) (+ y h -32) 256 32])
+            widget/hover-text
             widget/basic-mouse])
          (widget/process-frame
            game)))))

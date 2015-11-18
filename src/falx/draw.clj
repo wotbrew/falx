@@ -209,9 +209,14 @@
 ;; =================================
 ;; HOVER TEXT
 
+(def hover-text-box-context {:color theme/hover-box})
+
+(def hover-text-box-border-context {:color theme/yellow})
+
 (defmethod thing! :ui/hover-text
   [m rect]
   (when-some [text (:text m)]
-    (sprite! sprite/pixel (rect/extend rect 8) {:color theme/hover-box})
-    (box! (rect/extend rect 8) {:color theme/yellow})
-    (centered-string! rect text)))
+    (let [nrect (rect/extend rect 8)]
+      (sprite! sprite/pixel nrect hover-text-box-context)
+      (box! nrect hover-text-box-border-context)
+      (centered-string! rect text))))

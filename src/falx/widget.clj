@@ -235,7 +235,14 @@
         y (+ 16 y)
         text (:hover-text (:ui game))]
     (if (some? text)
-      (let [[w h] (gdx/get-string-wrapped-bounds text 160)]
+      (let [[w h] (gdx/get-string-wrapped-bounds text 256)
+            [sw sh] (-> game :ui-camera :size)
+            x (if (< (+ x w) sw)
+                x
+                (- x w))
+            y (if (< (+ x h) sh)
+                y
+                (- y h))]
         (assoc m :rect [x y w h]
                  :text text))
       (dissoc m :text))))

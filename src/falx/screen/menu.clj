@@ -86,5 +86,6 @@
            [(widget/filler-border (rect/extend r 32))
             (title-text [x y w 32])
             (buttons [x (+ y 32) w (- h 32)])
-            widget/hover-text])
+            widget/hover-text
+            widget/basic-mouse])
          (widget/process-frame game)))))
