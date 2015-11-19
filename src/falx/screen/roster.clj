@@ -129,6 +129,9 @@
    :entity entity
    :rect rect})
 
+;; ==============
+;; CHARACTER PANEL
+
 (derive :roster/character-panel :ui/panel)
 
 (defn get-character-buttons
@@ -151,6 +154,9 @@
   {:type :roster/character-panel
    :rect rect
    :coll (get-character-buttons rect roster)})
+
+;; ============
+;; SCREEN
 
 (defn screen
   [game size]

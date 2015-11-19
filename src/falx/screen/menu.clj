@@ -13,9 +13,15 @@
   (-> (widget/label rect ":: FALX ::")
       (assoc :context {:color theme/red})))
 
+(derive :menu/new-button :ui/text-button)
+(derive :menu/new-button :ui/nav-button)
+
 (defn new-adventure-button
   [rect]
-  (widget/text-button "(N)ew Adventure" rect))
+  {:type :menu/new-button
+   :text "(N)ew Adventure"
+   :rect rect
+   :screen-key :new})
 
 ;; =========
 ;; CONTINUE BUTTON

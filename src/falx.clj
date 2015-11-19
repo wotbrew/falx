@@ -7,10 +7,11 @@
             [falx.screen
              [menu :as menu]
              [roster]
-             [create]]
+             [create]
+             [new]]
             [falx.draw :as draw]))
 
-(def max-fps 0)
+(def max-fps 60)
 
 (def default-game
   {:mouse    gdx/default-mouse

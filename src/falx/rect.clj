@@ -44,24 +44,28 @@
      (+ h n n)]))
 
 (defn fit-tiled
-  [rect size]
-  (let [[x y w h] rect
-        [w2 h2] size
-        i (int (/ w w2))
-        j (int (/ h h2))]
-    (loop [i_ 0
-           j_ 0
-           acc (transient [])]
-      (if (< i_ i)
-        (recur (inc i_)
-               j_
-               (conj! acc
-                      [(+ x (* i_ w2))
-                       (+ y (* j_ h2))
-                       w2 h2]))
-        (if (< j_ (dec j))
-          (recur 0 (inc j_) acc)
-          (persistent! acc))))))
+  ([rect size]
+   (let [[w2 h2] size]
+     (fit-tiled rect w2 h2)))
+  ([rect w2 h2]
+   (let [[x y w h] rect]
+     (fit-tiled x y w h w2 h2)))
+  ([x y w h w2 h2]
+   (let [i (int (/ w w2))
+         j (int (/ h h2))]
+     (loop [i_ 0
+            j_ 0
+            acc (transient [])]
+       (if (< i_ i)
+         (recur (inc i_)
+                j_
+                (conj! acc
+                       [(+ x (* i_ w2))
+                        (+ y (* j_ h2))
+                        w2 h2]))
+         (if (< j_ (dec j))
+           (recur 0 (inc j_) acc)
+           (persistent! acc)))))))
 
 (defn fit-horizontal
   ([rect n]
