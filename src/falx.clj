@@ -5,10 +5,11 @@
             [falx.event :as event]
             [falx.action :as action]
             [falx.screen
-             [menu :as menu]
+             [menu]
              [roster]
              [create]
-             [new]]
+             [new]
+             [play]]
             [falx.draw :as draw]))
 
 (def max-fps 60)
@@ -36,7 +37,7 @@
     :frame-id (gdx/get-frame-id)
     :delta (gdx/get-delta-time)))
 
-(def default-ui (menu/screen default-game (:size (:ui-camera @game-state))))
+(def default-ui (falx.screen.play/screen default-game (:size (:ui-camera @game-state))))
 
 (def widget-state (agent default-ui))
 

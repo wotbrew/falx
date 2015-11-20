@@ -220,3 +220,12 @@
       (sprite! sprite/pixel nrect hover-text-box-context)
       (box! nrect hover-text-box-border-context)
       (centered-string! rect text))))
+
+
+;; ==================================
+;; PLAY
+
+(defmethod thing! :play/screen
+  [m rect]
+  (let [[x y w h] rect]
+    ))

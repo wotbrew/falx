@@ -20,19 +20,18 @@
 (defn left-rect
   [rect]
   (let [[x y w h] rect]
-    [x (+ y 32) (int (/ w 2)) h]))
+    [x (+ y 32) 192 h]))
 
 (defn right-rect
   [rect]
   (let [[x y w h] rect
-        hw (int (/ w 2))]
-    [(+ x hw) (+ y 32) hw h]))
+        hw (- w 224)]
+    [(+ x 224) (+ y 32) hw h]))
 
 (defn title-text
   [rect]
   (-> (widget/label rect ":: CREATE ::")
       (assoc :context {:color theme/red})))
-
 
 ;; =============
 ;; CANCEL BUTTON
@@ -78,14 +77,17 @@
   [game rect]
   (let [[x y w h] rect]
     (widget/panel
-      [(widget/filler-border rect)])))
+      [(widget/filler [x y w 32])
+       (widget/filler [(+ x w) y 32 h])
+       (widget/label [x (+ y 32) w 32] "Party")])))
 
 (defn right-panel
   [game rect]
   (let [[x y w h] rect]
     (widget/panel
-      [(widget/filler-border rect)
-       (bottom-right-buttons [(+ x w -288) (+ y h -64) 256 32])])))
+      [(widget/filler [x y w 32])
+       (bottom-right-buttons [(+ x w -256) (+ y h -64) 256 32])
+       (widget/label [x (+ y 32) w 32] "Adventure")])))
 
 (defn screen
   [game size]

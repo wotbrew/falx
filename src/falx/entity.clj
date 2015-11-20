@@ -34,18 +34,13 @@
   ([m id k not-found]
    (get (find m id) k not-found)))
 
-(defn find-ids
+(defn find-ids-with
   [m k v]
   (-> m ::ave (get k) (get v) (or #{})))
 
-(defn find-first-id
+(defn find-with
   [m k v]
-  (first (find-ids m k v)))
-
-(defn find-first
-  [m k v]
-  (when-some [id (find-first-id m k v)]
-    (find m id)))
+  (map #(find m %) (find-ids-with m k v)))
 
 (defn dissoc-att
   ([m id k]
