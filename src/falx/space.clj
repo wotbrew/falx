@@ -31,61 +31,33 @@
   {:map map
    :point point})
 
-(defn position
-  [map point layer]
-  {:map map
-   :point point
-   :layer layer})
-
-(defn space
-  [layer-sort-map]
-  {:sort-order layer-sort-map})
-
-(defn position->cell
-  [position]
-  (cell (:map position) (:point position)))
-
-(defn cell->position
-  [cell layer]
-  (position (:map cell) (:point cell) layer))
-
-(defn find-position
-  [space id]
-  (-> space :id (get id)))
+(def default
+  {})
 
 (defn find-cell
   [space id]
-  (when-some [pos (find-position space id)]
-    (position->cell pos)))
+  (-> space :id (get id)))
 
-(defn find-in-position
-  [space position]
-  (-> space :position (get position)))
-
-(defn find-in-cell
+(defn list-in-cell
   [space cell]
   (-> space :cell (get cell)))
 
-(defn find-in-map
+(defn list-in-map
   [space map]
   (-> space :map (get map)))
 
 (defn unput
   [space id]
-  (if-some [pos (find-position space id)]
-    (let [cell (position->cell pos)]
-      (-> space
-          (dissoc-in [:id id])
-          (disjoc-in [:position position] id)
-          (disjoc-in [:cell cell] id)
-          (disjoc-in [:map (:map cell)] id)))
+  (if-some [cell (find-cell space id)]
+    (-> space
+        (dissoc-in [:id id])
+        (disjoc-in [:cell cell] id)
+        (disjoc-in [:map (:map cell)] id))
     space))
 
 (defn put
-  [space id position]
-  (let [cell (position->cell position)]
-    (-> (unput space id)
-        (assoc-in [:id id] position)
-        (update-in [:position position] set-conj id)
-        (update-in [:cell cell] set-conj id)
-        (update-in [:map (:map cell)] set-conj id))))
+  [space id cell]
+  (-> (unput space id)
+      (assoc-in [:id id] cell)
+      (update-in [:cell cell] set-conj id)
+      (update-in [:map (:map cell)] set-conj id)))

@@ -1,5 +1,12 @@
 (ns falx.index
+  "Manages re-indexing entities"
+  (:refer-clojure :exclude [find])
   (:require [clojure.set :as set]))
+
+(def default
+  {:id 0
+   :eav {}
+   :ave {}})
 
 (defn disjoc
   [m k v]
@@ -34,13 +41,17 @@
   ([m id k not-found]
    (get (find m id) k not-found)))
 
-(defn find-ids-with
+(defn list-ids-with
   [m k v]
   (-> m :ave (get k) (get v) (or #{})))
 
-(defn find-with
+(defn list-with
   [m k v]
-  (map #(find m %) (find-ids-with m k v)))
+  (map #(find m %) (list-ids-with m k v)))
+
+(defn list-unique-values
+  [m k]
+  (-> m :ave (get k) keys))
 
 (defn dissoc-att
   ([m id k]
