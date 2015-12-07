@@ -1,63 +1,64 @@
 (ns falx.world
-  (:require [falx.space :as space]
-            [falx.index :as index]))
+  (:require [falx.util :refer :all])
+  (:refer-clojure :exclude [empty]))
 
-(def default
-  {:space space/default
-   :index index/default})
+(def empty {:seed 0
+            :eav {}
+            :ave {}})
 
-;; ==============
-;; ENTITIES
+(defn get-entity
+  [world eid]
+  (-> world :eav (get eid)))
 
-(defn find-entity
-  [world id]
-  (index/find (:index world) id))
-
-(defn list-ids-in-cell
-  [world cell]
-  (space/list-in-cell (:space world) cell))
-
-(defn list-entities-in-cell
-  [world cell]
-  (when-some [ids (seq (list-ids-in-cell world cell))]
-    (map #(find-entity world %) ids)))
-
-(defn list-ids-with
+(defn get-eids-with
   [world attribute value]
-  (index/list-ids-with (:index world) attribute value))
+  (-> world :ave (get attribute) (get value)))
 
-(defn list-with
+(defn get-entities-with
   [world attribute value]
-  (index/list-with (:index world) attribute value))
+  (map #(get-entity world %) (get-eids-with world attribute value)))
 
-;; ============
-;; SYNC
+(defn add-entity-attribute
+  [world eid attribute value]
+  (-> world
+      (assoc-in [:eav eid attribute] value)
+      (update-in [:ave attribute value] set-conj eid)))
 
-(defn sync-cell
+(defn get-entity-attribute
+  ([world eid attribute]
+   (-> world :eav (get eid) (get attribute)))
+  ([world eid attribute not-found]
+   (-> world :eav (get eid) (get attribute not-found))))
+
+(defn remove-entity-attribute
+  [world eid attribute]
+  (let [val (get-entity-attribute world eid attribute ::nope)]
+    (if (identical? ::nope val)
+      world
+      (-> world
+          (dissoc-in [:eav eid attribute])
+          (disjoc-in [:ave attribute val] eid)))))
+
+(defn remove-entity
+  [world eid]
+  (reduce #(remove-entity-attribute %1 eid %2) world (keys (get-entity world eid))))
+
+(defn add-entity
   [world entity]
-  (let [space (:space world)
-        id (:id entity)
-        current (space/find-cell space id)
-        new (:cell entity)]
-    (cond
-      (nil? new) (update world :space space/unput id)
-      (not= current new) (update world :space space/put id new)
-      :else world)))
+  (let [id (:id entity (:seed world 0))
+        entity' (assoc entity :id id)
+        world' (remove-entity world id)
+        world'' (update world' :seed (fnil inc 0))]
+    (reduce-kv #(add-entity-attribute %1 id %2 %3) world'' entity')))
 
-;; =============
-;; CHANGE
+(defn add-entities
+  [world entities]
+  (reduce add-entity world entities))
 
-(defn change
-  [world entity]
-  (let [m (update world :index index/ingest entity)
-        id (:id entity (:id world 0))]
-    (sync-cell m (find-entity m id))))
-
-;; =============
-;; QUERY
-
-(defn ask
-  ([world id f]
-   (index/ask (:index world) id f))
-  ([world id f & args]
-    (ask world id #(apply f % args))))
+(defn update-entity
+  ([world eid f]
+    (if-some [entity (get-entity world eid)]
+      (add-entity world (f entity))
+      world))
+  ([world eid f & args]
+    (update-entity world eid #(apply f % args))))

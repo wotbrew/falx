@@ -158,11 +158,6 @@
                        ~@body)))
 
 (defn draw-sprite!
-  ([sprite rect]
-   (draw-sprite! sprite rect {}))
-  ([sprite rect context]
-   (let [[x y w h] rect]
-     (draw-sprite! sprite x y w h context)))
   ([sprite x y w h]
    (draw-sprite! sprite x y w h {}))
   ([sprite x y w h context]
@@ -171,11 +166,6 @@
      (batch/draw-texture-region! *sprite-batch* (region/find sprite) x y w h))))
 
 (defn draw-string!
-  ([s rect]
-   (draw-string! s rect {}))
-  ([s rect context]
-   (let [[x y w] rect]
-     (draw-string! s x y w context)))
   ([s x y w]
    (draw-string! s x y w {}))
   ([s x y w context]

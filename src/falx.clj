@@ -1,77 +1,29 @@
 (ns falx
   (:require [clj-gdx :as gdx]
-            [falx.screen.menu :as menu]
-            [falx.widget :as widget]
-            [falx.event :as event]
-            [falx.action :as action]
-            [falx.screen
-             [menu]
-             [roster]
-             [create]
-             [new]
-             [play]]
-            [falx.draw :as draw]))
+            [falx.game :as game]
+            [falx.input :as input]
+
+            [falx.draw.world :as draw-world]
+            [falx.world :as world]
+            [falx.levels.testing :as level-testing]
+            [falx.entity :as entity]))
 
 (def max-fps 60)
 
-(def default-game
-  {:mouse    gdx/default-mouse
-   :keyboard gdx/default-keyboard
-   :display gdx/default-display
-   :ui-camera gdx/default-camera
-   :game-camera gdx/default-camera
-   :delta 0.0
-   :fps 0
-   :max-fps max-fps})
-
-(def game-state
-  (atom default-game))
-
-(defn get-next-game
-  [game]
-  (assoc game
-    :mouse @gdx/mouse-state
-    :keyboard @gdx/keyboard-state
-    :display (gdx/get-display)
-    :fps (gdx/get-fps)
-    :frame-id (gdx/get-frame-id)
-    :delta (gdx/get-delta-time)))
-
-(def default-ui (falx.screen.play/screen default-game (:size (:ui-camera @game-state))))
-
-(def widget-state (agent default-ui))
-
-(event/defhandler
-  :event/goto
-  :goto
-  (fn [event]
-    (let [game @game-state
-          widget (widget/get-screen (:screen-key event) game (:size (:ui-camera game)))]
-      (send widget-state (constantly widget)))))
-
-(defn publish-ui-events!
-  [ui game]
-  (run! event/publish! (widget/get-input-events ui game)))
-
-(defn react-to-ui!
-  [ui game]
-  (let [actions (widget/get-input-actions ui game)]
-    (swap! game-state #(reduce action/react % actions))))
+(def game-atom (atom {}))
 
 (gdx/defrender
   (try
-    (await widget-state)
-    (let [game (swap! game-state get-next-game)
-          widget @widget-state]
-      (send widget-state widget/process-frame game)
-      (react-to-ui! widget game)
-      (publish-ui-events! widget game)
-      (swap! game-state assoc-in [:ui :hover-text] (widget/get-hover-text widget game))
+    (let [input {:keyboard @gdx/keyboard-state
+                 :mouse @gdx/mouse-state}
+          actions (input/get-input-actions input @game-atom)]
+      (swap! game-atom #(reduce game/act % actions))
       (gdx/using-camera
-        (:ui-camera game)
-        (draw/widget!
-          widget)
-        (draw/string! (:fps game) [0 0 64 32])))
+        gdx/default-camera
+        (draw-world/draw! @level-testing/world level-testing/level))
+      (gdx/using-camera
+        gdx/default-camera
+        (gdx/draw-string! (gdx/get-fps) 0 0 128)))
     (catch Throwable e
       (println e)
       (Thread/sleep 5000))))
