@@ -19,8 +19,7 @@
 (defn set-position!
   [gdx-camera x y]
   (let [^Vector3 pos (.-position gdx-camera)]
-    (set! (.-x pos) (float x))
-    (set! (.-y pos) (float y))))
+    (.set pos (float x) (float y) 0)))
 
 (defn update!
   [^Camera gdx-camera]
@@ -48,28 +47,10 @@
       (doto @ortho-instance
         (set-to-ortho! w h flip-y?)
         (set-position! x y)
-        (.update true)))
+        update!))
     nil))
 
 (defmulti get-gdx-camera :type)
-
-(defn get-screen-point
-  ([camera [x y]]
-    (get-screen-point camera x y))
-  ([camera x y]
-    (let [^Camera cam (get-gdx-camera camera)
-          v3 (.project cam (Vector3. x y 0.0))]
-      [(int (.-x v3))
-       (int (.-y v3))])))
-
-(defn get-world-point
-  ([camera [x y]]
-    (get-world-point camera x y))
-  ([camera x y]
-    (let [^Camera cam (get-gdx-camera camera)
-          v3 (.unproject cam (Vector3. x y 0.0) )]
-      [(int (.-x v3))
-       (int (.-y v3))])))
 
 (defmethod get-gdx-camera :camera/orthographic
   [camera]
@@ -81,6 +62,30 @@
      ~batch
      (get-combined ~gdx-camera)
      ~@body))
+
+(defn get-screen-point
+  ([camera [x y]]
+   (get-screen-point camera x y))
+  ([camera x y]
+   (sync-camera! camera)
+   (dispatch/on-render-thread
+     (let [^Camera cam (get-gdx-camera camera)
+           v3 (Vector3. x y 1)]
+       (.project cam v3)
+       [(int (.-x v3))
+        (int (.-y v3))]))))
+
+(defn get-world-point
+  ([camera [x y]]
+   (get-world-point camera x y))
+  ([camera x y]
+   (sync-camera! camera)
+   (dispatch/on-render-thread
+     (let [^Camera cam (get-gdx-camera camera)
+           v3 (Vector3. x y 1)]
+       (.unproject cam v3)
+       [(int (.-x v3))
+        (int (.-y v3))]))))
 
 (defmacro using-camera
   [batch camera & body]

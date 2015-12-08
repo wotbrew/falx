@@ -48,7 +48,7 @@
   [batch matrix & body]
   `(let [^SpriteBatch b# ~batch
          ^Matrix4 m# ~matrix
-         ^Matrix4 o# (.getProjectionMatrix b#)]
+         ^Matrix4 o# (.cpy (.getProjectionMatrix b#))]
      (.setProjectionMatrix b# m#)
      (let [r# (do ~@body)]
        (.setProjectionMatrix b# o#)

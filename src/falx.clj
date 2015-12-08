@@ -29,7 +29,8 @@
       (gdx/using-camera
         gdx/default-camera
         (gdx/draw-string! (gdx/get-fps) 0 0 128)
-        (gdx/draw-string! (input/get-mouse-world-point game input) 0 16 128)))
+        (gdx/draw-string! (input/get-mouse-point input) 0 16 128)
+        (gdx/draw-string! (input/get-mouse-world-point game input) 0 32 128)))
     (catch Throwable e
       (println e)
       (Thread/sleep 5000))))

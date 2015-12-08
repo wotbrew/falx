@@ -64,9 +64,9 @@
 
 (defn get-mouse-world-point
   [game input]
-  (let [[x y] (get-mouse-point input)]
-    (get-world-point game [(int (/ x draw-world/cell-width))
-                           (int (/ y draw-world/cell-height))])))
+  (let [[x y] (get-world-point game (get-mouse-point input))]
+    [(int (/ x draw-world/cell-width))
+     (int (/ y draw-world/cell-height))]))
 
 (defn get-click-actions
   [input game]
