@@ -18,38 +18,38 @@
   [world attribute value]
   (map #(get-entity world %) (get-eids-with world attribute value)))
 
-(defn add-entity-attribute
+(defn add-eid-attribute
   [world eid attribute value]
   (-> world
       (assoc-in [:eav eid attribute] value)
       (update-in [:ave attribute value] set-conj eid)))
 
-(defn get-entity-attribute
+(defn get-eid-attribute
   ([world eid attribute]
    (-> world :eav (get eid) (get attribute)))
   ([world eid attribute not-found]
    (-> world :eav (get eid) (get attribute not-found))))
 
-(defn remove-entity-attribute
+(defn remove-eid-attribute
   [world eid attribute]
-  (let [val (get-entity-attribute world eid attribute ::nope)]
+  (let [val (get-eid-attribute world eid attribute ::nope)]
     (if (identical? ::nope val)
       world
       (-> world
           (dissoc-in [:eav eid attribute])
           (disjoc-in [:ave attribute val] eid)))))
 
-(defn remove-entity
+(defn remove-eid
   [world eid]
-  (reduce #(remove-entity-attribute %1 eid %2) world (keys (get-entity world eid))))
+  (reduce #(remove-eid-attribute %1 eid %2) world (keys (get-entity world eid))))
 
 (defn add-entity
   [world entity]
   (let [id (:id entity (:seed world 0))
         entity' (assoc entity :id id)
-        world' (remove-entity world id)
+        world' (remove-eid world id)
         world'' (update world' :seed (fnil inc 0))]
-    (reduce-kv #(add-entity-attribute %1 id %2 %3) world'' entity')))
+    (reduce-kv #(add-eid-attribute %1 id %2 %3) world'' entity')))
 
 (defn add-entities
   [world entities]

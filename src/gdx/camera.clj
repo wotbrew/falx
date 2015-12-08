@@ -48,10 +48,28 @@
       (doto @ortho-instance
         (set-to-ortho! w h flip-y?)
         (set-position! x y)
-        update!))
+        (.update true)))
     nil))
 
 (defmulti get-gdx-camera :type)
+
+(defn get-screen-point
+  ([camera [x y]]
+    (get-screen-point camera x y))
+  ([camera x y]
+    (let [^Camera cam (get-gdx-camera camera)
+          v3 (.project cam (Vector3. x y 0.0))]
+      [(int (.-x v3))
+       (int (.-y v3))])))
+
+(defn get-world-point
+  ([camera [x y]]
+    (get-world-point camera x y))
+  ([camera x y]
+    (let [^Camera cam (get-gdx-camera camera)
+          v3 (.unproject cam (Vector3. x y 0.0) )]
+      [(int (.-x v3))
+       (int (.-y v3))])))
 
 (defmethod get-gdx-camera :camera/orthographic
   [camera]
@@ -71,5 +89,3 @@
        ~batch (do (sync-camera! c#)
                   (get-gdx-camera c#))
        ~@body)))
-
-(def camera ortho-camera)

@@ -11,8 +11,11 @@
    :creature
    :misc])
 
-(def cell-width 32)
-(def cell-height 32)
+(def cell-scale 32)
+
+(def cell-width cell-scale)
+
+(def cell-height cell-scale)
 
 (defn draw-eid!
   [world eid]

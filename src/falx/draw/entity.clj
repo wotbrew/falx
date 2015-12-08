@@ -45,3 +45,10 @@
   [entity x y w h]
   (let [id (:id entity)]
     (gdx/draw-sprite! (get-castle-wall id) x y w h)))
+
+(def human-male
+  (gdx/sprite (io/resource "tiles/Human.png") [32 0 32 32]))
+
+(defmethod draw! :entity/creature
+  [entity x y w h]
+  (gdx/draw-sprite! human-male x y w h))
