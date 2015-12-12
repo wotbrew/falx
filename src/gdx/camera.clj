@@ -30,18 +30,18 @@
   (let [size (or size (:size display/default))
         [w h] size]
     (merge
-      {:type :camera/orthographic
-       :pos  [(float (/ w 2))
-              (float (/ h 2))]
-       :size size}
+      {:type  :camera/orthographic
+       :point [(float (/ w 2))
+               (float (/ h 2))]
+       :size  size}
       opts)))
 
 (defmulti sync-camera! :type)
 
 (defmethod sync-camera! :camera/orthographic
   [camera]
-  (let [{:keys [pos size flip-y?]} camera
-        [x y] pos
+  (let [{:keys [point size flip-y?]} camera
+        [x y] point
         [w h] size]
     (dispatch/on-render-thread
       (doto @ortho-instance

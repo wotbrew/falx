@@ -1,84 +1,59 @@
-(ns falx.input
-  (:require [gdx.camera :as camera]
-            [falx.draw.world :as draw-world]))
+(ns falx.input)
 
-(defn key-pressed?
-  [input key]
-  (-> input :keyboard :pressed (contains? key)))
+(defn bind-key-pressed
+  [id key]
+  {:id id
+   :type :key-pressed
+   :pressed key})
 
-(def modifier-keys #{:shift-left :shift-right})
+(defn bind-key-hit
+  [id key]
+  {:id id
+   :type :key-hit
+   :hit key})
 
-(defn modifier-pressed?
-  [input]
-  (some #(key-pressed? input %) modifier-keys))
+(defn bind-button-pressed
+  [id button]
+  {:id id
+   :type :button-pressed
+   :pressed button})
 
-(defn click?
-  [input]
-  (-> input :mouse :hit :left))
+(defn bind-button-hit
+  [id button]
+  {:id id
+   :type :button-hit
+   :hit button})
 
-(defn get-mouse-point
-  [input]
-  (-> input :mouse :point))
+(defn get-binding-key
+  [binding]
+  (case (:type binding)
+    :key-pressed [:key-pressed (:pressed binding)]
+    :key-hit [:key-hit (:hit binding)]
+    :button-pressed [:button-pressed (:pressed binding)]
+    :button-hit [:button-hit (:hit binding)]
+    nil))
 
-;; ============
-;; MOVE CAM
+(defn modifiers-pressed?
+  [input binding]
+  (every? (-> input :keyboard :pressed (or #{})) (:modifiers binding)))
 
-(def cam-up-key :w)
-
-(def cam-left-key :a)
-
-(def cam-right-key :d)
-
-(def cam-down-key :s)
-
-(def cam-speed 500)
-
-(def cam-fast-mult 2.0)
-
-(defn get-cam-shift-amount
-  [input frame]
-  (* (:delta frame 0) cam-speed (if (modifier-pressed? input)
-                                  cam-fast-mult
-                                  1.0)))
-
-(defn get-cam-actions
-  [input game frame]
-  (filterv
-    some?
-    [(when (key-pressed? input cam-up-key)
-       {:type  :action/shift-camera
-        :point [0 (* -1 (get-cam-shift-amount input frame))]})
-     (when (key-pressed? input cam-down-key)
-       {:type  :action/shift-camera
-        :point [0 (get-cam-shift-amount input frame)]})
-     (when (key-pressed? input cam-left-key)
-       {:type  :action/shift-camera
-        :point [(* -1 (get-cam-shift-amount input frame)) 0]})
-     (when (key-pressed? input cam-right-key)
-       {:type  :action/shift-camera
-        :point [(get-cam-shift-amount input frame) 0]})]))
-
-(defn get-world-point
-  [game point]
-  (camera/get-world-point (:world-camera game) point))
-
-(defn get-mouse-world-point
-  [game input]
-  (let [[x y] (get-world-point game (get-mouse-point input))]
-    [(int (/ x draw-world/cell-width))
-     (int (/ y draw-world/cell-height))]))
-
-(defn get-click-actions
-  [input game]
-  (when (click? input)
-    (prn "click")
-    (prn (get-mouse-world-point game input))))
-
-(defn get-input-actions
-  [input game frame]
-  (into
-    []
-    (comp cat (filter some?))
-    [(get-cam-actions input game frame)
-     (get-click-actions input game)]))
-
+(defn get-commands
+  [input binding-map]
+  (let [{:keys [keyboard mouse]} input]
+    (concat
+      (for [pressed (:pressed keyboard)
+            binding (get binding-map [:key-pressed pressed])
+            :when (modifiers-pressed? input binding)]
+        (:id binding))
+      (for [hit (:hit keyboard)
+            binding (get binding-map [:key-hit hit])
+            :when (modifiers-pressed? input binding)]
+        (:id binding))
+      (for [pressed (:pressed mouse)
+            binding (get binding-map [:button-pressed pressed])
+            :when (modifiers-pressed? input binding)]
+        (:id binding))
+      (for [hit (:hit mouse)
+            binding (get binding-map [:button-hit hit])
+            :when (modifiers-pressed? input binding)]
+        (:id binding)))))

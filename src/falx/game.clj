@@ -1,25 +1,21 @@
 (ns falx.game
   (:require [falx.levels.testing :as level-testing]
-            [clj-gdx :as gdx]
-            [falx.point :as point]))
+            [falx.screens.main]
+            [falx.screen :as screen]
+            [falx.world :as world]))
 
 (def default
-  {:world        @level-testing/world
-   :world-camera gdx/default-camera})
+  {:world @level-testing/world
+   :screen falx.screens.main/default
+   :settings {}})
 
-(defmulti act "Have the game react to an action" (fn [game action] (:type action)))
-
-(defmethod act :default
+(defn act
   [game action]
-  game)
+  (let [{:keys [screen world]} game]
+    (assoc game
+      :screen (screen/act screen action)
+      :world (world/act world action))))
 
-;; CAMERA
-
-(defn shift-camera
-  [game point]
-  (update-in game [:world-camera :pos] point/add point))
-
-(defmethod act :action/shift-camera
-  [game {:keys [point]}]
-  (shift-camera game point))
-
+(defn run-actions
+  [game actions]
+  (reduce act game actions))

@@ -62,3 +62,11 @@
       world))
   ([world eid f & args]
     (update-entity world eid #(apply f % args))))
+
+(defmulti act
+  (fn [world action]
+    (:type action)))
+
+(defmethod act :default
+  [world action]
+  world)

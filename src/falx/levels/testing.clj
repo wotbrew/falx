@@ -45,9 +45,12 @@
 (def entities
   (flatten
     [terrain
-     (entity/put
+     #_(entity/put
        {:type :entity/creature}
-       (cell [1 1]))]))
+       (cell [1 1]))
+     #_(entity/put
+       {:type :entity/creature}
+       (cell [2 2]))]))
 
 (def world
   (delay

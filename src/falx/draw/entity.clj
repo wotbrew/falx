@@ -1,6 +1,7 @@
 (ns falx.draw.entity
   (:require [clj-gdx :as gdx]
-            [clojure.java.io :as io]))
+            [clojure.java.io :as io]
+            [gdx.color :as color]))
 
 (defmulti draw! (fn [entity x y w h] (:type entity)))
 
@@ -49,6 +50,11 @@
 (def human-male
   (gdx/sprite (io/resource "tiles/Human.png") [32 0 32 32]))
 
+(def selection
+  (gdx/sprite (io/resource "tiles/Misc.png") [0 0 32 32]))
+
 (defmethod draw! :entity/creature
   [entity x y w h]
+  (when (:selected? entity)
+    (gdx/draw-sprite! selection x y w h {:color color/green}))
   (gdx/draw-sprite! human-male x y w h))
