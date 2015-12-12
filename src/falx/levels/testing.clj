@@ -45,10 +45,10 @@
 (def entities
   (flatten
     [terrain
-     #_(entity/put
+     (entity/put
        {:type :entity/creature}
        (cell [1 1]))
-     #_(entity/put
+     (entity/put
        {:type :entity/creature}
        (cell [2 2]))]))
 

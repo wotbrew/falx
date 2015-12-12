@@ -70,3 +70,7 @@
 (defmethod act :default
   [world action]
   world)
+
+(defmethod act :add-entity
+  [world {:keys [entity]}]
+  (add-entity world entity))

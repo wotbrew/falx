@@ -1,4 +1,5 @@
-(ns falx.entity)
+(ns falx.entity
+  (:require [falx.world :as world]))
 
 (defn cell
   [level point]

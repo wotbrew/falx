@@ -85,15 +85,23 @@
   (let [point (get-mouse-point screen input)]
     (entity/cell (:level screen) point)))
 
-(defmethod get-command-actions :click
+(defn selection-modifier-down?
+  [input]
+  (-> input :keyboard :pressed :shift-left))
+
+(defmethod get-command-actions :select
   [screen world input frame _]
   (let [cell (get-mouse-cell screen input)
         entities (world/get-entities-with world :cell cell)]
-    (for [e entities]
-      (do
-        (prn e)
-        {:type   :entity-selected
-         :entity e}))))
+    (concat
+      (when-not (selection-modifier-down? input)
+        (let [selected (world/get-entities-with world :selected? true)]
+          (for [e selected]
+            {:type   :add-entity
+             :entity (dissoc e :selected?)})))
+      (for [e entities]
+        {:type   :add-entity
+         :entity (assoc e :selected? true)}))))
 
 ;; ==============
 ;; INPUT
@@ -104,7 +112,7 @@
         (input/bind-key-pressed :cam-right :d)
         (input/bind-key-pressed :cam-down :s)
 
-        (input/bind-button-hit :click :left)]
+        (input/bind-button-hit :select :left)]
        (group-by input/get-binding-key)))
 
 (defmethod screen/get-input-actions :screen/main
