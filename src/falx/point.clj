@@ -93,9 +93,9 @@
    south
    west])
 
-(defn adjacent
+(defn get-adjacent
   ([[x y]]
-   (adjacent x y))
+   (get-adjacent x y))
   ([x y]
    (map #(add % x y) directions)))
 
@@ -115,12 +115,12 @@
            (not b)
            b))))
 
-(defn manhattan
+(defn get-manhattan-distance
   ([[x y] [x2 y2]]
-   (manhattan x y x2 y2))
+   (get-manhattan-distance x y x2 y2))
   ([x y x2 y2]
-   (+ (Math/abs (int (- x x2)))
-      (Math/abs (int (- y y2))))))
+   (+ (Math/abs (- x x2))
+      (Math/abs (- y y2)))))
 
 (defn direction
   ([[x y] [x2 y2]]
@@ -132,7 +132,7 @@
 ;; =========
 ;; PATHING
 
-(deftype A*Node [pt ^int g ^int h parent]
+(deftype A*Node [pt ^float g ^float h parent]
   Comparable
   (compareTo [this x]
     (compare (+ g h)
@@ -142,16 +142,16 @@
 (defn a*-g
   [a b]
   (if (diagonal? a (.pt ^A*Node b))
-    1.4
+    (Math/sqrt 2)
     1))
 
-(def a*-h manhattan)
+(def a*-h get-manhattan-distance)
 
-(def ^:dynamic *max-path-iter* 1000)
+(def ^:dynamic *max-path-iter* 100000)
 
-(defn a*
+(defn get-a*-path
   ([pred [x y] [x2 y2]]
-   (a* pred x y x2 y2))
+   (get-a*-path pred x y x2 y2))
   ([pred x y x2 y2]
    (let [open-q (PriorityQueue.)
          closed-s (HashSet.)
@@ -173,6 +173,6 @@
              (do
                (.add closed-s (.pt current))
                (vreset! current-v current)
-               (let [adj (adjacent (.pt current))]
+               (let [adj (get-adjacent (.pt current))]
                  (transduce f reducing nil adj)
                  (recur (inc i)))))))))))

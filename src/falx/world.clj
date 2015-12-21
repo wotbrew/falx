@@ -4,7 +4,24 @@
 
 (def empty {:seed 0
             :eav {}
-            :ave {}})
+            :ave {}
+            :events []})
+
+(defmulti act
+  (fn [world action]
+    (:type action)))
+
+(defmethod act :default
+  [world action]
+  world)
+
+(defn publish-event
+  [world event]
+  (update world :events (fnil conj []) event))
+
+(defmethod act :publish-world-event
+  [world action]
+  (publish-event world (:event action)))
 
 (defn get-entity
   [world eid]
@@ -39,17 +56,34 @@
           (dissoc-in [:eav eid attribute])
           (disjoc-in [:ave attribute val] eid)))))
 
-(defn remove-eid
+(defn remove-eid*
   [world eid]
   (reduce #(remove-eid-attribute %1 eid %2) world (keys (get-entity world eid))))
 
+(defn remove-eid
+  [world eid]
+  (-> (remove-eid* world eid)
+      (publish-event {:type   :entity-removed
+                      :entity (get-entity world eid)})))
+
+(defn replace-entity
+  [world entity]
+  (let [id (:id entity)
+        world' (remove-eid* world id)]
+    (-> (reduce-kv #(add-eid-attribute %1 id %2 %3) world' entity)
+        (publish-event {:type :entity-replaced
+                        :entity entity}))))
+
 (defn add-entity
   [world entity]
-  (let [id (:id entity (:seed world 0))
-        entity' (assoc entity :id id)
-        world' (remove-eid world id)
-        world'' (update world' :seed (fnil inc 0))]
-    (reduce-kv #(add-eid-attribute %1 id %2 %3) world'' entity')))
+  (if (:id entity)
+    (replace-entity world entity)
+    (let [id (:seed world 0)
+          world' (update world :seed (fnil inc 0))
+          entity' (assoc entity :id id)]
+      (-> (reduce-kv #(add-eid-attribute %1 id %2 %3) world' entity')
+          (publish-event {:type :entity-added
+                          :entity entity'})))))
 
 (defn add-entities
   [world entities]
@@ -62,15 +96,3 @@
       world))
   ([world eid f & args]
     (update-entity world eid #(apply f % args))))
-
-(defmulti act
-  (fn [world action]
-    (:type action)))
-
-(defmethod act :default
-  [world action]
-  world)
-
-(defmethod act :add-entity
-  [world {:keys [entity]}]
-  (add-entity world entity))

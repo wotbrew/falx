@@ -5,6 +5,7 @@
             [falx.draw.world :as draw-world]
             [falx.point :as point]
             [gdx.camera :as camera]
+            [falx.game.selection :as selection]
             [falx.entity :as entity]
             [falx.world :as world]))
 
@@ -89,19 +90,30 @@
   [input]
   (-> input :keyboard :pressed :shift-left))
 
+(defmulti get-select-action (fn [world input entity] (:type entity)))
+
+(defmethod get-select-action :default
+  [world input entity])
+
+(defmethod get-select-action :entity/floor
+  [world input entity]
+  {:type :publish-screen-event
+   :event {:type :floor-selected
+           :floor entity}})
+
+(defmethod get-select-action :entity/creature
+  [world input entity]
+  (if (selection-modifier-down? input)
+    {:type   :select-creature
+     :creature entity}
+    {:type   :select-creature-only
+     :creature entity}))
+
 (defmethod get-command-actions :select
   [screen world input frame _]
   (let [cell (get-mouse-cell screen input)
         entities (world/get-entities-with world :cell cell)]
-    (concat
-      (when-not (selection-modifier-down? input)
-        (let [selected (world/get-entities-with world :selected? true)]
-          (for [e selected]
-            {:type   :add-entity
-             :entity (dissoc e :selected?)})))
-      (for [e entities]
-        {:type   :add-entity
-         :entity (assoc e :selected? true)}))))
+    (keep #(get-select-action world input %) entities)))
 
 ;; ==============
 ;; INPUT

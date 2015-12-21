@@ -24,3 +24,10 @@
   [screen world input frame]
   [])
 
+(defn publish-event
+  [screen event]
+  (update screen :events (fnil conj []) event))
+
+(defmethod act :publish-screen-event
+  [screen action]
+  (publish-event screen (:event action)))

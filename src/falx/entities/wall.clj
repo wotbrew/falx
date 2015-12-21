@@ -2,6 +2,7 @@
 
 (def wall
   {:type :entity/wall
-   :layer :terrain})
+   :layer :terrain
+   :solid? true})
 
 

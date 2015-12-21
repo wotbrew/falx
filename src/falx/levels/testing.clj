@@ -21,12 +21,12 @@
    "#               #"
    "#               #"
    "#      ####     #"
-   "#######    ##  ##"
+   "########  ###   #"
    "#               #"
    "#               #"
    "#               #"
    "#               #"
-   "#######    ##  ##"
+   "########  ###   #"
    "#      ####     #"
    "#               #"
    "#               #"
@@ -46,7 +46,8 @@
   (flatten
     [terrain
      (entity/put
-       {:type :entity/creature}
+       {:type :entity/creature
+        :id "fred"}
        (cell [1 1]))
      (entity/put
        {:type :entity/creature}
