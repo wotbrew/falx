@@ -1,34 +1,38 @@
 (ns falx.draw.world
-  (:require [falx.draw.entity :as draw-entity]
-            [falx.entity :as entity]
+  (:require [falx.draw.thing :as draw-thing]
             [falx.world :as world]))
 
-(def layers
-  [:floor
-   :terrain
-   :decor
-   :object
-   :creature
-   :misc])
+(def cell-width 32)
 
-(def cell-scale 32)
-
-(def cell-width cell-scale)
-
-(def cell-height cell-scale)
-
-(defn draw-eid!
-  [world eid]
-  (let [entity (world/get-entity world eid)
-        [x y] (:point entity)]
-    (draw-entity/draw! entity (* x cell-width) (* y cell-height) cell-width cell-height)))
+(def cell-height 32)
 
 (defn draw-slice!
   [world slice]
-  (let [eids (world/get-eids-with world :slice slice)]
-    (run! #(draw-eid! world %) eids)))
+  (let [things (world/get-things-by-value world :slice slice)]
+    (doseq [thing things
+            :let [point (:point thing)
+                  [x y] point]]
+      (draw-thing/draw! thing
+                        (* x cell-width)
+                        (* y cell-height)
+                        cell-width
+                        cell-height))))
 
-(defn draw!
+(def layers
+  [:floor
+   :wall
+   :decor
+   :item
+   :object
+   :creature
+   :unknown])
+
+(defn get-slices
+  [level]
+  (for [layer layers]
+    {:layer layer
+     :level level}))
+
+(defn draw-level!
   [world level]
-  (let [slices (map #(entity/slice level %) layers)]
-    (run! #(draw-slice! world %) slices)))
+  (run! #(draw-slice! world %) (get-slices level)))

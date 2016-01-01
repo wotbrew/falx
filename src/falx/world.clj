@@ -1,98 +1,112 @@
 (ns falx.world
-  (:require [falx.util :refer :all])
-  (:refer-clojure :exclude [empty]))
-
-(def empty {:seed 0
-            :eav {}
-            :ave {}
-            :events []})
-
-(defmulti act
-  (fn [world action]
-    (:type action)))
-
-(defmethod act :default
-  [world action]
-  world)
+  (:require [clojure.set :as set]
+            [falx.thing :as thing]
+            [falx.util :as util]))
 
 (defn publish-event
-  [world event]
-  (update world :events (fnil conj []) event))
+  ([world event]
+   (update world :events (fnil conj []) event)))
 
-(defmethod act :publish-world-event
-  [world action]
-  (publish-event world (:event action)))
+(defn split-events
+  [world]
+  {:world (dissoc world :events)
+   :events (:events world)})
 
-(defn get-entity
-  [world eid]
-  (-> world :eav (get eid)))
+(defn get-thing
+  [world id]
+  (-> world :eav (get id)))
 
-(defn get-eids-with
+(defn get-attribute
+  ([world id attribute]
+   (get-attribute world id attribute nil))
+  ([world id attribute not-found]
+   (-> (get-thing world id) (get attribute not-found))))
+
+(defn get-ids-by-value
   [world attribute value]
-  (-> world :ave (get attribute) (get value)))
+  (-> world :ave (get attribute) (get value #{})))
 
-(defn get-entities-with
+(defn get-things-by-value
   [world attribute value]
-  (map #(get-entity world %) (get-eids-with world attribute value)))
+  (map #(get-thing world %) (get-ids-by-value world attribute value)))
 
-(defn add-eid-attribute
-  [world eid attribute value]
-  (-> world
-      (assoc-in [:eav eid attribute] value)
-      (update-in [:ave attribute value] set-conj eid)))
-
-(defn get-eid-attribute
-  ([world eid attribute]
-   (-> world :eav (get eid) (get attribute)))
-  ([world eid attribute not-found]
-   (-> world :eav (get eid) (get attribute not-found))))
-
-(defn remove-eid-attribute
-  [world eid attribute]
-  (let [val (get-eid-attribute world eid attribute ::nope)]
-    (if (identical? ::nope val)
-      world
+(defn remove-attribute*
+  [world id attribute]
+  (let [value (get-attribute world id attribute ::not-found)]
+    (case value
+      ::not-found world
       (-> world
-          (dissoc-in [:eav eid attribute])
-          (disjoc-in [:ave attribute val] eid)))))
+          (util/dissoc-in [:eav id attribute])
+          (util/disjoc-in [:ave attribute value] id)))))
 
-(defn remove-eid*
-  [world eid]
-  (reduce #(remove-eid-attribute %1 eid %2) world (keys (get-entity world eid))))
+(defn remove-attribute
+  [world id attribute]
+  (let [value (get-attribute world id attribute ::not-found)]
+    (case value
+      ::not-found world
+      (-> (remove-attribute* world id attribute)
+          (publish-event
+            {:type :event.thing/attribute-removed
+             :id id
+             :attribute attribute
+             :value value})))))
 
-(defn remove-eid
-  [world eid]
-  (-> (remove-eid* world eid)
-      (publish-event {:type   :entity-removed
-                      :entity (get-entity world eid)})))
+(defn set-attribute
+  [world id attribute value]
+  (-> (remove-attribute* world id attribute)
+      (assoc-in [:eav id attribute] value)
+      (update-in [:ave attribute value] util/set-conj id)
+      (cond->
+        (not= value (get-attribute world id attribute))
+        (publish-event
+          {:type           :event.thing/attribute-set
+           :id             id
+           :attribute      attribute
+           :value          value
+           :previous-value (get-attribute world id attribute)}))))
 
-(defn replace-entity
-  [world entity]
-  (let [id (:id entity)
-        world' (remove-eid* world id)]
-    (-> (reduce-kv #(add-eid-attribute %1 id %2 %3) world' entity)
-        (publish-event {:type :entity-replaced
-                        :entity entity}))))
+(defn remove-thing
+  [world id]
+  (let [thing (get-thing world id)
+        attributes (keys thing)]
+    (-> (reduce #(remove-attribute* %1 id %2) world attributes)
+        (publish-event
+          {:type :event.thing/removed
+           :id id}))))
 
-(defn add-entity
-  [world entity]
-  (if (:id entity)
-    (replace-entity world entity)
-    (let [id (:seed world 0)
-          world' (update world :seed (fnil inc 0))
-          entity' (assoc entity :id id)]
-      (-> (reduce-kv #(add-eid-attribute %1 id %2 %3) world' entity')
-          (publish-event {:type :entity-added
-                          :entity entity'})))))
+(defn add-thing*
+  [world thing]
+  {:pre [(some? (:id thing))]}
+  (let [id (:id thing)
+        existing-thing (get-thing world (:id thing))
+        ekvs (set existing-thing)
+        {:keys [thing events]} (thing/split-events thing)
+        kvs (set thing)]
+    (as->
+      world g
+      (reduce #(set-attribute %1 id (key %2) (val %2)) g (set/difference kvs ekvs))
+      (reduce #(remove-attribute %1 id (key %2)) g (set/difference ekvs kvs))
+      (reduce publish-event g events))))
 
-(defn add-entities
-  [world entities]
-  (reduce add-entity world entities))
+(defn add-thing
+  [world thing]
+  (-> (add-thing* world thing)
+      (publish-event
+        {:type :event.thing/added
+         :id thing})))
 
-(defn update-entity
-  ([world eid f]
-    (if-some [entity (get-entity world eid)]
-      (add-entity world (f entity))
-      world))
-  ([world eid f & args]
-    (update-entity world eid #(apply f % args))))
+(defn merge-thing
+  [world thing]
+  (if (nil? (get-thing world (:id thing)))
+    (add-thing world thing)
+    (-> (add-thing* world thing)
+        (publish-event
+          {:type :event.thing/merged
+           :id   thing}))))
+
+(defn update-thing
+  ([world id f]
+   (let [thing (get-thing world id)]
+     (merge-thing world (f thing))))
+  ([world id f & args]
+   (update-thing world id #(apply f % args))))

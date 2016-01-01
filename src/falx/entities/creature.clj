@@ -1,2 +1,0 @@
-(ns falx.entities.creature)
-

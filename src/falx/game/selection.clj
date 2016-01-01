@@ -1,30 +1,67 @@
 (ns falx.game.selection
-  (:require [falx.world :as world]))
+  (:require [falx.thing :as thing]
+            [falx.thing.creature :as creature]
+            [falx.game.time :as time]
+            [falx.world :as world]))
+
+(defn just-select
+  [thing]
+  (if (:selected? thing)
+    thing
+    (-> (assoc thing :selected? true)
+        (thing/publish-event
+          {:type  :event.thing/selected
+           :thing thing}))))
+
+(defn can-select?
+  [thing time]
+  (and (creature/creature? thing)
+       (time/can-act? time (:id thing))))
 
 (defn select
-  [creature]
-  (assoc creature :selected? true))
+  [thing time]
+  (if (can-select? thing time)
+    (just-select thing)
+    thing))
 
 (defn unselect
-  [creature]
-  (dissoc creature :selected?))
+  [thing]
+  (if-not (:selected? thing)
+    thing
+    (-> (dissoc thing :selected?)
+        (thing/publish-event
+          {:type  :event.thing/unselected
+           :thing thing}))))
+
+(defn select-id
+  [world id time]
+  (world/update-thing world id select time))
+
+(defn unselect-id
+  [world id]
+  (world/update-thing world id unselect))
+
+(defn unselect-but-id
+  [world id]
+  (let [ids (world/get-ids-by-value world :selected? true)]
+    (reduce unselect-id world (disj ids id))))
+
+(defn select-ids
+  [world ids time]
+  (reduce #(select-id %1 %2 time) world ids))
 
 (defn get-selected
   [world]
-  (world/get-entities-with world :selected? true))
+  (world/get-things-by-value world :selected? true))
 
-(defn select-in-world
-  [world creature]
-  (-> (world/add-entity world (select creature))
-      (world/publish-event {:type :creature-selected
-                            :creature creature})))
+(defn get-selected-ids
+  [world]
+  (world/get-ids-by-value world :selected? true))
 
-(defmethod world/act :select-creature
-  [world {:keys [creature]}]
-  (select-in-world world creature))
+(defn selected?
+  [thing]
+  (:selected? thing))
 
-(defmethod world/act :select-creature-only
-  [world {:keys [creature]}]
-  (let [selected (get-selected world)]
-    (-> (world/add-entities world (map unselect selected))
-        (select-in-world creature))))
+(defn selected-id?
+  [world id]
+  (world/get-attribute world id :selected?))
