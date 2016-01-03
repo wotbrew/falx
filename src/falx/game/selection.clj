@@ -82,7 +82,7 @@
   [game things]
   (game/update-world game select-in-world-exclusive (:time game) things))
 
-(game/defreaction!
+(game/defreaction
   [:event.action :action.hit/select]
   ::select
   (fn [game _]

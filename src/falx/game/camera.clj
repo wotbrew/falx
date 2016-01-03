@@ -27,25 +27,25 @@
   (let [dt (get-delta-point game direction)]
     (update-in game [:world-camera :point] point/add dt)))
 
-(game/defreaction!
+(game/defreaction
   [:event.action :action.pressed/cam-up]
   ::cam-up
   (fn [game _]
     (move-in-direction game point/north)))
 
-(game/defreaction!
+(game/defreaction
   [:event.action :action.pressed/cam-left]
   ::cam-left
   (fn [game _]
     (move-in-direction game point/west)))
 
-(game/defreaction!
+(game/defreaction
   [:event.action :action.pressed/cam-down]
   ::cam-down
   (fn [game _]
     (move-in-direction game point/south)))
 
-(game/defreaction!
+(game/defreaction
   [:event.action :action.pressed/cam-right]
   ::cam-right
   (fn [game _]

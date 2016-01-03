@@ -34,7 +34,7 @@
 (defonce ^:private handlers
   (atom {}))
 
-(defn defhandler!
+(defn defhandler
   [event-type key f]
   (swap! handlers register event-type key f))
 

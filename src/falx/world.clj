@@ -11,7 +11,7 @@
 
 (defonce ^:private reactions (atom {}))
 
-(defn defreaction!
+(defn defreaction
   [event-type key f]
   (swap! reactions react/register event-type key f))
 
