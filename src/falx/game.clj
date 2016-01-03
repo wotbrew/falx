@@ -11,6 +11,10 @@
   [game event]
   (update game :events (fnil conj []) event))
 
+(defn publish-events
+  [game coll]
+  (reduce publish-event game coll))
+
 (defn split-events
   "Takes an events in the game, and yields a map
   {:events, :game}. Where the `:events`
@@ -25,10 +29,8 @@
   ([game f]
    (let [world (f (:world game))
          {:keys [world events]} (world/split-events world)]
-     (as->
-       game game
-       (assoc game :world world)
-       (reduce publish-event game events))))
+     (-> (assoc game :world world)
+         (publish-events events))))
   ([game f & args]
     (update-world game #(apply f % args))))
 
