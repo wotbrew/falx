@@ -82,13 +82,20 @@
   [game things]
   (game/update-world game select-in-world-exclusive (:time game) things))
 
+(defn get-selectable-focused-things
+  "Returns the focused things that are selectable."
+  [game]
+  (let [ts (focus/get-all-things game)
+        time (:time game)]
+    (filter #(can-select? % time) ts)))
+
 (game/defreaction
   [:event.action :action.hit/select]
   ::select
   (fn [game _]
-    (let [ts (focus/get-all-things game)
-          time (:time game)
-          things (filter #(can-select? % time) ts)]
-      (if (game/input-modified? game)
-        (select-in-game game things)
-        (select-in-game-exclusive game things)))))
+    (let [things (get-selectable-focused-things game)]
+      (if (empty? things)
+        game
+        (if (game/input-modified? game)
+          (select-in-game game things)
+          (select-in-game-exclusive game things))))))

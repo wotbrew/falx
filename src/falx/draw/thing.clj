@@ -21,5 +21,5 @@
 (defmethod draw! :creature
   [thing x y w h]
   (when (:selected? thing)
-    (gdx/draw-sprite! selection-circle x y w h))
+    (gdx/draw-sprite! selection-circle x y w h {:color gdx.color/green}))
   (gdx/draw-sprite! human-male x y w h))
