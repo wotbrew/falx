@@ -106,8 +106,8 @@
         kvs (set thing)]
     (as->
       world g
-      (reduce #(set-attribute %1 id (key %2) (val %2)) g (set/difference kvs ekvs))
       (reduce #(remove-attribute %1 id (key %2)) g (set/difference ekvs kvs))
+      (reduce #(set-attribute %1 id (key %2) (val %2)) g (set/difference kvs ekvs))
       (reduce publish-event g events))))
 
 (defn add-thing
@@ -134,7 +134,8 @@
   "Applies the function `f` and any `args` to the thing
   in the world given by `id`."
   ([world id f]
-   (let [thing (get-thing world id)]
-     (add-thing world (f thing))))
+   (if-some [thing (get-thing world id)]
+     (add-thing world (f thing))
+     world))
   ([world id f & args]
    (update-thing world id #(apply f % args))))
