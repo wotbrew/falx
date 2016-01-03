@@ -10,5 +10,4 @@
 
 (defn publish!
   [event]
-  (debug event)
   (async/>!! event-chan event))

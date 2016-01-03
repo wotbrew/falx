@@ -2,7 +2,9 @@
   (:require [falx.thing :as thing]
             [falx.thing.creature :as creature]
             [falx.game.time :as time]
-            [falx.world :as world]))
+            [falx.world :as world]
+            [falx.game :as game]
+            [falx.game.focus :as focus]))
 
 (defn just-select
   [thing]
@@ -33,35 +35,18 @@
           {:type  :event.thing/unselected
            :thing thing}))))
 
-(defn select-id
-  [world id time]
-  (world/update-thing world id select time))
+(defn toggle
+  [thing time]
+  (if (:selected? thing)
+    (unselect thing)
+    (select thing time)))
 
-(defn unselect-id
-  [world id]
-  (world/update-thing world id unselect))
-
-(defn unselect-but-id
-  [world id]
-  (let [ids (world/get-ids-by-value world :selected? true)]
-    (reduce unselect-id world (disj ids id))))
-
-(defn select-ids
-  [world ids time]
-  (reduce #(select-id %1 %2 time) world ids))
-
-(defn get-selected
-  [world]
-  (world/get-things-by-value world :selected? true))
-
-(defn get-selected-ids
-  [world]
-  (world/get-ids-by-value world :selected? true))
-
-(defn selected?
-  [thing]
-  (:selected? thing))
-
-(defn selected-id?
-  [world id]
-  (world/get-attribute world id :selected?))
+(game/defreaction!
+  [:event.action :action.hit/select]
+  ::select
+  (fn [game _]
+    (let [ts (focus/get-all game)
+          time (:time game)
+          selectable (filter #(can-select? % time) ts)
+          selected (map #(toggle % time) selectable)]
+      (game/add-things game selected))))

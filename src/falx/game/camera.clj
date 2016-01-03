@@ -9,15 +9,18 @@
 
 (def camera-delta-factor 250)
 
+(defn get-speed
+  [game]
+  (* (:delta game 0.0)
+     camera-delta-factor
+     camera-mult
+     (if (input/modified? (:input game))
+       camera-fast-mult
+       1.0)))
+
 (defn get-delta-point
   [game direction]
-  (point/scale direction
-              (* (:delta game 0.0)
-                 camera-delta-factor
-                 camera-mult
-                 (if (input/modified? (:input game))
-                   camera-fast-mult
-                   1.0))))
+  (point/scale direction (get-speed game)))
 
 (defn move-in-direction
   [game direction]
@@ -47,3 +50,23 @@
   ::cam-right
   (fn [game _]
     (move-in-direction game point/east)))
+
+(defn get-world-point
+  [game point]
+  (let [cam (:world-camera game)]
+    (gdx.camera/get-world-point cam point)))
+
+(defn get-world-mouse-point
+  [game]
+  (let [point (input/get-mouse-point (:input game))]
+    (get-world-point game point)))
+
+(def cell-width 32)
+
+(def cell-height 32)
+
+(defn get-world-mouse-level-point
+  [game]
+  (let [[x y] (get-world-mouse-point game)]
+    [(int (/ x cell-width))
+     (int (/ y cell-height))]))

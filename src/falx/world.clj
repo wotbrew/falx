@@ -145,6 +145,10 @@
              :id   thing}))
       :else world)))
 
+(defn add-things
+  [world coll]
+  (reduce add-thing world coll))
+
 (defn update-thing
   "Applies the function `f` and any `args` to the thing
   in the world given by `id`."

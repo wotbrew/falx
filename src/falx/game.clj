@@ -57,6 +57,10 @@
   [game thing]
   (update-world game world/add-thing thing))
 
+(defn add-things
+  [game coll]
+  (update-world game world/add-things coll))
+
 (defn get-thing
   "Gets a thing from the games world"
   [game id]
