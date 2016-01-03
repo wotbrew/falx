@@ -52,3 +52,10 @@
 (deftest things-put-in-cell-have-the-level
   (is (= (:level (put {:id "fred"} (cell :foo [6 6])))
          :foo)))
+
+(deftest things-step-to-point-have-the-point
+  (let [t (put {:id "fred"} (cell :foo [3 4]))]
+    (is (= (:point (step t [6 6]))
+           [6 6]))
+    (is (= (:level (step t [6 6]))
+           :foo))))

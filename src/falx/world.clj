@@ -90,15 +90,11 @@
 
 (defn add-thing
   [world thing]
-  (-> (add-thing* world thing)
-      (publish-event
-        {:type :event.thing/added
-         :id thing})))
-
-(defn merge-thing
-  [world thing]
   (if (nil? (get-thing world (:id thing)))
-    (add-thing world thing)
+    (-> (add-thing* world thing)
+        (publish-event
+          {:type :event.thing/added
+           :id thing}))
     (-> (add-thing* world thing)
         (publish-event
           {:type :event.thing/merged
@@ -107,6 +103,6 @@
 (defn update-thing
   ([world id f]
    (let [thing (get-thing world id)]
-     (merge-thing world (f thing))))
+     (add-thing world (f thing))))
   ([world id f & args]
    (update-thing world id #(apply f % args))))
