@@ -90,15 +90,19 @@
 
 (defn add-thing
   [world thing]
-  (if (nil? (get-thing world (:id thing)))
-    (-> (add-thing* world thing)
-        (publish-event
-          {:type :event.thing/added
-           :id thing}))
-    (-> (add-thing* world thing)
-        (publish-event
-          {:type :event.thing/merged
-           :id   thing}))))
+  (let [existing (get-thing world (:id thing))]
+    (cond
+      (nil? existing)
+      (-> (add-thing* world thing)
+          (publish-event
+            {:type :event.thing/added
+             :id   thing}))
+      (not= existing thing)
+      (-> (add-thing* world thing)
+          (publish-event
+            {:type :event.thing/changed
+             :id   thing}))
+      :else world)))
 
 (defn update-thing
   ([world id f]
