@@ -1,10 +1,16 @@
 (ns falx.thing
-  "Things are just maps, each game entity is a thing")
+  "Things are just maps, each game entity is a thing"
+  (:require [falx.react :as react]))
 
-(defn thing?
-  "Is the map a thing?"
-  [m]
-  (some? (:id m)))
+(defonce ^:private reactions (atom {}))
+
+(defn defreaction!
+  [event-type key f]
+  (swap! reactions react/register event-type key f))
+
+(defn react
+  [thing event]
+  (react/react @reactions event thing))
 
 (defn split-events
   "A thing that is being operated on may accumulate events, these can be split out from the thing
@@ -17,7 +23,13 @@
   "**Publishes** the fact something has changed with the thing, all this does is conj it into the things
   `:events` collection. Returns the new thing."
   [thing event]
-  (update thing :events (fnil conj []) event))
+  (-> (update thing :events (fnil conj []) event)
+      (react event)))
+
+(defn thing?
+  "Is the map a thing?"
+  [m]
+  (some? (:id m)))
 
 (defn cell
   "The cell represents a point in the world, each point

@@ -2,14 +2,32 @@
   "The game datastructure and core functions on it are defined here.
 
   The game contains a
-   `:world`, ..."
-  (:require [falx.world :as world]))
+   `:world, :world-camera`, ..."
+  (:require [falx.world :as world]
+            [clj-gdx :as gdx]
+            [falx.react :as react]))
+
+(def default
+  {:world        world/default
+   :world-camera gdx/default-camera
+   :delta 0.0})
+
+(defonce ^:private reactions (atom {}))
+
+(defn defreaction!
+  [event-type key f]
+  (swap! reactions react/register event-type key f))
+
+(defn react
+  [game event]
+  (react/react @reactions event game))
 
 (defn publish-event
   "Publishes a new event that can be reacted to by the game.
   Returns a new game with the event in the `:events` coll"
   [game event]
-  (update game :events (fnil conj []) event))
+  (-> (update game :events (fnil conj []) event)
+      (react event)))
 
 (defn publish-events
   [game coll]

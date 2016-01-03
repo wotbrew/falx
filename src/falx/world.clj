@@ -3,14 +3,29 @@
   The world is simply an indexed collection of things."
   (:require [clojure.set :as set]
             [falx.thing :as thing]
-            [falx.util :as util]))
+            [falx.util :as util]
+            [falx.react :as react]))
+
+(def default
+  {})
+
+(defonce ^:private reactions (atom {}))
+
+(defn defreaction!
+  [event-type key f]
+  (swap! reactions react/register event-type key f))
+
+(defn react
+  [world event]
+  (react/react @reactions event world))
 
 (defn publish-event
   "Publishes an event that can be reacted to.
   Returns a new world which will retain the `event` under its
   `:events` key."
-  ([world event]
-   (update world :events (fnil conj []) event)))
+  [world event]
+  (-> (update world :events (fnil conj []) event)
+      (react event)))
 
 (defn split-events
   "Removes events from the world, returns

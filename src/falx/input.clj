@@ -1,6 +1,11 @@
 (ns falx.input
   (:require [clj-gdx :as gdx]))
 
+(def default
+  {:keyboard gdx/default-keyboard
+   :mouse gdx/default-mouse
+   :actions #{}})
+
 (defn get-keyboard-state
   "Returns the current keyboard state (requires game to be running)"
   []

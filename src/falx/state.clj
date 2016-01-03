@@ -3,7 +3,7 @@
             [falx.event :as event]))
 
 (defonce ^:private game-state
-  (atom {}))
+  (atom game/default))
 
 (defn get-game
   "Returns the current game state"
