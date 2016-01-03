@@ -5,12 +5,14 @@
    `:world, :world-camera`, ..."
   (:require [falx.world :as world]
             [clj-gdx :as gdx]
-            [falx.react :as react]))
+            [falx.react :as react]
+            [falx.input :as input]))
 
 (def default
   {:world        world/default
    :world-camera gdx/default-camera
-   :delta 0.0})
+   :delta 0.0
+   :input input/default})
 
 (defonce ^:private reactions (atom {}))
 
@@ -53,11 +55,12 @@
     (update-world game #(apply f % args))))
 
 (defn add-thing
-  "Like `(update-world game add-thing thing)`."
+  "Like `(update-world game world/add-thing thing)`."
   [game thing]
   (update-world game world/add-thing thing))
 
 (defn add-things
+  "Like `(update-world game world/add-things coll)`."
   [game coll]
   (update-world game world/add-things coll))
 
@@ -77,3 +80,18 @@
    (update-world game world/update-thing id f))
   ([game id f & args]
    (update-thing game id #(apply f % args))))
+
+(defn input-modified?
+  "Is the input modifier key/button down?"
+  [game]
+  (input/modified? (:input game)))
+
+(defn frame
+  "Processes a single frame of the game, taking in the input and delta since last frame.
+  Returns the new game"
+  [game input delta]
+  (let [events (input/get-input-events input)]
+    (-> game
+        (publish-events events)
+        (assoc :input input
+               :delta delta))))

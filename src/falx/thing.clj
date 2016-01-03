@@ -74,3 +74,21 @@
       (publish-event
         {:type :event.thing/unput
          :thing thing})))
+
+(defn same-thing?
+  "Are thing-a and thing-b potentially different snapshots of the same thing?
+  i.e do they have equal `:id` identity?"
+  [thing-a thing-b]
+  (= (:id thing-a)
+     (:id thing-b)))
+
+(defn coll-remove
+  "Removes other instances of the thing from the coll"
+  [thing coll]
+  (remove #(same-thing? thing %) coll))
+
+(defn coll-difference
+  "Takes those things in things-b that are not in things-a. Comparison is done by thing identity."
+  [things-a things-b]
+  (reduce #(coll-remove %2 %1) things-b things-a))
+

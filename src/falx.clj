@@ -7,29 +7,11 @@
 
 (def max-fps 60)
 
-(defn get-action-event
-  [action input]
-  {:type   [:event.action action]
-   :action action
-   :input  input})
-
-(defn get-input-events
-  [input]
-  (map #(get-action-event % input) (:actions input)))
-
-(defn process-frame
-  [game input delta]
-  (let [events (get-input-events input)]
-    (-> game
-        (game/publish-events events)
-        (assoc :input input
-               :delta delta))))
-
 (gdx/defrender
   (try
     (let [input (input/get-input-state input/temp-bindings**)
           delta (gdx/get-delta-time)
-          game (state/update-game! process-frame input delta)]
+          game (state/update-game! game/frame input delta)]
       (gdx/using-camera
         (:world-camera game gdx/default-camera)
         (draw-world/draw-level!

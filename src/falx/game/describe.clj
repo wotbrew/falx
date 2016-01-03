@@ -8,5 +8,5 @@
   ::describe
   (fn [_]
     (let [g (state/get-game)
-          ts (focus/get-all g)]
+          ts (focus/get-all-things g)]
       (run! println ts))))

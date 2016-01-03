@@ -89,3 +89,15 @@
   "Returns the mouse point in screen co-ordinates."
   [input]
   (-> input :mouse :point))
+
+(defn get-action-event
+  "Returns an action event for the given action"
+  [action input]
+  {:type   [:event.action action]
+   :action action
+   :input  input})
+
+(defn get-input-events
+  "Returns a coll of input events for the given input"
+  [input]
+  (map #(get-action-event % input) (:actions input)))

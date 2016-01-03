@@ -2,7 +2,7 @@
   (:require [falx.game.camera :as camera]
             [falx.world :as world]))
 
-(defn get-all
+(defn get-all-things
   "Get all focused things (those things under the mouse)"
   [game]
   (let [point (camera/get-world-mouse-level-point game)
