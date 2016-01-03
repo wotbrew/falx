@@ -91,7 +91,8 @@
   Returns the new game"
   [game input delta]
   (let [events (input/get-input-events input)]
-    (-> game
+    (-> (assoc game :input input :delta delta)
         (publish-events events)
-        (assoc :input input
-               :delta delta))))
+        (publish-event {:type :event.game/frame
+                        :input input
+                        :delta delta}))))
