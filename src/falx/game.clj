@@ -33,6 +33,13 @@
   (world/get-thing (:world game) id))
 
 (defn remove-thing
-  "Like `(update-world game remove-thing thing)`"
+  "Like `(update-world game world/remove-thing thing)`"
   [game id]
   (update-world game world/remove-thing id))
+
+(defn update-thing
+  "Like `(update-world game world/update-thing id f)`"
+  ([game id f]
+   (update-world game world/update-thing id f))
+  ([game id f & args]
+   (update-thing game id #(apply f % args))))
