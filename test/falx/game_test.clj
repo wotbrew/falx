@@ -3,6 +3,10 @@
             [clojure.test :refer :all]
             [falx.world :as world]))
 
+(deftest publishing-event-adds-it-to-event-coll
+  (is (= (:events (publish-event {} {:type :something}))
+         [{:type :something}])))
+
 (deftest split-events-removes-events-from-game-world
          (is  (-> (update-world {} world/publish-event {:type :something})
                   split-events
