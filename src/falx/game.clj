@@ -81,6 +81,11 @@
   ([game id f & args]
    (update-thing game id #(apply f % args))))
 
+(defn put-thing
+  "Like `(update-world game world/put-thing thing cell)`"
+  [game thing cell]
+  (update-world game world/put-thing thing cell))
+
 (defn input-modified?
   "Is the input modifier key/button down?"
   [game]

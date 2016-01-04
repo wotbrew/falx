@@ -59,6 +59,11 @@
   ([id f & args]
    (update-thing! id #(apply f % args))))
 
+(defn put-thing!
+  "Puts the thing in the cell, modifies the global game state and returns the updated game."
+  [thing cell]
+  (update-game! game/put-thing thing cell))
+
 (defmacro silent
   "Discards the result of body (can stop REPL crashing if game gets too big to print!)"
   [& body]

@@ -158,3 +158,8 @@
      world))
   ([world id f & args]
    (update-thing world id #(apply f % args))))
+
+(defn put-thing
+  "Puts the thing in the given cell"
+  [world thing cell]
+  (add-thing world (thing/put thing cell)))
