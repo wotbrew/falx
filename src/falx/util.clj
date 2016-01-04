@@ -24,3 +24,7 @@
     (dissoc m k)))
 
 (def set-conj (fnil conj #{}))
+
+(defn find-first
+  [pred coll]
+  (first (filter pred coll)))
