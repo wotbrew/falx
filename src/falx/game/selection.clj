@@ -54,48 +54,48 @@
   [world]
   (world/get-things-by-value world :selected? true))
 
-(defn select-in-world
-  "Selects the coll of things in the world"
-  [world time things]
-  (let [selected (map #(toggle % time) things)]
-    (world/add-things world selected)))
+(defn toggle-in-world
+  "Toggles the selection of the thing in the world"
+  [world time thing]
+  (let [selected (toggle thing time)]
+    (world/add-thing world selected)))
 
-(defn select-in-game
-  "Selects the coll of things in the game"
-  [game things]
-  (game/update-world game select-in-world (:time game) things))
+(defn toggle-in-game
+  "Toggles the selection of the thing in the game"
+  [game thing]
+  (game/update-world game toggle-in-world (:time game) thing))
 
 (defn select-in-world-exclusive
-  "Selects the coll of things in the world,
+  "Selects the thing in the world,
   all other things will be unselected."
-  [world time things]
+  [world time thing]
   (let [ethings (get-selected world)
-        ethings-to-remove (thing/coll-difference things ethings)
-        selected (map #(select % time) things)]
+        ethings-to-remove (thing/coll-remove thing ethings)
+        selected (select thing time)]
     (->> (map unselect ethings-to-remove)
-         (concat selected)
+         (cons selected)
          (world/add-things world))))
 
 (defn select-in-game-exclusive
-  "Selects the coll of things in the game,
+  "Selects the thing in the game,
   all other things will be unselected."
-  [game things]
-  (game/update-world game select-in-world-exclusive (:time game) things))
+  [game thing]
+  (game/update-world game select-in-world-exclusive (:time game) thing))
 
-(defn get-selectable-focused-things
-  "Returns the focused things that are selectable."
+(defn get-focused-selectable
+  "Returns the focused thing that is selectable."
   [game]
-  (let [ts (focus/get-all-things game)
-        time (:time game)]
-    (filter #(can-select? % time) ts)))
+  (let [time (:time game)
+        creature (focus/get-creature game)]
+    (when (can-select? creature time)
+      creature)))
 
 (game/defreaction
   [:event.action :action.hit/select]
   ::select
   (fn [game _]
-    (let [things (get-selectable-focused-things game)]
-      (if (empty? things)
-        game
-        (if (game/input-modified? game)
-          (select-in-game game things)
-          (select-in-game-exclusive game things))))))
+    (if-some [thing (get-focused-selectable game)]
+      (if (game/input-modified? game)
+        (toggle-in-game game thing)
+        (select-in-game-exclusive game  thing))
+      game)))
