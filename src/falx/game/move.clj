@@ -1,28 +1,25 @@
 (ns falx.game.move
   (:require [falx.game :as game]
-            [falx.thing :as thing]
             [falx.game.selection :as selection]
             [falx.game.focus :as focus]
-            [falx.game.goal :as goal]))
+            [falx.game.goal :as goal]
+            [falx.thing :as thing]))
 
-(defn teleport-selected
-  [game point]
-  (let [world (:world game)
-        selected (selection/get-selected world)
-        stepped (map #(thing/step % point) selected)]
-    (game/add-things game stepped)))
+(defn move
+  [thing cell]
+  (goal/give-exclusive thing (goal/move-to-cell cell)))
 
-(defn move-selected
-  [game point]
-  (let [world (:world game)
-        selected (selection/get-selected world)
-        goal (goal/move-to-point point)]
-    (->> selected
-         (map #(goal/give-exclusive % goal))
-         (game/add-things game))))
+(defn moving-to?
+  [thing cell]
+  (goal/has? thing (goal/move-to-cell cell)))
 
 (game/defreaction
   [:event.action :action.hit/move]
   ::move
   (fn [game _]
-    (move-selected game (focus/get-point game))))
+    (let [{:keys [world level]} game
+          point (focus/get-point game)
+          cell (thing/cell level point)]
+      (->> (selection/get-selected world)
+           (map #(move % cell))
+           (game/add-things game)))))

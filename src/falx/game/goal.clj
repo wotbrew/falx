@@ -1,10 +1,16 @@
 (ns falx.game.goal
-  (:require [falx.thing :as thing]))
+  (:require [falx.thing :as thing]
+            [falx.util :as util]))
+
+(defn has?
+  "Does the thing have the goal?"
+  [thing goal]
+  (contains? (:goals thing) goal))
 
 (defn give
   "Gives the goal to the thing"
   [thing goal]
-  (-> (update thing :goals conj goal)
+  (-> (update thing :goals util/set-conj goal)
       (thing/publish-event {:type  [:event.thing/goal-added (:type goal)]
                             :thing thing
                             :goal  goal})))
@@ -15,7 +21,7 @@
 
 (defn- remove*
   [thing goal]
-  (update thing :goals (partial remove #{goal})))
+  (update thing :goals disj goal))
 
 (defn complete
   "Completes the given goal, returns the thing."
@@ -60,8 +66,8 @@
   (-> (discard-same-type thing goal)
       (give goal)))
 
-(defn move-to-point
-  "Returns a move to point goal."
-  [point]
-  {:type :goal/move-to-point
-   :point point})
+(defn move-to-cell
+  "Returns a move to cell goal."
+  [cell]
+  {:type :goal/move-to-cell
+   :cell cell})

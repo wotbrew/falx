@@ -16,7 +16,7 @@
         (:world-camera game gdx/default-camera)
         (draw-world/draw-level!
           (:world game)
-          :testing))
+          (:level game)))
       (gdx/draw-string! (gdx/get-fps) 0 0 128)
       (gdx/draw-string! (input/get-mouse-point input) 0 32 512)
       (gdx/draw-string! (:actions input) 0 64 512))

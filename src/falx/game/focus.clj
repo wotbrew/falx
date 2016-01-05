@@ -2,19 +2,25 @@
   (:require [falx.game.camera :as camera]
             [falx.world :as world]
             [falx.thing.creature :as creature]
-            [falx.util :as util]))
+            [falx.util :as util]
+            [falx.thing :as thing]))
 
 (defn get-point
   "Get the focused point"
   [game]
   (camera/get-world-mouse-level-point game))
 
+(defn get-cell
+  "Get the focused cell"
+  [game]
+  (thing/cell (:level game) (get-point game)))
+
 (defn get-all-things
   "Get all focused things (those things under the mouse)"
   [game]
-  (let [point (get-point game)
-        world (:world game)]
-    (world/get-things-by-value world :point point)))
+  (let [{:keys [world]} game
+        cell (get-cell game)]
+    (world/get-things-by-value world :cell cell)))
 
 (defn get-creature
   "Returns the focused creature, nil if none"
