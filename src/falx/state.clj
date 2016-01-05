@@ -29,9 +29,9 @@
 
 (defn update-world!
   "Applies the function `f` and any `args` to the world in the game, mutating the current game state.
-  Returns the updated game."
+  Returns the updated world."
   ([f]
-   (update-game! game/update-world f))
+   (:world (update-game! game/update-world f)))
   ([f & args]
    (update-world! #(apply f % args))))
 
@@ -41,21 +41,24 @@
   (game/get-thing @game-state id))
 
 (defn add-thing!
-  "Adds the thing to the global game state, returns the updated game."
+  "Adds the thing to the global game state"
   [thing]
-  (update-game! game/add-thing thing))
+  (update-game! game/add-thing thing)
+  nil)
 
 (defn remove-thing!
-  "Removes the thing from the global game state, returns the updated game."
+  "Removes the thing from the global game state"
   [id]
-  (update-game! game/remove-thing id))
+  (update-game! game/remove-thing id)
+  nil)
 
 (defn update-thing!
   "Applies the function `f` and any `args` to the thing given by `id` in the game.
   Mutates the global game state.
-  Returns the game state."
+  Returns the thing."
   ([id f]
-   (update-game! game/update-thing id f))
+   (-> (update-game! game/update-thing id f)
+       (game/get-thing id)))
   ([id f & args]
    (update-thing! id #(apply f % args))))
 

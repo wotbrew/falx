@@ -5,13 +5,19 @@
             [falx.game.goal :as goal]
             [falx.thing :as thing]))
 
+(defn move-goal
+  "Returns a move to cell goal."
+  [cell]
+  {:type :goal/move-to-cell
+   :cell cell})
+
 (defn move
   [thing cell]
-  (goal/give-exclusive thing (goal/move-to-cell cell)))
+  (goal/give-exclusive thing (move-goal cell)))
 
 (defn moving-to?
   [thing cell]
-  (goal/has? thing (goal/move-to-cell cell)))
+  (goal/has? thing (move-goal cell)))
 
 (game/defreaction
   [:event.action :action.hit/move]

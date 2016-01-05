@@ -43,6 +43,14 @@
                             :thing thing
                             :goal  goal})))
 
+(defn fail
+  "Removes the goal due to failure, returns the thing"
+  [thing goal]
+  (-> (remove* thing goal)
+      (thing/publish-event {:type [:event.thing/goal-failed (:type goal)]
+                            :thing thing
+                            :goal goal})))
+
 (defn discard-coll
   "Discards a coll of goals, returns the thing."
   [thing coll]
@@ -65,9 +73,3 @@
   [thing goal]
   (-> (discard-same-type thing goal)
       (give goal)))
-
-(defn move-to-cell
-  "Returns a move to cell goal."
-  [cell]
-  {:type :goal/move-to-cell
-   :cell cell})

@@ -12,7 +12,8 @@
   {:world        world/default
    :world-camera gdx/default-camera
    :delta 0.0
-   :input input/default})
+   :input input/default
+   :level :testing})
 
 (defonce ^:private reactions (atom {}))
 

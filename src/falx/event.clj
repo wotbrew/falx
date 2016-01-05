@@ -38,6 +38,10 @@
   [event-type key f]
   (swap! handlers register event-type key f))
 
+(defn defhandler-async
+  [event-type key f]
+  (defhandler event-type key #(future (f %))))
+
 (defn publish!
   [event]
   (async/>!! event-chan event)

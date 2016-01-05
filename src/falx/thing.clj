@@ -1,6 +1,7 @@
 (ns falx.thing
   "Things are just maps, each game entity is a thing"
-  (:require [falx.react :as react]))
+  (:require [falx.react :as react]
+            [falx.point :as point]))
 
 (defonce ^:private reactions (atom {}))
 
@@ -60,11 +61,24 @@
            :thing thing
            :cell  cell}))))
 
-(defn step
-  "Puts the thing in the given `point`, assuming its staying on the same level"
+(defn put-at-point
+  "Puts the thing at the `point`, assuming its staying on the same level"
   [thing point]
   (if-some [level (:level thing)]
     (put thing (cell level point))
+    thing))
+
+(defn adjacent-to-point?
+  "Is the thing adjacent to the point?"
+  [thing point]
+  (when-some [current (:point thing)]
+    (point/adjacent? current point)))
+
+(defn step
+  "Puts the thing in the `point` only if it is adjacent to it."
+  [thing point]
+  (if (adjacent-to-point? thing point)
+    (put-at-point thing point)
     thing))
 
 (defn unput
