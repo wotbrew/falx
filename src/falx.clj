@@ -3,7 +3,9 @@
             [falx.draw.world :as draw-world]
             [falx.input :as input]
             [falx.state :as state]
-            [falx.game :as game]))
+            [falx.game :as game]
+            [falx.init :as init]
+            [clojure.tools.logging :refer [error info]]))
 
 (def max-fps 60)
 
@@ -21,7 +23,7 @@
       (gdx/draw-string! (input/get-mouse-point input) 0 32 512)
       (gdx/draw-string! (:actions input) 0 64 512))
     (catch Throwable e
-      (println e)
+      (error e)
       (Thread/sleep 5000))))
 
 (def app
@@ -31,4 +33,7 @@
 
 (defn -main
   [& args]
-  (gdx/start-app! app))
+  (info "Starting application")
+  (gdx/start-app! app)
+  (info "Started application")
+  (init/init!))
