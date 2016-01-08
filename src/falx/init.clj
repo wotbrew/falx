@@ -12,6 +12,8 @@
     falx.game.camera
     falx.game.time
     falx.game.move
+    falx.game.path
+    falx.game.solid
 
     falx.thing.creature
 
@@ -26,12 +28,23 @@
   (state/update-game! (constantly game/default))
   (info "Loading modules")
   (run! (fn [ns]
-          (info "Loading" ns)
+          (info "Loading core module" ns)
           (require [ns])) namespaces)
   (state/put-thing!
     {:id "fred"
-     :type :creature}
+     :type :creature
+     :solid? true}
     (thing/cell
       :testing
       [3 4]))
+  (state/put-thing!
+    {:id "bob"
+     :type :creature
+     :solid? true}
+    (thing/cell
+      :testing
+      [6 6]))
   (info "Initialized game"))
+
+(comment
+  (init!))

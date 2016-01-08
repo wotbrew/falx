@@ -4,7 +4,9 @@
             [falx.state :as state]
             [falx.game.goal :as goal]
             [falx.thing :as thing]
-            [falx.point :as point]))
+            [falx.game.path :as path]
+            [falx.game.solid :as solid]
+            [falx.world :as world]))
 
 ;; ========
 ;; TAKE A STEP
@@ -15,12 +17,20 @@
   {:type :goal/step
    :point point})
 
-(defn try-step
+(defn try-step-thing
   [thing point goal]
   (let [thing' (thing/step thing point)]
     (if (= point (:point thing'))
       (goal/complete thing' goal)
-      (goal/discard thing' goal))))
+      (goal/fail thing' goal))))
+
+(defn try-step
+  [world id point goal]
+  (let [thing (world/get-thing world id)
+        cell (thing/cell (:level thing) point)]
+    (if (and (:solid? thing) (solid/solid-cell? world cell))
+      (world/add-thing world (goal/fail thing goal))
+      (world/add-thing world (try-step-thing thing point goal)))))
 
 (event/defhandler
   [:event.thing/goal-added :goal/step]
@@ -29,7 +39,7 @@
     (let [{:keys [goal thing]} event
           point (:point goal)
           id (:id thing)]
-      (state/update-thing! id try-step point goal))))
+      (state/update-world! try-step id point goal))))
 
 ;; ============
 ;; ASKED TO MOVE
@@ -64,10 +74,6 @@
   {:type :goal/walk-path
    :path path})
 
-(defn get-path
-  [point-a point-b]
-  (seq (rest (point/get-a*-path (constantly true) point-a point-b))))
-
 (defn try-walk-path
   [thing path goal]
   (if (seq path)
@@ -82,10 +88,12 @@
     (let [{:keys [goal thing]} event
           current (:point thing)
           point (:point goal)
-          id (:id thing)]
+          id (:id thing)
+          level (:level thing)
+          world (:world (state/get-game))]
       (if-not current
         (state/update-thing! id goal/discard goal)
-        (let [path (get-path current point)]
+        (let [path (path/get-path world level current point)]
           (state/update-thing! id try-walk-path path goal))))))
 
 ;; ==========

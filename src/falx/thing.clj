@@ -74,6 +74,12 @@
   (when-some [current (:point thing)]
     (point/adjacent? current point)))
 
+(defn adjacent-to-cell?
+  "Is the thing adjacent to the cell?"
+  [thing cell]
+  (and (= (:level cell) (:level thing))
+       (adjacent-to-point? thing (:point thing))))
+
 (defn step
   "Puts the thing in the `point` only if it is adjacent to it."
   [thing point]
@@ -105,4 +111,3 @@
   "Takes those things in things-b that are not in things-a. Comparison is done by thing identity."
   [things-a things-b]
   (reduce #(coll-remove %2 %1) things-b things-a))
-

@@ -81,10 +81,10 @@
       ::not-found world
       (-> (remove-attribute* world id attribute)
           (publish-event
-            {:type :event.thing/attribute-removed
-             :id id
+            {:type      [:event.thing/attribute-removed attribute]
+             :id        id
              :attribute attribute
-             :value value})))))
+             :value     value})))))
 
 (defn set-attribute
   "Sets the things attribute to the given valie."
@@ -95,7 +95,7 @@
       (cond->
         (not= value (get-attribute world id attribute))
         (publish-event
-          {:type           :event.thing/attribute-set
+          {:type           [:event.thing/attribute-set attribute]
            :id             id
            :attribute      attribute
            :value          value
@@ -109,7 +109,7 @@
     (-> (reduce #(remove-attribute* %1 id %2) world attributes)
         (publish-event
           {:type :event.thing/removed
-           :id id}))))
+           :thing thing}))))
 
 (defn- add-thing*
   [world thing]
@@ -137,12 +137,13 @@
       (-> (add-thing* world thing)
           (publish-event
             {:type :event.thing/added
-             :id   thing}))
+             :thing thing}))
       (not= existing thing)
       (-> (add-thing* world thing)
           (publish-event
             {:type :event.thing/changed
-             :id   thing}))
+             :thing thing
+             :existing-thing existing}))
       :else world)))
 
 (defn add-things
