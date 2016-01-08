@@ -23,3 +23,22 @@
   (when (:selected? thing)
     (gdx/draw-sprite! selection-circle x y w h {:color gdx.color/green}))
   (gdx/draw-sprite! human-male x y w h))
+
+
+(def castle-floor
+  (gdx/sprite
+    (io/resource "tiles/CastleDungeon.png")
+    [0 0 32 32]))
+
+(defmethod draw! :floor
+  [thing x y w h]
+  (gdx/draw-sprite! castle-floor x y w h))
+
+(def castle-wall
+  (gdx/sprite
+    (io/resource "tiles/CastleDungeon.png")
+    [0 32 32 32]))
+
+(defmethod draw! :wall
+  [thing x y w h]
+  (gdx/draw-sprite! castle-wall x y w h))

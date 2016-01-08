@@ -2,7 +2,12 @@
   (:require [clojure.tools.logging :refer [info]]
             [falx.state :as state]
             [falx.thing :as thing]
-            [falx.game :as game]))
+            [falx.game :as game]
+            [falx.thing.creature :as creature]
+            [falx.thing.floor :as floor]
+            [falx.thing.wall :as wall]
+            [falx.rect :as rect]
+            [falx.point :as point]))
 
 (def namespaces
   '[falx.game.describe
@@ -22,6 +27,14 @@
 
     falx.ai.move])
 
+(defn fillout
+  [game template points]
+  (game/add-things
+    game
+    (map thing/put
+         (take (count points) (thing/fresh-thing-seq template))
+         (map (partial thing/cell :testing) points))))
+
 (defn init!
   []
   (info "Initializing game")
@@ -30,20 +43,28 @@
   (run! (fn [ns]
           (info "Loading core module" ns)
           (require [ns])) namespaces)
-  (state/put-thing!
-    {:id "fred"
-     :type :creature
-     :solid? true}
-    (thing/cell
-      :testing
-      [3 4]))
-  (state/put-thing!
-    {:id "bob"
-     :type :creature
-     :solid? true}
-    (thing/cell
-      :testing
-      [6 6]))
+  (let [game
+        (-> game/default
+            (fillout
+              floor/template
+              (rect/get-points 0 0 16 16))
+            (fillout
+              wall/template
+              (rect/get-edge-points 0 0 16 16))
+            (fillout
+              wall/template
+              (take 4 (point/line-down 7 0)))
+            (game/put-thing
+              (thing/thing "fred" creature/template)
+              (thing/cell
+                :testing
+                [3 4]))
+            (game/put-thing
+              (thing/thing "bob" creature/template)
+              (thing/cell
+                :testing
+                [6 6])))]
+    (state/update-game! (constantly game)))
   (info "Initialized game"))
 
 (comment

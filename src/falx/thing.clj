@@ -1,9 +1,28 @@
 (ns falx.thing
   "Things are just maps, each game entity is a thing"
   (:require [falx.react :as react]
-            [falx.point :as point]))
+            [falx.point :as point])
+  (:import (java.util UUID)))
 
 (defonce ^:private reactions (atom {}))
+
+(defn thing
+  ([id]
+   (thing id {}))
+  ([id template]
+   (merge template {:id id} )))
+
+(defn fresh-thing
+  ([]
+   (fresh-thing {}))
+  ([template]
+   (thing (str (UUID/randomUUID)) template)))
+
+(defn fresh-thing-seq
+  ([template]
+   (repeatedly #(fresh-thing template)))
+  ([template n]
+   (repeatedly n #(fresh-thing template))))
 
 (defn defreaction
   [event-type key f]
