@@ -1,7 +1,8 @@
 (ns falx.thing
   "Things are just maps, each game entity is a thing"
   (:require [falx.react :as react]
-            [falx.point :as point])
+            [falx.point :as point]
+            [falx.location :as location])
   (:import (java.util UUID)))
 
 (defonce ^:private reactions (atom {}))
@@ -51,20 +52,6 @@
   [m]
   (some? (:id m)))
 
-(defn cell
-  "The cell represents a point in the world, each point
-  can be located at a `level`."
-  [level point]
-  {:level level
-   :point point})
-
-(defn slice
-  "The slice represents a layer in the world, each layer
-  can be located at a `level`."
-  [level layer]
-  {:level level
-   :layer layer})
-
 (defn put
   "Puts the thing in the given `cell` in the world."
   [thing cell]
@@ -72,7 +59,7 @@
     thing
     (-> (assoc thing
           :cell cell
-          :slice (slice (:level cell) (:layer thing :unknown))
+          :slice (location/slice (:level cell) (:layer thing :unknown))
           :point (:point cell)
           :level (:level cell))
         (publish-event
@@ -84,7 +71,7 @@
   "Puts the thing at the `point`, assuming its staying on the same level"
   [thing point]
   (if-some [level (:level thing)]
-    (put thing (cell level point))
+    (put thing (location/cell level point))
     thing))
 
 (defn adjacent-to-point?
@@ -96,8 +83,8 @@
 (defn adjacent-to-cell?
   "Is the thing adjacent to the cell?"
   [thing cell]
-  (and (= (:level cell) (:level thing))
-       (adjacent-to-point? thing (:point thing))))
+  (when (:cell thing)
+    (location/adjacent? (:cell thing) cell)))
 
 (defn step
   "Puts the thing in the `point` only if it is adjacent to it."

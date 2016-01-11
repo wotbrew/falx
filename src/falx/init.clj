@@ -7,7 +7,8 @@
             [falx.thing.floor :as floor]
             [falx.thing.wall :as wall]
             [falx.rect :as rect]
-            [falx.point :as point]))
+            [falx.point :as point]
+            [falx.location :as location]))
 
 (def namespaces
   '[falx.game.describe
@@ -33,7 +34,7 @@
     game
     (map thing/put
          (take (count points) (thing/fresh-thing-seq template))
-         (map (partial thing/cell :testing) points))))
+         (map (partial location/cell :testing) points))))
 
 (defn init!
   []
@@ -56,12 +57,12 @@
               (take 4 (point/line-down 7 0)))
             (game/put-thing
               (thing/thing "fred" creature/template)
-              (thing/cell
+              (location/cell
                 :testing
                 [3 4]))
             (game/put-thing
               (thing/thing "bob" creature/template)
-              (thing/cell
+              (location/cell
                 :testing
                 [6 6])))]
     (state/update-game! (constantly game)))

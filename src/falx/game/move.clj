@@ -3,7 +3,7 @@
             [falx.game.selection :as selection]
             [falx.game.focus :as focus]
             [falx.game.goal :as goal]
-            [falx.thing :as thing]))
+            [falx.location :as location]))
 
 (defn move-goal
   "Returns a move to cell goal."
@@ -25,7 +25,7 @@
   (fn [game _]
     (let [{:keys [world level]} game
           point (focus/get-point game)
-          cell (thing/cell level point)]
+          cell (location/cell level point)]
       (->> (selection/get-selected world)
            (map #(move % cell))
            (game/add-things game)))))

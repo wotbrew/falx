@@ -6,7 +6,8 @@
             [falx.thing :as thing]
             [falx.game.path :as path]
             [falx.game.solid :as solid]
-            [falx.world :as world]))
+            [falx.world :as world]
+            [falx.location :as location]))
 
 ;; ========
 ;; TAKE A STEP
@@ -27,7 +28,7 @@
 (defn try-step
   [world id point goal]
   (let [thing (world/get-thing world id)
-        cell (thing/cell (:level thing) point)]
+        cell (location/cell (:level thing) point)]
     (if (and (:solid? thing) (solid/solid-cell? world cell))
       (world/add-thing world (goal/fail thing goal))
       (world/add-thing world (try-step-thing thing point goal)))))

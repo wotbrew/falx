@@ -3,7 +3,7 @@
             [falx.world :as world]
             [falx.thing.creature :as creature]
             [falx.util :as util]
-            [falx.thing :as thing]))
+            [falx.location :as location]))
 
 (defn get-point
   "Get the focused point"
@@ -13,7 +13,7 @@
 (defn get-cell
   "Get the focused cell"
   [game]
-  (thing/cell (:level game) (get-point game)))
+  (location/cell (:level game) (get-point game)))
 
 (defn get-all-things
   "Get all focused things (those things under the mouse)"
