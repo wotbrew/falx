@@ -62,6 +62,13 @@
         (let [path (path/get-path world current cell)]
           (state/update-thing! id try-walk-path path goal))))))
 
+(thing/defreaction
+  [:event.thing/goal-failed :goal/find-path]
+  ::find-path-goal-failed
+  (fn [thing {:keys [goal]}]
+    ;;try again?
+    (move/move thing (:cell goal))))
+
 ;; ==========
 ;; WALKING PATH
 
@@ -104,3 +111,11 @@
               (recur (rest path))
               (state/update-thing! id goal/fail goal)))
           (state/update-thing! id goal/complete goal))))))
+
+(thing/defreaction
+  [:event.thing/goal-failed :goal/walk-path]
+  ::walk-path-failed
+  (fn [thing {:keys [path]}]
+    (if (seq path)
+      (move/move thing (last path))
+      thing)))

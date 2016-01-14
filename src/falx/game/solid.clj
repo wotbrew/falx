@@ -1,13 +1,13 @@
 (ns falx.game.solid
   (:require [falx.world :as world]))
 
-(defn recalc-solid-cell?
+(defn- solid-cell?*
   [world cell]
   (some :solid? (world/get-things-by-value world :cell cell)))
 
 (defn solidity-changed
   [world cell]
-  (let [solid? (recalc-solid-cell? world cell)]
+  (let [solid? (solid-cell?* world cell)]
     (assoc-in world [::point-cache (:level cell) (:point cell)] solid?)))
 
 (defn solid-cell?
