@@ -52,6 +52,11 @@
   [world]
   (world/get-things-by-value world :selected? true))
 
+(defn get-selected-in-level
+  "Returns the selected things in the given world & level"
+  [world level]
+  (filter #(thing/in-level? % level) (get-selected world)))
+
 (defn toggle-in-world
   "Toggles the selection of the thing in the world"
   [world time thing]

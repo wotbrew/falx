@@ -4,71 +4,80 @@
             [falx.game.solid :as solid]
             [falx.game.selection :as selection]
             [falx.state :as state]
-            [falx.game.focus :as focus]))
+            [falx.game.focus :as focus]
+            [falx.location :as location]))
 
 (defn get-pred
   [world level]
   (complement (solid/get-solid-point-pred world level)))
 
-(defn get-path
+(defn get-path*
   [world level point-a point-b]
   (seq (rest (point/get-a*-path (get-pred world level) point-a point-b))))
+
+(defn get-path
+  [world cell-a cell-b]
+  (when (= (:level cell-a) (:level cell-b))
+    (->> (get-path* world (:level cell-a) (:point cell-a) (:point cell-b))
+         (map #(location/cell (:level cell-a) %))
+         seq)))
 
 ;; =====
 ;; PATH PREVIEW
 
 (defn get-path-preview
-  [game to]
+  [game cell]
   (let [{:keys [world level]} game
-        fselected (first (filter (comp #{level} :level) (selection/get-selected world)))
-        point-a (:point fselected)]
-    (when (and fselected point-a)
-      (get-path world level point-a to))))
+        fselected (first (selection/get-selected-in-level world level))]
+    (when (and fselected (:cell fselected))
+      (get-path world (:cell fselected) cell))))
 
 (defn refresh-path-preview!
-  [to]
-  (if-some [preview (get-path-preview (state/get-game) to)]
-    (state/update-game! assoc :path-preview preview
-                        :path-preview-points (set preview))
-    (state/update-game! dissoc :path-preview
-                        ::path-preview-points)))
+  [cell]
+  (if-some [preview (get-path-preview (state/get-game) cell)]
+   (state/update-game! assoc
+                       :path-preview preview
+                       :path-preview-cells (set preview))
+   (state/update-game! dissoc
+                       :path-preview
+                       ::path-preview-cells)))
 
 (event/defhandler-async
-  :event.focus/point-changed
-  ::point-changed
-  (fn [{:keys [point]}]
-    (refresh-path-preview! point)))
+  :event.focus/cell-changed
+  ::cell-changed
+  (fn [{:keys [cell]}]
+    (refresh-path-preview! cell)))
 
 (event/defhandler-async
   :event.selection/changed
   ::selection-changed
   (fn [_]
-    (refresh-path-preview! (focus/get-point (state/get-game)))))
+    (refresh-path-preview! (focus/get-cell (state/get-game)))))
 
 (event/defhandler-async
   :event.thing/put
   ::thing-put
   (fn [{:keys [cell]}]
     (let [game (state/get-game)]
-      (when (contains? (::path-preview-points game) (:point cell))
-        (refresh-path-preview! (focus/get-point game))))))
+      (when (contains? (::path-preview-points game) cell)
+        (refresh-path-preview! (focus/get-cell game))))))
 
 (event/defhandler-async
   :event.thing/unput
   ::thing-put
   (fn [{:keys [cell]}]
     (let [game (state/get-game)]
-      (when (contains? (::path-preview-points game) (:point cell))
-        (refresh-path-preview! (focus/get-point game))))))
+      (when (contains? (::path-preview-points game) cell)
+        (refresh-path-preview! (focus/get-cell game))))))
 
 (event/defhandler-async
   :event.selection/put
   ::selection-put
   (fn [_]
-    (refresh-path-preview! (focus/get-point (state/get-game)))))
+    (refresh-path-preview! (focus/get-cell (state/get-game)))))
 
 (event/defhandler-async
   :event.selection/unput
   ::selection-unput
   (fn [_]
-    (refresh-path-preview! (focus/get-point (state/get-game)))))
+    (refresh-path-preview! (focus/get-cell (state/get-game)))))

@@ -87,6 +87,10 @@
   (when (:cell thing)
     (location/adjacent? (:cell thing) cell)))
 
+(defn in-level?
+  [thing level]
+  (= (:level thing) level))
+
 (defn step
   "Puts the thing in the `point` only if it is adjacent to it."
   [thing point]

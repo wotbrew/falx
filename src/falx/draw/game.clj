@@ -10,13 +10,17 @@
 
 (defn draw-path-preview!
   [game]
-  (when-some [points (seq (:path-preview game))]
-    (run! (fn [[x y]]
-            (gdx/draw-sprite! yellow-flag
-                              (* x draw-world/cell-width)
-                              (* y draw-world/cell-height)
-                              draw-world/cell-width
-                              draw-world/cell-height)) points)))
+  (let [level (:level game)]
+    (->> (:path-preview game)
+         (eduction (comp (filter #(= level (:level %)))
+                         (map :point)))
+         (run!
+           (fn [[x y]]
+             (gdx/draw-sprite! yellow-flag
+                               (* x draw-world/cell-width)
+                               (* y draw-world/cell-height)
+                               draw-world/cell-width
+                               draw-world/cell-height))))))
 
 (defn draw!
   [game]

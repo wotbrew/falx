@@ -94,7 +94,7 @@
           world (:world (state/get-game))]
       (if-not current
         (state/update-thing! id goal/discard goal)
-        (let [path (path/get-path world level current point)]
+        (let [path (path/get-path* world level current point)]
           (state/update-thing! id try-walk-path path goal))))))
 
 ;; ==========
