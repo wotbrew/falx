@@ -91,14 +91,7 @@
   [thing level]
   (= (:level thing) level))
 
-(defn step-at-point
-  "Puts the thing in the `point` only if it is adjacent to it."
-  [thing point]
-  (if (adjacent-to-point? thing point)
-    (put-at-point thing point)
-    thing))
-
-(defn step-at-cell
+(defn step
   "Puts the thing at the `cell` only if it is adjacent to it"
   [thing cell]
   (if (adjacent-to-cell? thing cell)

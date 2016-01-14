@@ -73,7 +73,7 @@
           cell (:cell goal)
           thing (world/get-thing world id)]
       (if (can-step? thing cell world)
-        (world/update-thing world id thing/step-at-cell cell)
+        (world/update-thing world id thing/step cell)
         (world/update-thing world id goal/fail goal)))))
 
 (defn step
