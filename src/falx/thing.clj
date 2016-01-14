@@ -67,20 +67,6 @@
            :thing thing
            :cell  cell}))))
 
-(defn put-at-point
-  "Puts the thing at the `point`, assuming its staying on the same level"
-  [thing point]
-  (if-some [level (:level thing)]
-    (put thing (location/cell level point))
-    thing))
-
-(defn adjacent-to-point?
-  "Is the thing adjacent to the point?"
-  [thing point]
-  (and point
-       (when-some [current (:point thing)]
-         (point/adjacent? current point))))
-
 (defn adjacent-to-cell?
   "Is the thing adjacent to the cell?"
   [thing cell]
