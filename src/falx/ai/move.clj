@@ -67,11 +67,25 @@
 
 (def walk-wait-time 125)
 
-(defn try-path-step
+(defn walk
   [thing cell goal]
   (if-not (goal/has? thing goal)
     thing
     (move/step thing cell)))
+
+(defn still-walking?
+  [id goal]
+  (goal/has? (state/get-thing id) goal))
+
+(defn continue-walking?
+  [id cell goal]
+  (let [thing (state/get-thing id)]
+    (and (goal/has? thing goal)
+         (thing/in? thing cell))))
+
+(defn walk!
+  [id cell goal]
+  (state/update-thing! id walk cell goal))
 
 (event/defhandler
   [:event.thing/goal-added :goal/walk-path]
@@ -82,11 +96,11 @@
           path (:path goal)]
       (async/go-loop
         [path path]
-        (if (and (seq path) (goal/has? (state/get-thing id) goal))
+        (if (and (seq path) (still-walking? id goal))
           (let [cell (first path)]
-            (state/update-thing! id try-path-step cell goal)
+            (walk! id cell goal)
             (async/<! (async/timeout walk-wait-time))
-            (if (thing/in? (state/get-thing id) cell)
+            (if (continue-walking? id cell goal)
               (recur (rest path))
               (state/update-thing! id goal/fail goal)))
           (state/update-thing! id goal/complete goal))))))
