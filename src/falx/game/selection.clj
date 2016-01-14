@@ -4,9 +4,7 @@
             [falx.game.time :as time]
             [falx.world :as world]
             [falx.game :as game]
-            [falx.game.focus :as focus]
-            [falx.input :as input]
-            [clojure.set :as set]))
+            [falx.game.focus :as focus]))
 
 (defn just-select
   "Selects the given thing, does not check whether selection should be possible.
@@ -99,3 +97,33 @@
         (toggle-in-game game thing)
         (select-in-game-exclusive game  thing))
       game)))
+
+(game/defreaction
+  :event.thing/put
+  ::put
+  (fn [game {:keys [thing]}]
+    (if (:selected? thing)
+      (game/publish-event game {:type :event.selection/put
+                                :thing thing})
+      game)))
+
+(game/defreaction
+  :event.thing/unput
+  ::unput
+  (fn [game {:keys [thing]}]
+    (if (:selected? thing)
+      (game/publish-event game {:type :event.selection/unput
+                                :thing thing})
+      game)))
+
+(game/defreaction
+  :event.thing/selected
+  ::selected
+  (fn [game _]
+    (game/publish-event game {:type :event.selection/changed})))
+
+(game/defreaction
+  :event.thing/unselected
+  ::selected
+  (fn [game _]
+    (game/publish-event game {:type :event.selection/changed})))

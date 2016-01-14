@@ -119,8 +119,8 @@
   ([[x y] [x2 y2]]
    (get-manhattan-distance x y x2 y2))
   ([x y x2 y2]
-   (+ (Math/abs (- x x2))
-      (Math/abs (- y y2)))))
+   (+ (Math/abs (double (- x x2)))
+      (Math/abs (double (- y y2))))))
 
 (defn direction
   ([[x y] [x2 y2]]
@@ -147,32 +147,34 @@
 
 (def a*-h get-manhattan-distance)
 
-(def ^:dynamic *max-path-iter* 100000)
+(def ^:dynamic *max-path-iter* 1000)
+
+(defn get-a*-path*
+  [pred from to]
+  (let [open-q (PriorityQueue.)
+        closed-s (HashSet.)
+        current-v (volatile! nil)
+        f (comp (filter pred)
+                (filter #(not (.contains closed-s %)))
+                (map #(A*Node. % (a*-g % @current-v) (a*-h % to) @current-v)))
+        reducing (completing #(.add open-q %2))]
+    (.add open-q (A*Node. from 0 0 nil))
+    (loop [i (int 0)]
+      (when (< i *max-path-iter*)
+        (when-let [^A*Node current (.poll open-q)]
+          (if (= (.pt current) to)
+            (into (list)
+                  (comp (take-while some?)
+                        (map #(.pt ^A*Node %)))
+                  (iterate #(.parent ^A*Node %) current))
+            (do
+              (.add closed-s (.pt current))
+              (vreset! current-v current)
+              (let [adj (get-adjacent (.pt current))]
+                (transduce f reducing nil adj)
+                (recur (inc i))))))))))
 
 (defn get-a*-path
-  ([pred [x y] [x2 y2]]
-   (get-a*-path pred x y x2 y2))
-  ([pred x y x2 y2]
-   (let [open-q (PriorityQueue.)
-         closed-s (HashSet.)
-         goal [x2 y2]
-         current-v (volatile! nil)
-         f (comp (filter pred)
-                 (filter #(not (.contains closed-s %)))
-                 (map #(A*Node. % (a*-g % @current-v) (a*-h % goal) @current-v)))
-         reducing (completing #(.add open-q %2))]
-     (.add open-q (A*Node. [x y] 0 0 nil))
-     (loop [i (int 0)]
-       (when (< i *max-path-iter*)
-         (when-let [^A*Node current (.poll open-q)]
-           (if (= (.pt current) goal)
-             (into (list)
-                   (comp (take-while some?)
-                         (map #(.pt ^A*Node %)))
-                   (iterate #(.parent ^A*Node %) current))
-             (do
-               (.add closed-s (.pt current))
-               (vreset! current-v current)
-               (let [adj (get-adjacent (.pt current))]
-                 (transduce f reducing nil adj)
-                 (recur (inc i)))))))))))
+  [pred from to]
+  (when (pred to)
+    (get-a*-path* pred from to)))

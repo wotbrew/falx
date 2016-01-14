@@ -18,4 +18,4 @@
 (defn adjacent?
   [cell-a cell-b]
   (and (= (:level cell-a) (:level cell-b))
-       (point/adjacent? cell-a cell-b)))
+       (point/adjacent? (:point cell-a) (:point cell-b))))

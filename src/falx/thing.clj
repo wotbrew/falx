@@ -77,8 +77,9 @@
 (defn adjacent-to-point?
   "Is the thing adjacent to the point?"
   [thing point]
-  (when-some [current (:point thing)]
-    (point/adjacent? current point)))
+  (and point
+       (when-some [current (:point thing)]
+         (point/adjacent? current point))))
 
 (defn adjacent-to-cell?
   "Is the thing adjacent to the cell?"

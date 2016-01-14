@@ -40,7 +40,7 @@
 
 (defn defhandler-async
   [event-type key f]
-  (defhandler event-type key #(future (f %))))
+  (defhandler event-type key #(async/go (f %))))
 
 (defn publish!
   [event]

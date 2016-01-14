@@ -23,6 +23,7 @@
 
     falx.thing.creature
 
+    falx.draw.game
     falx.draw.world
     falx.draw.thing
 
