@@ -3,7 +3,8 @@
             [falx.game.selection :as selection]
             [falx.game.focus :as focus]
             [falx.game.goal :as goal]
-            [falx.location :as location]))
+            [falx.location :as location]
+            [falx.thing :as thing]))
 
 (defn move-goal
   "Returns a move to cell goal."
@@ -15,10 +16,6 @@
   [thing cell]
   (goal/give-exclusive thing (move-goal cell)))
 
-(defn moving-to?
-  [thing cell]
-  (goal/has? thing (move-goal cell)))
-
 (game/defreaction
   [:event.action :action.hit/move]
   ::move
@@ -29,3 +26,12 @@
       (->> (selection/get-selected world)
            (map #(move % cell))
            (game/add-things game)))))
+
+(thing/defreaction
+  :event.thing/put
+  ::thing-put
+  (fn [thing {:keys [cell]}]
+    (let [goal (move-goal cell)]
+      (if (goal/has? thing goal)
+        (goal/complete thing goal)
+        thing))))
