@@ -86,7 +86,7 @@
           (let [cell (first path)]
             (state/update-thing! id try-path-step cell goal)
             (async/<! (async/timeout walk-wait-time))
-            (if (= (:cell (state/get-thing id)) cell)
+            (if (thing/in? (state/get-thing id) cell)
               (recur (rest path))
               (state/update-thing! id goal/fail goal)))
           (state/update-thing! id goal/complete goal))))))

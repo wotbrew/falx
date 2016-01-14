@@ -8,28 +8,34 @@
 (defonce ^:private reactions (atom {}))
 
 (defn thing
+  "Creates a thing from the template using the given id."
   ([id]
    (thing id {}))
   ([id template]
    (merge template {:id id} )))
 
 (defn fresh-thing
+  "Creates a thing from the template, assigns a unique id."
   ([]
    (fresh-thing {}))
   ([template]
    (thing (str (UUID/randomUUID)) template)))
 
 (defn fresh-thing-seq
+  "Generates a seq of unique things from the given template."
   ([template]
    (repeatedly #(fresh-thing template)))
   ([template n]
    (repeatedly n #(fresh-thing template))))
 
 (defn defreaction
+  "Defines a reaction to an event published to/by the thing.
+  Each reaction is a function of the thing plus the event, and is executed
+  after immediately after the event is published. The reaction should return the new entity."
   [event-type key f]
   (swap! reactions react/register event-type key f))
 
-(defn react
+(defn- react
   [thing event]
   (react/react @reactions event thing))
 
@@ -51,6 +57,11 @@
   "Is the map a thing?"
   [m]
   (some? (:id m)))
+
+(defn in?
+  "Is the thing in the cell?"
+  [thing cell]
+  (= (:cell thing) cell))
 
 (defn put
   "Puts the thing in the given `cell` in the world."
@@ -74,6 +85,7 @@
     (location/adjacent? (:cell thing) cell)))
 
 (defn in-level?
+  "Is the thing in the given level?"
   [thing level]
   (= (:level thing) level))
 
