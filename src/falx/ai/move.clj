@@ -7,7 +7,6 @@
             [falx.thing :as thing]
             [falx.game.path :as path]))
 
-
 ;; ============
 ;; ASKED TO MOVE
 

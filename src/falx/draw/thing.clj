@@ -13,6 +13,16 @@
     (io/resource "tiles/Human.png")
     [32 0 32 32]))
 
+(def human-female
+  (gdx/sprite
+    (io/resource "tiles/Human.png")
+    [0 0 32 32]))
+
+(def goblin
+  (gdx/sprite
+    (io/resource "tiles/Goblins.png")
+    [0 0 32 32]))
+
 (def selection-circle
   (gdx/sprite
     (io/resource "tiles/Misc.png")
@@ -22,8 +32,13 @@
   [thing x y w h]
   (when (:selected? thing)
     (gdx/draw-sprite! selection-circle x y w h {:color gdx.color/green}))
-  (gdx/draw-sprite! human-male x y w h))
-
+  (gdx/draw-sprite!
+    (case (:race thing)
+      :goblin goblin
+      (case (:gender thing)
+        :male human-male
+        human-female))
+    x y w h))
 
 (def castle-floor
   (gdx/sprite

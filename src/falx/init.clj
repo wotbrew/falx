@@ -57,15 +57,25 @@
               wall/template
               (take 4 (point/line-down 7 0)))
             (game/put-thing
-              (thing/thing "fred" creature/template)
+              (merge
+                (thing/thing "fred" creature/human)
+                {:player? true})
               (location/cell
                 :testing
                 [3 4]))
             (game/put-thing
-              (thing/thing "bob" creature/template)
+              (merge
+                (thing/thing "ethel" creature/human)
+                {:player? true
+                 :gender :female})
               (location/cell
                 :testing
-                [6 6])))]
+                [6 6]))
+            (game/put-thing
+              (thing/thing "gobbo" creature/goblin-template)
+              (location/cell
+                :testing
+                [9 9])))]
     (state/update-game! (constantly game)))
   (info "Initialized game"))
 
