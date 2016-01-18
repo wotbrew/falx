@@ -1,29 +1,47 @@
 (ns falx.state
   (:require [falx.game :as game]
-            [falx.event :as event]))
+            [falx.event :as event]
+            [clojure.tools.logging :refer [error]]))
 
 (defonce ^:private game-state
-  (atom game/default))
+  (agent game/default))
 
 (defn get-game
   "Returns the current game state"
   []
   @game-state)
 
+(defn update-game-async!
+  ([f]
+   (let [eventsv (promise)
+         res (promise)]
+     (send game-state
+           (fn [game]
+             (try
+               (let [game (f game)
+                     {:keys [events game]} (game/split-events game)]
+                 (deliver eventsv events)
+                 (deliver res game)
+                 game)
+               (catch Throwable e
+                 (error "An error occurred updating game")
+                 (deliver eventsv [])
+                 (deliver res e)
+                 game))))
+     (run! event/publish! @eventsv)
+     (delay
+       (let [r @res]
+         (if (instance? Throwable r)
+           (throw r)
+           r)))))
+  ([f & args]
+    (update-game-async! #(apply f % args))))
+
 (defn update-game!
   "Applies the function `f` and any `args` to the game atomically. Mutating the current game state.
   Returns the updated game."
   ([f]
-   (let [eventsv (volatile! nil)
-         game
-         (swap! game-state
-                (fn [game]
-                  (let [game (f game)
-                        {:keys [events game]} (game/split-events game)]
-                    (vreset! eventsv events)
-                    game)))]
-     (run! event/publish! @eventsv)
-     game))
+   @(update-game-async! f))
   ([f & args]
    (update-game! #(apply f % args))))
 

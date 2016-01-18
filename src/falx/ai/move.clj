@@ -5,7 +5,10 @@
             [falx.game.goal :as goal]
             [falx.game.move :as move]
             [falx.thing :as thing]
-            [falx.game.path :as path]))
+            [falx.game.path :as path]
+            [falx.location :as location]
+            [falx.game.solid :as solid]
+            [falx.world :as world]))
 
 ;; ============
 ;; ASKED TO MOVE
@@ -30,6 +33,30 @@
           cell (:cell goal)
           id (:id thing)]
       (state/update-thing! id try-move-to-cell cell))))
+
+;; =============
+;; ASKED TO MOVE ADJACENT TO
+
+(defn get-nearest-cell
+  [world id-a id-b]
+  (let [ta (world/get-thing world id-a)
+        tb (world/get-thing world id-b)
+        target-cell (:cell tb)]
+    (thing/get-nearest-cell ta (when target-cell
+                                 (->> (location/get-adjacent target-cell)
+                                      (filter #(not (solid/solid-cell? world %))))))))
+
+(event/defhandler
+  [:event.thing/goal-added :goal/move-adjacent-to]
+  ::move-adjacent-to-goal-added
+  (fn [event]
+    (let [{:keys [goal thing]} event
+          from (:id thing)
+          to (:id (:thing goal))
+          game (state/get-game)
+          world (:world game)]
+      (when-some [cell (get-nearest-cell world from to)]
+        (state/update-thing! from move/move cell)))))
 
 ;; ==============
 ;; FINDING PATH

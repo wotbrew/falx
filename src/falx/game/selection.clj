@@ -21,7 +21,7 @@
   "Is it possible to select the given thing at the current time?"
   [thing time]
   (and (creature/creature? thing)
-       (:player? thing)
+       (creature/player? thing)
        (time/can-act? time (:id thing))))
 
 (defn select

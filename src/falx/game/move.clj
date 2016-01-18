@@ -8,7 +8,6 @@
             [falx.game.solid :as solid]
             [falx.world :as world]))
 
-
 (defn move-goal
   "Returns a move to cell goal."
   [cell]
@@ -44,6 +43,16 @@
       (if (goal/has? thing goal)
         (goal/complete thing goal)
         thing))))
+
+(defn move-adjacent-to-goal
+  "Attempts to move adjacent to the thing"
+  [thing]
+  {:type :goal/move-adjacent-to
+   :thing thing})
+
+(defn move-adjacent-to
+  [thing-a thing-b]
+  (goal/give-exclusive thing-a (move-adjacent-to-goal thing-b)))
 
 (defn step-goal
   "Return a step goal"

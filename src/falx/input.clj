@@ -24,6 +24,8 @@
 
    :action.hit/move #{[:mouse :left]}
 
+   :action.hit/attack #{[:mouse :left]}
+
    :action.hit/describe #{[:mouse :right]}
 
    :action.pressed/cam-up #{[:keyboard :w]}

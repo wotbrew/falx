@@ -20,6 +20,7 @@
     falx.game.move
     falx.game.path
     falx.game.solid
+    falx.game.attack
 
     falx.thing.creature
 

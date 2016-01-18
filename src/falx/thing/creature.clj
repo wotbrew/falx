@@ -4,10 +4,15 @@
   [thing]
   (= (:type thing) :creature))
 
+(defn player?
+  [thing]
+  (= (:faction thing) :faction/player))
+
 (def base-template
   {:type :creature
    :layer :creature
-   :solid? true})
+   :solid? true
+   :faction :faction/player})
 
 (def human
   (merge base-template
@@ -17,4 +22,5 @@
 (def goblin-template
   (merge base-template
          {:race :goblin
-          :gender :male}))
+          :gender :male
+          :faction :faction/goblin}))

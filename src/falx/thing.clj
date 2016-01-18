@@ -84,6 +84,20 @@
   (when (:cell thing)
     (location/adjacent? (:cell thing) cell)))
 
+(defn adjacent?
+  "Are the 2 things adjacent to one another?"
+  [thing-a thing-b]
+  (let [cell-a (:cell thing-a)
+        cell-b (:cell thing-b)]
+    (when (and cell-a cell-b)
+      (location/adjacent? cell-a cell-b))))
+
+(defn get-nearest-cell
+  "Gets the nearest cell to the thing in `cells`"
+  [thing cells]
+  (when-some [cell (:cell thing)]
+    (location/get-nearest cell cells)))
+
 (defn in-level?
   "Is the thing in the given level?"
   [thing level]
