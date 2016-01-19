@@ -13,7 +13,7 @@
 (event/defhandler-async
   [:event.thing/goal-changed :goal/goto-cell]
   ::goto-cell
-  (fn [{:keys [thing goal]}]
+  (fn [{:keys [thing goal goal-id]}]
     (let [id (:id thing)
           cell (:cell goal)]
       (async/go-loop
@@ -23,7 +23,7 @@
               current-cell (:cell thing)
               next-cell (first path)]
           (cond
-            (not (goal/has? thing goal)) nil
+            (not (goal/has-exact? thing goal goal-id)) nil
             (= current-cell cell) (state/update-thing-async! id goal/complete goal)
             (nil? next-cell) (recur (path/get-path world current-cell cell))
             (= current-cell next-cell) (recur (rest path))
@@ -36,7 +36,7 @@
 (event/defhandler-async
   [:event.thing/goal-changed :goal/goto-thing]
   ::goto-thing
-  (fn [{:keys [thing goal]}]
+  (fn [{:keys [thing goal goal-id]}]
     (let [target-thing (:thing goal)
           target-id (:id target-thing)
           id (:id thing)]
@@ -49,7 +49,7 @@
               current-cell (:cell thing)
               next-cell (first path)]
           (cond
-            (not (goal/has? thing goal)) nil
+            (not (goal/has-exact? thing goal goal-id)) nil
             (thing/adjacent-to-cell? target-thing current-cell) (state/update-thing-async! id goal/complete goal)
             (= current-cell target-cell) (recur nil nil)
             (nil? target-cell) (recur nil (move/get-nearest-cell world thing target-thing))
