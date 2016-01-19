@@ -28,7 +28,8 @@
     falx.draw.world
     falx.draw.thing
 
-    falx.ai.move])
+    falx.ai.move
+    falx.ai.attack])
 
 (defn fillout
   [game template points]
