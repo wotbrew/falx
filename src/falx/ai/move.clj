@@ -10,138 +10,70 @@
             [falx.game.solid :as solid]
             [falx.world :as world]))
 
-;; ============
-;; ASKED TO MOVE
+(def walk-wait-time 125)
 
-(defn find-path-goal
-  "Returns a path goal"
-  [cell]
-  {:type :goal/find-path
-   :cell cell})
+(defn step
+  [world id cell goal]
+  (cond
+    (solid/solid-cell? world cell) world
+    (not (goal/has? (world/get-thing world id) goal)) world
+    :else (world/update-thing world id thing/step cell)))
 
-(defn try-move-to-cell
-  [thing cell]
-  (if (thing/adjacent-to-cell? thing cell)
-    (move/step thing cell)
-    (goal/give-exclusive thing (find-path-goal cell))))
+(event/defhandler-async
+  [:event.thing/goal-changed :goal/goto-cell]
+  ::goto-cell
+  (fn [{:keys [thing goal]}]
+    (let [id (:id thing)
+          cell (:cell goal)]
+      (async/go-loop
+        [path nil]
+        (let [game (state/get-game)
+              world (:world game)
+              thing (world/get-thing world id)
+              current-cell (:cell thing)
+              next-cell (first path)]
+          (cond
+            (not (goal/has? thing goal)) nil
+            (= current-cell cell) (state/update-thing-async! id goal/complete goal)
+            (nil? next-cell) (recur (path/get-path world current-cell cell))
+            (= current-cell next-cell) (recur (rest path))
+            :else (do
+                    (state/update-world-async! step id next-cell goal)
+                    (async/<! (async/timeout walk-wait-time))
+                    (recur path))))))))
 
-(event/defhandler
-  [:event.thing/goal-added :goal/move]
-  ::move-goal-added
-  (fn [event]
-    (let [{:keys [goal thing]} event
-          cell (:cell goal)
-          id (:id thing)]
-      (state/update-thing! id try-move-to-cell cell))))
-
-;; =============
-;; ASKED TO MOVE ADJACENT TO
 
 (defn get-nearest-cell
-  [world id-a id-b]
-  (let [ta (world/get-thing world id-a)
-        tb (world/get-thing world id-b)
-        target-cell (:cell tb)]
-    (thing/get-nearest-cell ta (when target-cell
+  [world thing target-thing]
+  (let [target-cell (:cell target-thing)]
+    (thing/get-nearest-cell thing (when target-cell
                                  (->> (location/get-adjacent target-cell)
                                       (filter #(not (solid/solid-cell? world %))))))))
 
-(event/defhandler
-  [:event.thing/goal-added :goal/move-adjacent-to]
-  ::move-adjacent-to-goal-added
-  (fn [event]
-    (let [{:keys [goal thing]} event
-          from (:id thing)
-          to (:id (:thing goal))
-          game (state/get-game)
-          world (:world game)]
-      (when-some [cell (get-nearest-cell world from to)]
-        (state/update-thing! from move/move cell)))))
-
-;; ==============
-;; FINDING PATH
-
-(defn walk-path
-  "Returns a walk path goal"
-  [path]
-  {:type :goal/walk-path
-   :path path})
-
-(defn try-walk-path
-  [thing path goal]
-  (if (seq path)
-    (-> (goal/give-exclusive thing (walk-path path))
-        (goal/complete goal))
-    (goal/fail thing goal)))
-
 (event/defhandler-async
-  [:event.thing/goal-added :goal/find-path]
-  ::find-path-goal-added
-  (fn [event]
-    (let [{:keys [goal thing]} event
-          current (:cell thing)
-          cell (:cell goal)
-          id (:id thing)
-          world (:world (state/get-game))]
-      (if-not current
-        (state/update-thing! id goal/discard goal)
-        (let [path (path/get-path world current cell)]
-          (state/update-thing! id try-walk-path path goal))))))
-
-(thing/defreaction
-  [:event.thing/goal-failed :goal/find-path]
-  ::find-path-goal-failed
-  (fn [thing {:keys [goal]}]
-    ;;try again?
-    (move/move thing (:cell goal))))
-
-;; ==========
-;; WALKING PATH
-
-(def walk-wait-time 125)
-
-(defn walk
-  [thing cell goal]
-  (if-not (goal/has? thing goal)
-    thing
-    (move/step thing cell)))
-
-(defn still-walking?
-  [id goal]
-  (goal/has? (state/get-thing id) goal))
-
-(defn continue-walking?
-  [id cell goal]
-  (let [thing (state/get-thing id)]
-    (and (goal/has? thing goal)
-         (thing/in? thing cell))))
-
-(defn walk!
-  [id cell goal]
-  (state/update-thing! id walk cell goal))
-
-(event/defhandler
-  [:event.thing/goal-added :goal/walk-path]
-  ::walk-path-added
-  (fn [event]
-    (let [{:keys [goal thing]} event
-          id (:id thing)
-          path (:path goal)]
+  [:event.thing/goal-changed :goal/goto-thing]
+  ::goto-thing
+  (fn [{:keys [thing goal]}]
+    (let [target-thing (:thing goal)
+          target-id (:id target-thing)
+          id (:id thing)]
       (async/go-loop
-        [path path]
-        (if (and (seq path) (still-walking? id goal))
-          (let [cell (first path)]
-            (walk! id cell goal)
-            (async/<! (async/timeout walk-wait-time))
-            (if (continue-walking? id cell goal)
-              (recur (rest path))
-              (state/update-thing! id goal/fail goal)))
-          (state/update-thing! id goal/complete goal))))))
-
-(thing/defreaction
-  [:event.thing/goal-failed :goal/walk-path]
-  ::walk-path-failed
-  (fn [thing {:keys [path]}]
-    (if (seq path)
-      (move/move thing (last path))
-      thing)))
+        [path nil
+         target-cell nil]
+        (let [game (state/get-game)
+              world (:world game)
+              thing (world/get-thing world id)
+              target-thing (world/get-thing world target-id)
+              current-cell (:cell thing)
+              next-cell (first path)]
+          (cond
+            (not (goal/has? thing goal)) nil
+            (thing/adjacent-to-cell? target-thing current-cell) (state/update-thing-async! id goal/complete goal)
+            (= current-cell target-cell) (recur nil nil)
+            (nil? target-cell) (recur nil (get-nearest-cell world thing target-thing))
+            (nil? next-cell) (recur (path/get-path world current-cell target-cell) target-cell)
+            (= current-cell next-cell) (recur (rest path) target-cell)
+            :else (do
+                    (state/update-world-async! step id next-cell goal)
+                    (async/<! (async/timeout walk-wait-time))
+                    (recur path target-cell))))))))

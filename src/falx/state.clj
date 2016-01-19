@@ -45,6 +45,13 @@
   ([f & args]
    (update-game! #(apply f % args))))
 
+(defn update-world-async!
+  ([f]
+   (let [p (update-game-async! game/update-world f)]
+     (delay (:world @p))))
+  ([f & args]
+   (update-world-async! #(apply f % args))))
+
 (defn update-world!
   "Applies the function `f` and any `args` to the world in the game, mutating the current game state.
   Returns the updated world."
@@ -69,6 +76,13 @@
   [id]
   (update-game! game/remove-thing id)
   nil)
+
+(defn update-thing-async!
+  ([id f]
+   (let [p (update-game-async! game/update-thing id f)]
+     (delay (game/get-thing @p id))))
+  ([id f & args]
+   (update-thing-async! id #(apply f % args))))
 
 (defn update-thing!
   "Applies the function `f` and any `args` to the thing given by `id` in the game.

@@ -8,20 +8,38 @@
             [falx.game.solid :as solid]
             [falx.world :as world]))
 
-(defn move-goal
-  "Returns a move to cell goal."
+(defn goto-cell-goal
   [cell]
-  {:type :goal/move
+  {:type :goal/goto-cell
    :cell cell})
+
+(defn goto-thing-goal
+  [thing]
+  {:type :goal/goto-thing
+   :thing thing})
+
+(defn goto-thing-within-goal
+  [thing distance]
+  {:type :goal/goto-thing-within
+   :thing thing
+   :distance distance})
+
+(defn goto-cell
+  [thing cell]
+  (goal/give thing (goto-cell-goal cell)))
+
+(defn goto-thing
+  [thing target-thing]
+  (goal/give thing (goto-thing-goal target-thing)))
+
+(defn goto-thing-within
+  [thing distance]
+  (goal/give thing (goto-thing-within-goal thing distance)))
 
 (defn can-move?
   [thing cell world]
   (or (not (:solid? thing))
       (not (solid/solid-cell? world cell))))
-
-(defn move
-  [thing cell]
-  (goal/give-exclusive thing (move-goal cell)))
 
 (game/defreaction
   [:event.action :action.hit/move]
@@ -32,59 +50,5 @@
           cell (location/cell level point)]
       (->> (selection/get-selected world)
            (filter #(can-move? % cell world))
-           (map #(move % cell))
+           (map #(goto-cell % cell))
            (game/add-things game)))))
-
-(thing/defreaction
-  :event.thing/put
-  ::thing-put-complete-move
-  (fn [thing {:keys [cell]}]
-    (let [goal (move-goal cell)]
-      (if (goal/has? thing goal)
-        (goal/complete thing goal)
-        thing))))
-
-(defn move-adjacent-to-goal
-  "Attempts to move adjacent to the thing"
-  [thing]
-  {:type :goal/move-adjacent-to
-   :thing thing})
-
-(defn move-adjacent-to
-  [thing-a thing-b]
-  (goal/give-exclusive thing-a (move-adjacent-to-goal thing-b)))
-
-(defn step-goal
-  "Return a step goal"
-  [cell]
-  {:type :goal/step
-   :cell cell})
-
-(thing/defreaction
-  :event.thing/put
-  ::thing-put-complete-step
-  (fn [thing {:keys [cell]}]
-    (let [goal (step-goal cell)]
-      (if (goal/has? thing goal)
-        (goal/complete thing goal)
-        thing))))
-
-(defn can-step?
-  [thing cell world]
-  (and (can-move? thing cell world)
-       (thing/adjacent-to-cell? thing cell)))
-
-(world/defreaction
-  [:event.thing/goal-added :goal/step]
-  ::thing-step-goal-added
-  (fn [world {:keys [thing goal]}]
-    (let [id (:id thing)
-          cell (:cell goal)
-          thing (world/get-thing world id)]
-      (if (can-step? thing cell world)
-        (world/update-thing world id thing/step cell)
-        (world/update-thing world id goal/fail goal)))))
-
-(defn step
-  [thing cell]
-  (goal/give-exclusive thing (step-goal cell)))

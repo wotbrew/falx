@@ -23,7 +23,7 @@
 (defn try-move-to-attack
   [game defender attacker]
   (game/add-thing game
-    (move/move-adjacent-to attacker defender)))
+    (move/goto-thing attacker defender)))
 
 (defn attack
   [game defender attacker]
