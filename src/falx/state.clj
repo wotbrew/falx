@@ -11,6 +11,11 @@
   []
   @game-state)
 
+(defn get-world
+  "Returns the current world within the game state"
+  []
+  (:world (get-game)))
+
 (defn update-game-async!
   ([f]
    (let [eventsv (promise)

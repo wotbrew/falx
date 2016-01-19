@@ -41,6 +41,27 @@
   (or (not (:solid? thing))
       (not (solid/solid-cell? world cell))))
 
+(defn step
+  [world id cell]
+  (let [thing (world/get-thing world id)]
+    (if (can-move? thing cell world)
+      (world/update-thing world id thing/step cell)
+      world)))
+
+(defn step-for-goal
+  [world id cell goal]
+  (if (goal/has? (world/get-thing world id) goal)
+    (step world id cell)
+    world))
+
+(defn get-nearest-cell
+  [world thing target-thing]
+  (let [target-cell (:cell target-thing)]
+    (thing/get-nearest-cell thing (when target-cell
+                                    (->> (location/get-adjacent target-cell)
+                                         (filter #(can-move? thing % world)))))))
+
+
 (game/defreaction
   [:event.action :action.hit/move]
   ::move
