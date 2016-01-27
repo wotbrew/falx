@@ -1,166 +1,101 @@
 (ns falx.world
-  "Core functions on the world.
-  The world is simply an indexed collection of things."
-  (:require [clojure.set :as set]
-            [falx.thing :as thing]
-            [falx.util :as util]
-            [falx.react :as react]))
+  (:require [falx.db :as db]
+            [falx.actor :as actor]
+            [falx.react :as react])
+  (:refer-clojure :exclude [empty]))
 
-(def default
-  {})
+(def empty
+  {:db db/empty
+   :reactions {}
+   :events []})
 
-(defonce ^:private reactions (atom {}))
+(defn world
+  [reactions]
+  (assoc empty :reactions (react/react-map reactions)))
 
-(defn defreaction
-  [event-type key f]
-  (swap! reactions react/register event-type key f))
-
-(defn react
+(defn publish
   [world event]
-  (react/react @reactions event world))
-
-(defn publish-event
-  "Publishes an event that can be reacted to.
-  Returns a new world which will retain the `event` under its
-  `:events` key."
-  [world event]
-  (-> (update world :events (fnil conj []) event)
-      (react event)))
+  (let [world' (react/react world (:reactions world) event)]
+    (update world' :events conj event)))
 
 (defn split-events
-  "Removes events from the world, returns
-  a map {:world, :events} where :events will contain
-  the events that had been published so far."
   [world]
-  {:world (dissoc world :events)
-   :events (:events world)})
+  (let [w (assoc world :events [])]
+    {:world w
+     :events (mapv #(assoc % :world w) (:events world []))}))
 
-(defn get-things
-  "Returns a seq of all things in the world."
-  [world]
-  (-> world :eav vals))
-
-(defn get-thing
-  "Returns the thing with `id`"
+(defn get-actor
   [world id]
-  (-> world :eav (get id)))
+  (-> world :db (db/pull id)))
 
-(defn get-attribute
-  "Gets a single thing attribute"
-  ([world id attribute]
-   (get-attribute world id attribute nil))
-  ([world id attribute not-found]
-   (-> (get-thing world id) (get attribute not-found))))
+(defn query-actors
+  ([world k v]
+   (-> world :db (db/pull-query k v)))
+  ([world k v & kvs]
+   (let [db (:db world)]
+     (apply db/pull-query db k v kvs))))
 
-(defn get-ids-by-value
-  "Returns the ids of things having
-  the attribute, value pair."
-  [world attribute value]
-  (-> world :ave (get attribute) (get value #{})))
+(defn replace-actor
+  [world actor]
+  (let [{:keys [actor events]} (actor/split-events actor)]
+    (as-> world world
+          (update world :db db/replace actor)
+          (reduce publish world events))))
 
-(defn get-things-by-value
-  "Returns the things having the given attribute
-  value pair."
-  [world attribute value]
-  (map #(get-thing world %) (get-ids-by-value world attribute value)))
+(defn merge-actor
+  [world actor]
+  (let [{:keys [actor events]} (actor/split-events actor)]
+    (as-> world world
+          (update world :db db/merge actor)
+          (reduce publish world events))))
 
-(defn- remove-attribute*
-  [world id attribute]
-  (let [value (get-attribute world id attribute ::not-found)]
-    (case value
-      ::not-found world
-      (-> world
-          (util/dissoc-in [:eav id attribute])
-          (util/disjoc-in [:ave attribute value] id)))))
-
-(defn remove-attribute
-  "Removes an attribute from a thing."
-  [world id attribute]
-  (let [value (get-attribute world id attribute ::not-found)]
-    (case value
-      ::not-found world
-      (-> (remove-attribute* world id attribute)
-          (publish-event
-            {:type      [:event.thing/attribute-removed attribute]
-             :id        id
-             :attribute attribute
-             :value     value})))))
-
-(defn set-attribute
-  "Sets the things attribute to the given valie."
-  [world id attribute value]
-  (-> (remove-attribute* world id attribute)
-      (assoc-in [:eav id attribute] value)
-      (update-in [:ave attribute value] util/set-conj id)
-      (cond->
-        (not= value (get-attribute world id attribute))
-        (publish-event
-          {:type           [:event.thing/attribute-set attribute]
-           :id             id
-           :attribute      attribute
-           :value          value
-           :previous-value (get-attribute world id attribute)}))))
-
-(defn remove-thing
-  "Completely removes a thing from the world."
-  [world id]
-  (let [thing (get-thing world id)
-        attributes (keys thing)]
-    (-> (reduce #(remove-attribute* %1 id %2) world attributes)
-        (publish-event
-          {:type :event.thing/removed
-           :thing thing}))))
-
-(defn- add-thing*
-  [world thing]
-  {:pre [(some? (:id thing))]}
-  (let [id (:id thing)
-        existing-thing (get-thing world (:id thing))
-        ekvs (set existing-thing)
-        {:keys [thing events]} (thing/split-events thing)
-        kvs (set thing)]
-    (as->
-      world g
-      (reduce #(remove-attribute %1 id (key %2)) g (set/difference ekvs kvs))
-      (reduce #(set-attribute %1 id (key %2) (val %2)) g (set/difference kvs ekvs))
-      (reduce publish-event g events))))
-
-(defn add-thing
-  "Adds the thing to the world, if it already exists attributes
-  are removed or added as appropriate.
-
-  Each thing must be provided with an `:id`."
-  [world thing]
-  (let [existing (get-thing world (:id thing))]
-    (cond
-      (nil? existing)
-      (-> (add-thing* world thing)
-          (publish-event
-            {:type :event.thing/added
-             :thing thing}))
-      (not= existing thing)
-      (-> (add-thing* world thing)
-          (publish-event
-            {:type :event.thing/changed
-             :thing thing
-             :existing-thing existing}))
-      :else world)))
-
-(defn add-things
-  [world coll]
-  (reduce add-thing world coll))
-
-(defn update-thing
-  "Applies the function `f` and any `args` to the thing
-  in the world given by `id`."
+(defn update-actor
   ([world id f]
-   (if-some [thing (get-thing world id)]
-     (add-thing world (f thing))
+   (if-some [actor (get-actor world id)]
+     (replace-actor world (f actor))
      world))
   ([world id f & args]
-   (update-thing world id #(apply f % args))))
+   (update-actor world id #(apply f % args))))
 
-(defn put-thing
-  "Puts the thing in the given cell"
-  [world thing cell]
-  (add-thing world (thing/put thing cell)))
+(defn get-at
+  [world cell]
+  (query-actors world :cell cell))
+
+(defn get-obstructions-at
+  [world actor cell]
+  (actor/get-obstructions actor (get-at world cell)))
+
+(defn some-obstruction-at
+  [world actor cell]
+  (actor/some-obstruction actor (get-at world cell)))
+
+(defn some-obstructs?
+  [world actor cell]
+  (boolean (some-obstruction-at world actor cell)))
+
+(defn can-put?
+  [world actor cell]
+  (not (some-obstructs? world actor cell)))
+
+(defn put
+  [world id cell]
+  (let [actor (get-actor world id)]
+    (if (and actor (can-put? world actor cell))
+      (update-actor world id actor/put cell)
+      world)))
+
+(defn unput
+  [world id]
+  (update-actor world id actor/unput))
+
+(defn can-step?
+  [world actor cell]
+  (and (can-put? world actor cell)
+       (actor/can-step? actor cell)))
+
+(defn step
+  [world id cell]
+  (let [actor (get-actor world id)]
+    (if (and actor (can-step? world actor cell))
+      (update-actor world id actor/put cell))))
+

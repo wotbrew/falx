@@ -1,104 +1,75 @@
 (ns falx.game
-  "The game datastructure and core functions on it are defined here.
-
-  The game contains a
-   `:world, :world-camera`, ..."
   (:require [falx.world :as world]
             [clj-gdx :as gdx]
-            [falx.react :as react]
-            [falx.input :as input]))
+            [clojure.core.async :as async :refer [go >! <! chan]])
+  (:refer-clojure :exclude [empty]))
 
-(def default
-  {:world        world/default
-   :world-camera gdx/default-camera
-   :delta 0.0
-   :input input/default
-   :level :testing})
+(defonce event-chan (chan 512))
 
-(defonce ^:private reactions (atom {}))
+(defonce event-mult (async/mult event-chan))
 
-(defn defreaction
-  [event-type key f]
-  (swap! reactions react/register event-type key f))
+(defonce event-pub
+  (let [c (chan)]
+    (async/tap event-mult c)
+    (async/pub c :type)))
 
-(defn react
-  [game event]
-  (react/react @reactions event game))
+(defn publish!
+  [event]
+  (go (>! event-chan event)))
 
-(defn publish-event
-  "Publishes a new event that can be reacted to by the game.
-  Returns a new game with the event in the `:events` coll"
-  [game event]
-  (-> (update game :events (fnil conj []) event)
-      (react event)))
+(defonce pending-world-events-chan
+  (let [c (async/chan 1024 cat)]
+    (async/pipe c event-chan false)
+    c))
 
-(defn publish-events
-  [game coll]
-  (reduce publish-event game coll))
+(def world
+  (doto
+    (agent (world/world []))
+    (add-watch ::publish-events
+               (fn [_ _ old new]
+                 (when (and (not (identical? old new))
+                            (seq (:events new)))
+                   (let [{:keys [world events]} (world/split-events world)]
+                     ;;gotta block to preserve order, can I use async/put! here?
+                     ;;it doesn't need to be syncnronous as long as order of dispatch is preserved
+                     (async/>!! pending-world-events-chan events)
+                     world))))))
 
-(defn split-events
-  "Takes an events in the game, and yields a map
-  {:events, :game}. Where the `:events`
-   and :game will be the game without the events."
-  [game]
-  {:events (:events game)
-   :game (dissoc game :events)})
+(defn update-world!
+  ([f]
+   (send world f)
+   nil)
+  ([f & args]
+   (update-world! #(apply f % args))))
 
-(defn update-world
-  "Applies the function `f` and any args to the world.
-  Surfaces any world events to the game."
-  ([game f]
-   (let [world (f (:world game))
-         {:keys [world events]} (world/split-events world)]
-     (-> (assoc game :world world)
-         (publish-events events))))
-  ([game f & args]
-    (update-world game #(apply f % args))))
+(defn get-actor
+  [id]
+  (world/get-actor @world id))
 
-(defn add-thing
-  "Like `(update-world game world/add-thing thing)`."
-  [game thing]
-  (update-world game world/add-thing thing))
+(defn query-actors
+  ([k v]
+   (world/query-actors @world k v))
+  ([k v & kvs]
+   (apply world/query-actors @world k v kvs)))
 
-(defn add-things
-  "Like `(update-world game world/add-things coll)`."
-  [game coll]
-  (update-world game world/add-things coll))
+(defn replace-actor!
+  [actor]
+  (update-world! world/replace-actor actor))
 
-(defn get-thing
-  "Gets a thing from the games world"
-  [game id]
-  (world/get-thing (:world game) id))
+(defn merge-actor!
+  [actor]
+  (update-world! world/merge-actor actor))
 
-(defn remove-thing
-  "Like `(update-world game world/remove-thing thing)`"
-  [game id]
-  (update-world game world/remove-thing id))
+(defn update-actor!
+  ([id f]
+   (update-world! world/update-actor id f))
+  ([id f & args]
+   (update-actor! id #(apply f % args))))
 
-(defn update-thing
-  "Like `(update-world game world/update-thing id f)`"
-  ([game id f]
-   (update-world game world/update-thing id f))
-  ([game id f & args]
-   (update-thing game id #(apply f % args))))
+(def screen
+  (agent {:type :screen/game}))
 
-(defn put-thing
-  "Like `(update-world game world/put-thing thing cell)`"
-  [game thing cell]
-  (update-world game world/put-thing thing cell))
+(def input
+  (agent {:mouse gdx/default-mouse
+          :keyboard gdx/default-keyboard}))
 
-(defn input-modified?
-  "Is the input modifier key/button down?"
-  [game]
-  (input/modified? (:input game)))
-
-(defn frame
-  "Processes a single frame of the game, taking in the input and delta since last frame.
-  Returns the new game"
-  [game input delta]
-  (let [events (input/get-input-events input)]
-    (-> (assoc game :input input :delta delta)
-        (publish-events events)
-        (publish-event {:type :event.game/frame
-                        :input input
-                        :delta delta}))))

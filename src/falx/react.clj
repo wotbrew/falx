@@ -1,25 +1,21 @@
-(ns falx.react
-  (:require [falx.util :as util]))
+(ns falx.react)
 
-(defn unregister
-  [m key]
-  (if-some [event (-> m :key (get key))]
-    (-> (util/dissoc-in m [:event event key])
-        (util/dissoc-in [:key key]))
-    m))
+(defn reaction
+  [key f]
+  {:key key
+   :f f})
 
 (defn register
-  [m event-type key f]
-  (-> (unregister m key)
-      (assoc-in [:event event-type key] f)
-      (assoc-in [:key key] event-type)))
+  [rm reaction]
+  (let [{:keys [key f]} reaction]
+    (update rm key conj f)))
 
-(defn get-reactions
-  [m event-type]
-  (-> m :event (get event-type) vals))
+(defn react-map
+  [reactions]
+  (reduce register {} reactions))
 
 (defn react
-  [m event x]
-  (let [handlers (get-reactions m (:type event))]
-    (reduce #(%2 %1 event) x handlers)))
-
+  [v rm event]
+  (let [k (:type event)
+        fs (get rm k)]
+    (reduce #(%2 %1 event) v fs)))
