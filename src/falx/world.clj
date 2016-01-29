@@ -35,19 +35,44 @@
    (let [db (:db world)]
      (apply db/pull-query db k v kvs))))
 
+(defn actor-changed-event
+  [old-actor actor]
+  {:type :world.event/actor-changed
+   :old-actor old-actor
+   :actor actor
+   :id (:id actor)})
+
+(defn- split-actor-events
+  [world actor]
+  (let [{:keys [actor events]} (actor/split-events actor)
+        ea (get-actor world (:id actor))]
+    {:actor actor
+     :events (concat
+               (when (not= ea actor)
+                 (actor-changed-event
+                   ea
+                   actor))
+               events)}))
+
 (defn replace-actor
   [world actor]
-  (let [{:keys [actor events]} (actor/split-events actor)]
+  (let [{:keys [actor events]} (split-actor-events world actor)]
     (as-> world world
           (update world :db db/replace actor)
           (reduce publish world events))))
 
 (defn merge-actor
   [world actor]
-  (let [{:keys [actor events]} (actor/split-events actor)]
-    (as-> world world
-          (update world :db db/merge actor)
-          (reduce publish world events))))
+  (let [{:keys [actor events]} (actor/split-events actor)
+        id (:id actor)
+        old-actor (get-actor world id)
+        merged (as-> world world
+                     (update world :db db/merge actor)
+                     (reduce publish world events))
+        new-actor (get-actor merged id)]
+    (if (not= old-actor new-actor)
+      (publish merged (actor-changed-event old-actor new-actor))
+      merged)))
 
 (defn update-actor
   ([world id f]
@@ -56,6 +81,10 @@
      world))
   ([world id f & args]
    (update-actor world id #(apply f % args))))
+
+(defn remove-actor
+  [world id]
+  (update world :db db/remove id))
 
 (defn get-at
   [world cell]

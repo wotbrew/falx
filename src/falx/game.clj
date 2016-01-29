@@ -66,10 +66,6 @@
   ([id f & args]
    (update-actor! id #(apply f % args))))
 
-(def screen
-  (agent {:type :screen/game}))
-
 (def input
   (agent {:mouse gdx/default-mouse
           :keyboard gdx/default-keyboard}))
-

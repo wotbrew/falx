@@ -1,7 +1,7 @@
 (ns falx.db
   (:require [falx.util :as util]
             [clojure.set :as set])
-  (:refer-clojure :exclude [update merge replace assert empty]))
+  (:refer-clojure :exclude [update merge replace assert empty remove]))
 
 (def empty
   {:eav {}
@@ -83,6 +83,11 @@
     (as-> db db
           (reduce #(retract %1 id %2) db retracts)
           (reduce-kv #(assert %1 id %2 %3) db m))))
+
+(defn remove
+  [db id]
+  (let [ks (keys (pull db id))]
+    (reduce #(retract %1 id %2) db ks)))
 
 (defn update
   ([db id f]

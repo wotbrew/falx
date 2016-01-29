@@ -5,18 +5,10 @@
 
 (def max-fps 60)
 
-(def game
-  (agent (game/game [])))
-
-(defn render-game!
-  [db]
-  (gdx/draw-string! "empty" 0 0 96))
-
 (gdx/defrender
   (try
-    (let [db {}]
-      (render-game! db)
-      ;;poll input in background, send changes to game for next frame
+    (let [world @game/world
+          mouse @gdx/mouse-state]
       )
     (catch Throwable e
       (error e)
@@ -31,5 +23,4 @@
   [& args]
   (info "Starting application")
   (gdx/start-app! app)
-  (info "Started application")
-  #_(init/init!))
+  (info "Started application"))
