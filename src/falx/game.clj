@@ -1,7 +1,10 @@
 (ns falx.game
   (:require [falx.world :as world]
+            [falx.ui :as ui]
             [clj-gdx :as gdx]
-            [clojure.core.async :as async :refer [go >! <! chan]])
+            [clojure.core.async :as async :refer [go >! <! chan]]
+            [falx.ui.edit :as uiedit]
+            [falx.ui.widget :as widget])
   (:refer-clojure :exclude [empty]))
 
 (defonce event-chan (chan 512))
@@ -69,3 +72,6 @@
 (def input
   (agent {:mouse gdx/default-mouse
           :keyboard gdx/default-keyboard}))
+
+(def ui
+  (agent ui/empty))

@@ -1,11 +1,16 @@
 (ns falx.draw
   (:import (clojure.lang IPersistentMap)))
 
-(defmulti drawm! :type)
+(def drawm! nil)
+
+(defmulti drawm! (fn [m x y] (:type m)))
+
+(defmethod drawm! :default
+  [_ _ _])
 
 (defprotocol IDraw
-  (draw! [this]))
+  (draw! [this x y]))
 
 (extend-protocol IDraw
   IPersistentMap
-  (draw! [this] (drawm! this)))
+  (draw! [this x y] (drawm! this x y)))

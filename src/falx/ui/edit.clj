@@ -1,10 +1,10 @@
-(ns falx.ui.main
+(ns falx.ui.edit
   (:require [falx.ui.widget :as widget]
             [falx.ui :as ui]))
 
-(defmethod ui/screen :screen/main
+(defmethod ui/screen :screen/edit
   [ui frame]
-  {:id :screen/main
+  {:id :screen/edit
    :type     :ui.type/screen
    :elements [#_(widget/text (:fps frame) [0 0 90 0])
               (widget/box [32 32 32 32])
