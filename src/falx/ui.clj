@@ -1,12 +1,12 @@
 (ns falx.ui
   (:require [falx.react :as react]
-            [falx.ui.widget :as widget])
+            [falx.rect :as rect])
   (:refer-clojure :exclude [empty]))
 
 (def empty
   {:reactions {}
    :events []
-   :screen {}})
+   :selected-screen :screen/main})
 
 (defn ui
   [reactions]
@@ -24,18 +24,27 @@
   {})
 
 (defn get-state
-  [ui widget]
-  (-> ui :widgets (get (:id widget))))
+  [ui id]
+  (-> ui :state (get (:id id))))
 
 (defn update-state
-  ([ui widget f]
-   (update-in ui [:widgets (:id widget)] f))
-  ([ui widget f & args]
-   (update-state ui widget #(apply f % args))))
+  ([ui id f]
+   (update-in ui [:state id] f))
+  ([ui id f & args]
+   (update-state ui id #(apply f % args))))
 
-(defn handle-frame
-  [ui frame]
-  (let [nui (widget/handle-frame ui (:screen ui) frame)]
-    (if (identical? ui nui)
-      ui
-      (assoc ui :screen (screen ui (:world frame))))))
+(defmulti update-ui (fn [ui widget frame prect] (:type widget)))
+
+(defmethod update-ui :default
+  [ui _ _ prect]
+  ui)
+
+(defn select-screen
+  [ui screen-id]
+  (assoc ui :selected-screen screen-id
+            :previous-screen (or (:selected-screen ui)
+                                 screen-id)))
+
+(defn revert-screen
+  [ui]
+  (select-screen ui (:previous-screen ui)))

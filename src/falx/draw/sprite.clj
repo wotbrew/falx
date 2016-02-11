@@ -35,3 +35,12 @@
 (def human-male
   (human32 1 0))
 
+(defn gui32
+  [x y]
+  (tile32 "Gui" x y))
+
+(def block
+  (gui32 0 0))
+
+(def slot
+  (gui32 1 0))

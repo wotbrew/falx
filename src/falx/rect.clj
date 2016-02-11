@@ -35,3 +35,35 @@
    (and
      (<= x x2 (+ x w))
      (<= y y2 (+ y h)))))
+
+(defn from-point
+  ([point-or-rect size]
+   (let [[w h] size]
+     (from-point point-or-rect w h)))
+  ([point-or-rect w h]
+   (let [[x y] point-or-rect]
+     [x y w h])))
+
+(def zero
+  [0 0 0 0])
+
+(defn shift
+  ([rect point]
+   (let [[x y] point]
+     (shift rect x y)))
+  ([rect x2 y2]
+   (let [[x y w h] rect]
+     (shift x y w h x2 y2)))
+  ([x y w h point]
+   (let [[x2 y2] point]
+     (shift x y w h x2 y2)))
+  ([x y w h x2 y2]
+   [(+ x x2) (+ y y2) w h]))
+
+(defn move
+  ([rect point]
+   (let [[x y] point]
+     (move rect x y)))
+  ([rect x y]
+   (let [[_ _ w h] rect]
+     [x y w h])))

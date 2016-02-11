@@ -3,8 +3,12 @@
             [clojure.tools.logging :refer [error info]]
             [falx.game :as game]
             [falx.draw :as draw]
-            [falx.draw.ui :as draw-ui]
-            [falx.ui :as ui]))
+            [falx.draw.widget :as draw-ui]
+            [falx.ui :as ui]
+            [falx.ui.edit :as uiedit]
+            [falx.ui.main :as uimain]
+            [falx.ui.widget :as widget]
+            [falx.rect :as rect]))
 
 (def max-fps 60)
 
@@ -21,11 +25,18 @@
    :input (get-input)
    :world @game/world})
 
+(defn get-screen
+  ([frame]
+   (get-screen @game/ui frame))
+  ([ui frame]
+   (ui/screen ui frame)))
+
 (gdx/defrender
   (try
-    (let [frame (get-frame)]
-      (send game/ui ui/handle-frame frame)
-      (draw/draw! {} 0 0))
+    (let [frame (get-frame)
+          screen (get-screen frame)]
+      (send game/ui ui/update-ui screen frame rect/zero)
+      (draw/draw! screen 0 0))
     (catch Throwable e
       (error e)
       (Thread/sleep 5000))))
