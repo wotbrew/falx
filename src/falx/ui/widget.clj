@@ -25,13 +25,43 @@
   [ui widget frame prect]
   (update-ui-elements ui widget frame prect))
 
-(derive :ui.type/clickable :ui.type/panel)
+(defn wrap
+  [widget behaviours]
+  {:type :ui.type/wrap
+   :rect [0 0 0 0]
+   :element widget
+   :behaviours behaviours})
 
-(defn clickable
-  [widget]
-  {:type     :ui.type/clickable
-   :rect     [0 0 0 0]
-   :elements [widget]})
+(defmulti behave (fn [ui widget frame prect behaviour] behaviour))
+
+(defmethod behave :default
+  [ui widget frame prect _]
+  ui)
+
+(defmethod ui/update-ui :ui.type/wrap
+  [ui widget frame prect]
+  (let [w (:element widget)]
+    (-> (reduce #(behave %1 w frame prect %2) ui (:behaviours widget))
+        (ui/update-ui w frame prect))))
+
+(defn hovering?
+  [widget frame prect]
+  (let [input (:input frame)
+        mouse (:mouse input)]
+    (rect/contains-point? (rect/shift (:rect widget) prect) (:point mouse))))
+
+(defmethod behave :hover
+  [ui widget frame prect _]
+  (if-some [id (:id widget)]
+    (ui/update-state ui id assoc :hovering? (hovering? widget frame prect))
+    ui))
+
+(defn clicked?
+  [widget frame prect]
+  (let [input (:input frame)
+        mouse (:mouse input)]
+    (and (contains? (:hit mouse) :left)
+         (hovering? widget frame prect))))
 
 (defmulti clicked (fn [ui widget frame] (:id widget)))
 
@@ -39,20 +69,11 @@
   [ui _ _]
   ui)
 
-(defn clicked?
-  [widget frame prect]
-  (let [input (:input frame)
-        mouse (:mouse input)]
-    (and (contains? (:hit mouse) :left)
-         (rect/contains-point? (rect/shift (:rect widget) prect) (:point mouse)))))
-
-(defmethod ui/update-ui :ui.type/clickable
-  [ui widget frame prect]
-  (let [w (first (:elements widget))]
-    (cond-> ui
-            (clicked? w frame prect) (clicked w frame)
-            :always (update-ui-elements widget frame prect))))
-
+(defmethod behave :click
+  [ui widget frame prect _]
+  (if (clicked? widget frame prect)
+    (clicked ui widget frame)
+    ui))
 
 (derive :ui.type/screen :ui.type/panel)
 

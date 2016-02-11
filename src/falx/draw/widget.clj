@@ -38,6 +38,10 @@
         y (+ y y2)]
     (run! #(draw/draw! % x y) elements)))
 
+(defmethod draw/drawm! :ui.type/wrap
+  [{:keys [element]} x2 y2]
+  (draw/draw! element x2 y2))
+
 (defmethod draw/drawm! :ui.type/backing
   [{:keys [rect]} x2 y2]
   (let [[x y w h] rect]

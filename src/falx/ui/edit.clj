@@ -37,10 +37,10 @@
        (ctext (get-palette-name key) [x y w 32])
        (-> (as :screen.edit/palette-left
              (arrow-left [x y 32 32]))
-           clickable)
+           (wrap [:click :hover]))
        (-> (as :screen.edit/palette-right
              (arrow-right [(+ x w -32) y 32 32]))
-           clickable)])))
+           (wrap [:click :hover]))])))
 
 (defmethod ui/screen :screen/edit
   [ui frame]
