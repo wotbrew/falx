@@ -28,35 +28,3 @@
 (defn find-first
   [pred coll]
   (first (filter pred coll)))
-
-#_(defn identity-memoize
-  "Not thread safe, won't handle switching arity either"
-  [f]
-  (let [varr (object-array 32)
-        rarr (object-array 32)]
-    (fn
-      ([x]
-       (if (identical? (aget varr 0) x)
-         (aget rarr 0)
-         (let [r (f x)]
-           (aset varr 0 x)
-           (aset rarr 0 r)
-           r)))
-      ([x y]
-       (if (and (identical? (aget varr 0) x)
-                (identical? (aget varr 1) y))
-         (aget rarr 1)
-         (let [r (f x y)]
-           (aset varr 0 x)
-           (aset varr 1 y)
-           (aset rarr 1 r))))
-      ([x y z]
-       (if (and (identical? (aget varr 0) x)
-                (identical? (aget varr 1) y)
-                (identical? (aget varr 2) z))
-         (aget rarr 2)
-         (let [r (f x y z)]
-           (aset varr 0 x)
-           (aset varr 1 y)
-           (aset varr 2 z)
-           (aset rarr 2 r)))))))

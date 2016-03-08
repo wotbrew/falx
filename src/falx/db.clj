@@ -1,13 +1,17 @@
 (ns falx.db
+  "Defines a set of functions on a simple in memory entity-attribute-value database."
   (:require [falx.util :as util]
             [clojure.set :as set])
   (:refer-clojure :exclude [update merge replace assert empty remove]))
 
 (def empty
+  "An empty database"
   {:eav {}
    :ave {}})
 
 (defn query
+  "Returns the set of entity ids with the attribute `k` having the value `v`.
+  For multiple kvs, returns entities having each `k` and `v`."
   ([db k v]
    (-> db :ave (get k) (get v) (or #{})))
   ([db k v & kvs]
@@ -22,10 +26,13 @@
          r)))))
 
 (defn pull
+  "Returns the entity given by its `id`."
   [db id]
   (-> db :eav (get id)))
 
 (defn pull-query
+  "Returns the set of entities with the attribute `k` having the value `v`.
+  For multiple kvs, returns entities having each `k` and `v`."
   ([db k v]
    (map (partial pull db) (query db k v)))
   ([db k v & kvs]
@@ -48,6 +55,7 @@
   (util/disjoc-in ave [k v] id))
 
 (defn assert
+  "Introduces the fact that `k` is `v` for the entity given by `id`. Returns the new db."
   [db id k v]
   (let [{:keys [eav ave]} db
         e (get eav id)
@@ -60,6 +68,7 @@
                        (not= ev ::not-found) (retract-ave id k ev))))))
 
 (defn retract
+  "Removes the attribute `k` from the entity given by `id`. Returns the new db."
   [db id k]
   (let [e (pull db id)
         ev (get e k ::not-found)]
@@ -69,11 +78,15 @@
           (clojure.core/update :ave retract-ave id k ev)))))
 
 (defn merge
+  "For a map `m` with an `:id` representing entity identity. Merge the keys of the map as entity attributes in the db.
+  Returns the new db."
   [db m]
   (let [id (:id m)]
     (reduce-kv #(assert %1 id %2 %3) db m)))
 
 (defn replace
+  "For a map `m` with an `:id` representing entity identity. Use the keys of the map as entity attributes in the db.
+  Returns the new db. Removes any attributes already on the entity that are not present in `m`."
   [db m]
   (let [id (:id m)
         e (pull db id)
@@ -85,11 +98,13 @@
           (reduce-kv #(assert %1 id %2 %3) db m))))
 
 (defn remove
+  "Removes the entity given by its `id`. Returns the new db"
   [db id]
   (let [ks (keys (pull db id))]
     (reduce #(retract %1 id %2) db ks)))
 
 (defn update
+  "Applies the function `f` and any `args` to the entity given by its `id`. Returns the new db."
   ([db id f]
    (if-some [e (pull db id)]
      (replace db (assoc (f e) :id id))
