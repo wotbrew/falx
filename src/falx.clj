@@ -26,6 +26,7 @@
       (draw/object! (:fps frame) 0 0 64 32)
       (draw/object! (:input frame) 0 32 800 32)
       (let [[x y] (:point (:mouse (:input frame)))]
+        (draw/box! x y 64 64)
         (draw/tiled! sprite/human-male x y 64 64)))
     (catch Throwable e
       (error e)

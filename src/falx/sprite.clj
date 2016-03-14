@@ -1,6 +1,7 @@
 (ns falx.sprite
   (:require [clojure.java.io :as io]
-            [clj-gdx :as gdx]))
+            [clj-gdx :as gdx]
+            [falx.rect :as rect]))
 
 (defn sprite
   [file x y w h]
@@ -8,8 +9,7 @@
 
 (defn get-size
   [sprite]
-  (let [[_ _ w h] (:rect sprite)]
-    [w h]))
+  (rect/get-size (:rect sprite)))
 
 (defn tile
   [file x y w h]

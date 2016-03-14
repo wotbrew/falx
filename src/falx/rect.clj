@@ -67,3 +67,8 @@
   ([rect x y]
    (let [[_ _ w h] rect]
      [x y w h])))
+
+(defn get-size
+  [rect]
+  [(nth rect 2)
+   (nth rect 3)])

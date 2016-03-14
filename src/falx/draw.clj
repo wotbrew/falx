@@ -103,14 +103,16 @@
   "A box, draw with `object`' or `box!`."
   (drawable
     (fn [_ x y w h context]
-      (gdx/draw-sprite! sprite/pixel x y w 1)
-      (gdx/draw-sprite! sprite/pixel x y 1 h)
-      (gdx/draw-sprite! sprite/pixel x (+ y h) w 1)
-      (gdx/draw-sprite! sprite/pixel (+ x w) y 1 h))))
+      (let [t (int (:thickness context 1))
+            -t (- t)]
+        (gdx/draw-sprite! sprite/pixel x y w t)
+        (gdx/draw-sprite! sprite/pixel x y t h)
+        (gdx/draw-sprite! sprite/pixel x (+ y h -t) w t)
+        (gdx/draw-sprite! sprite/pixel (+ x w -t) y t h)))))
 
 (def box!
   "Draws a box."
-  (get-draw-fn drawable))
+  (get-draw-fn box))
 
 (defn tiled!
   "Draws the sprite by tiling it in the given rect."
