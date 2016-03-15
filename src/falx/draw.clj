@@ -105,10 +105,10 @@
     (fn [_ x y w h context]
       (let [t (int (:thickness context 1))
             -t (- t)]
-        (gdx/draw-sprite! sprite/pixel x y w t)
-        (gdx/draw-sprite! sprite/pixel x y t h)
-        (gdx/draw-sprite! sprite/pixel x (+ y h -t) w t)
-        (gdx/draw-sprite! sprite/pixel (+ x w -t) y t h)))))
+        (gdx/draw-sprite! sprite/pixel x y w t context)
+        (gdx/draw-sprite! sprite/pixel x y t h context)
+        (gdx/draw-sprite! sprite/pixel x (+ y h -t) w t context)
+        (gdx/draw-sprite! sprite/pixel (+ x w -t) y t h context)))))
 
 (def box!
   "Draws a box."

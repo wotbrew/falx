@@ -97,6 +97,11 @@
           (reduce #(retract %1 id %2) db retracts)
           (reduce-kv #(assert %1 id %2 %3) db m))))
 
+(defn add
+  "The same as `replace`"
+  [db m]
+  (replace db m))
+
 (defn remove
   "Removes the entity given by its `id`. Returns the new db"
   [db id]

@@ -3,7 +3,10 @@
             [clojure.tools.logging :refer [error info]]
             [falx.game :as game]
             [falx.draw :as draw]
-            [falx.sprite :as sprite]))
+            [falx.sprite :as sprite]
+            [falx.actor :as actor]
+            [falx.position :as pos]
+            [falx.ui :as ui]))
 
 (def max-fps 60)
 
@@ -22,12 +25,14 @@
 
 (gdx/defrender
   (try
-    (let [frame (get-frame)]
+    (let [frame (get-frame)
+          ui (-> (ui/button "Foobar" [32 256 96 32])
+                 (ui/process frame {}))]
+      (game/publish-coll! (ui/get-events ui frame))
       (draw/object! (:fps frame) 0 0 64 32)
       (draw/object! (:input frame) 0 32 800 32)
       (let [[x y] (:point (:mouse (:input frame)))]
-        (draw/box! x y 64 64)
-        (draw/tiled! sprite/human-male x y 64 64)))
+        (draw/sprite! sprite/mouse-point x y 32 32)))
     (catch Throwable e
       (error e)
       (Thread/sleep 5000))))
@@ -37,8 +42,21 @@
     :max-background-fps max-fps
     :max-foreground-fps max-fps))
 
+(defn init!
+  []
+  (game/replace-actor! {:id 0
+                        :name "Fred"})
+  (game/update-actor! 0 actor/put (pos/cell [3 3] :foo)))
+
 (defn -main
   [& args]
   (info "Starting application")
   (gdx/start-app! app)
+  (try
+    (init!)
+    (catch Throwable e))
   (info "Started application"))
+
+(comment
+  (init!)
+  (-main))

@@ -23,12 +23,20 @@
         32
         32))
 
+;; =====
+;; Misc
+;; =====
+
 (defn misc32
   [x y]
   (tile32 "Misc" x y))
 
 (def pixel
   (misc32 0 1))
+
+;; =====
+;; Races - Human
+;; =====
 
 (defn human32
   [x y]
@@ -40,6 +48,10 @@
 (def human-male
   (human32 1 0))
 
+;; =====
+;; Gui
+;; =====
+
 (defn gui32
   [x y]
   (tile32 "Gui" x y))
@@ -49,3 +61,41 @@
 
 (def slot
   (gui32 1 0))
+
+;; =====
+;; Mouse
+;; =====
+
+(defn mouse32
+  [x y]
+  (tile32 "Mouse" x y))
+
+(def mouse-point
+  (mouse32 0 0))
+
+(def mouse-select
+  (mouse32 1 0))
+
+(def mouse-attack
+  (mouse32 2 0))
+
+(def mouse-gray-attack
+  (mouse32 3 0))
+
+(def mouse-spell
+  (mouse32 0 1))
+
+(def mouse-gray-spell
+  (mouse32 1 1))
+
+(def mouse-left
+  (mouse32 2 1))
+
+(def mouse-right
+  (mouse32 3 1))
+
+(def mouse-arrow
+  (mouse32 0 2))
+
+(def mouse-gray-arrow
+  (mouse32 1 2))

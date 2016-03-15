@@ -57,13 +57,14 @@
   [world actor]
   (let [{:keys [actor events]} (actor/split-events actor)
         ea (get-actor world (:id actor))]
-    {:actor actor
-     :events (concat
-               (when (not= ea actor)
-                 (actor-changed-event
-                   ea
-                   actor))
-               events)}))
+    {:actor  actor
+     :events
+     (if (not= ea actor)
+       (cons (actor-changed-event
+               ea
+               actor)
+             events)
+       events)}))
 
 (defn replace-actor
   "Replaces the actor in the world with the one provided. Assumes the actor contains `:id`."
@@ -72,6 +73,11 @@
     (as-> world world
           (update world :db db/replace actor)
           (reduce publish world events))))
+
+(defn add-actor
+  "Same as `replace-actor`"
+  [world actor]
+  (replace-actor world actor))
 
 (defn merge-actor
   "Adds any attributes given in the `actor` to those already in the world."
