@@ -38,6 +38,11 @@
   ([db k v & kvs]
    (map (partial pull db) (apply query db k v kvs))))
 
+(defn get-entities
+  "Returns a seq of all entities in the db (in no particular order)."
+  [db]
+  (vals (:eav db)))
+
 (defn- assert-eav
   [eav id k v]
   (assoc-in eav [id k] v))

@@ -72,3 +72,7 @@
   [rect]
   [(nth rect 2)
    (nth rect 3)])
+
+(defn floor-to-nearest
+  [rect n]
+  (mapv #(- % (mod % n)) rect))

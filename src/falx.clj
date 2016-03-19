@@ -26,8 +26,9 @@
 (gdx/defrender
   (try
     (let [frame (get-frame)
-          ui (-> (ui/button "Foobar" [32 256 96 32])
+          ui (-> (ui/game-screen (:size (:display frame)))
                  (ui/process frame {}))]
+      (ui/draw! ui frame)
       (game/publish-coll! (ui/get-events ui frame))
       (draw/object! (:fps frame) 0 0 64 32)
       (draw/object! (:input frame) 0 32 800 32)

@@ -1,6 +1,37 @@
 (ns falx.ui
   (:require [falx.draw :as draw]
-            [falx.rect :as rect]))
+            [falx.rect :as rect]
+            [falx.sprite :as sprite]
+            [falx.util :as util]
+            [falx.world :as world]))
+
+;; ====
+;; Colors
+
+
+(def gray
+  {:red 0.5,
+   :green 0.5,
+   :blue 0.5,
+   :alpha 1.0,
+   :float-bits -8.4903784E37})
+
+(def light-gray
+  {:red 0.75,
+   :green 0.75,
+   :blue 0.75,
+   :alpha 1.0,
+   :float-bits -1.2743907E38})
+
+(def white
+  {:red 1.0,
+   :green 1.0,
+   :blue 1.0,
+   :alpha 1.0,
+   :float-bits -1.7014117E38})
+
+;; ====
+;; Widgets
 
 (defmulti draw! (fn [e frame] (:type e)))
 
@@ -27,6 +58,12 @@
   [state e]
   state)
 
+(defmulti enabled? (fn [e frame] (:type e)))
+
+(defmethod enabled? :default
+  [e frame]
+  true)
+
 (defn panel
   [coll]
   {:type :ui/panel
@@ -48,12 +85,6 @@
   [state e]
   (reduce next-state state (:coll e)))
 
-(defmulti enabled? (fn [e frame] (:type e)))
-
-(defmethod enabled? :default
-  [e frame]
-  true)
-
 (defn sprite
   ([sprite rect]
    {:type   :ui/sprite
@@ -68,6 +99,12 @@
 (defmethod draw! :ui/sprite
   [e _]
   (draw/sprite! (:sprite e) (:rect e) (:context e)))
+
+(defn pixel
+  ([rect]
+   (pixel rect {}))
+  ([rect context]
+   (sprite sprite/pixel rect context)))
 
 (defn box
   ([rect]
@@ -97,6 +134,10 @@
   [e _]
   (draw/tiled! (:sprite e) (:rect e) (:context e)))
 
+(defn blocks
+  [rect]
+  (tiled sprite/block rect))
+
 (defn string
   ([s rect]
    {:type :ui/string
@@ -118,32 +159,11 @@
    :string s
    :rect   rect})
 
-(def gray
-  {:red 0.5,
-   :green 0.5,
-   :blue 0.5,
-   :alpha 1.0,
-   :float-bits -8.4903784E37})
-
-(def light-gray
-  {:red 0.75,
-   :green 0.75,
-   :blue 0.75,
-   :alpha 1.0,
-   :float-bits -1.2743907E38})
-
-(def white
-  {:red 1.0,
-   :green 1.0,
-   :blue 1.0,
-   :alpha 1.0,
-   :float-bits -1.7014117E38})
-
 (defmethod draw! :ui/button
   [e frame]
   (let [[x y w h] (:rect e)
         context (cond
-                  (:enabled? e) {:color gray}
+                  (not (:enabled? e)) {:color gray}
                   (:hovering? e) {:color white}
                   :else {:color light-gray})]
     (draw/box! x y w h context)
@@ -180,3 +200,47 @@
     (and (:enabled? e) (:clicked? e)) (conj {:type :ui.event/button-clicked
                                              :button e})))
 
+;; =====
+;; Game Screen
+
+(def game-screen-vmargin
+  (* 5 32))
+
+(def game-screen-hmargin
+  (* 7 32))
+
+(defn game-screen-rect
+  [width height]
+  (let [vmargin game-screen-vmargin
+        hmargin game-screen-hmargin]
+    [vmargin
+     0
+     (util/floor-to-nearest (- width (* 2 vmargin)) 32)
+     (util/floor-to-nearest (- height hmargin) 32)]))
+
+(defn game-view
+  [rect]
+  {:type :ui/game-view
+   :rect rect})
+
+(defmethod draw! :ui/game-view
+  [e frame]
+  (let [world (:world frame)
+        actors (world/get-all-actors world)]
+    (doseq [a actors
+            :let [point (:point a)]
+            :when point
+            :let [[x y] point]]
+      (draw/sprite! sprite/human-male (* x 32) (* y 32) 32 32))))
+
+(defn game-screen
+  ([size]
+   (let [[w h] size]
+     (game-screen w h)))
+  ([width height]
+   (panel
+     (let [[x y w h :as gr] (game-screen-rect width height)]
+       [(game-view gr)
+        (blocks [(- x 32) y 32 height])
+        (blocks [(+ x w) y 32 height])
+        (blocks [0 (+ y h) width 32])]))))

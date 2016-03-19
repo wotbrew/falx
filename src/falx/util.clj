@@ -28,3 +28,7 @@
 (defn find-first
   [pred coll]
   (first (filter pred coll)))
+
+(defn floor-to-nearest
+  [n1 n2]
+  (- n1 (mod n1 n2)))

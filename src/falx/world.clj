@@ -46,6 +46,11 @@
    (let [db (:db world)]
      (apply db/pull-query db k v kvs))))
 
+(defn get-all-actors
+  "Returns a seq of all actors in the world (in no particular order)."
+  [world]
+  (db/get-entities (:db world)))
+
 (defn actor-changed-event
   [old-actor actor]
   {:type :world.event/actor-changed
