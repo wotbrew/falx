@@ -3,32 +3,32 @@
             [falx.rect :as rect]
             [falx.sprite :as sprite]
             [falx.util :as util]
-            [falx.world :as world]))
+            [falx.world :as world]
+            [gdx.color :as color]))
 
 ;; ====
 ;; Colors
 
-
 (def gray
-  {:red 0.5,
-   :green 0.5,
-   :blue 0.5,
-   :alpha 1.0,
-   :float-bits -8.4903784E37})
+  (color/color 0.5 0.5 0.5 1))
 
 (def light-gray
-  {:red 0.75,
-   :green 0.75,
-   :blue 0.75,
-   :alpha 1.0,
-   :float-bits -1.2743907E38})
+  (color/color 0.75 0.75 0.75 1))
 
 (def white
-  {:red 1.0,
-   :green 1.0,
-   :blue 1.0,
-   :alpha 1.0,
-   :float-bits -1.7014117E38})
+  (color/color 1 1 1 1))
+
+(def black
+  (color/color 0 0 0 1))
+
+(def yellow
+  (color/color 1 1 0 1))
+
+(def green
+  (color/color 0 1 0 1))
+
+(def red
+  (color/color 1 0 0 1))
 
 ;; ====
 ;; Widgets
@@ -105,6 +105,10 @@
    (pixel rect {}))
   ([rect context]
    (sprite sprite/pixel rect context)))
+
+(defn background
+  ([rect]
+   (pixel rect {:color black})))
 
 (defn box
   ([rect]
@@ -209,7 +213,7 @@
 (def game-screen-hmargin
   (* 7 32))
 
-(defn game-screen-rect
+(defn game-view-rect
   [width height]
   (let [vmargin game-screen-vmargin
         hmargin game-screen-hmargin]
@@ -233,14 +237,65 @@
             :let [[x y] point]]
       (draw/sprite! sprite/human-male (* x 32) (* y 32) 32 32))))
 
+(defn game-left-rect
+  [width height]
+  (let [[x y w h] (game-view-rect width height)]
+    [0 0 (- x 32) h]))
+
+(defn game-left
+  [width height]
+  (pixel (game-left-rect width height)))
+
+(defn game-right-rect
+  [width height]
+  (let [[x y w h] (game-view-rect width height)]
+    [(+ x w 32) 0 (- width w x 32) h]))
+
+(defn game-right
+  [width height]
+  (pixel (game-right-rect width height) {:color green}))
+
+(defn game-bottom-left-rect
+  [width height]
+  (let [[x y w h] (game-view-rect width height)]
+    [0 (+ y h 32) (- x 32) (- height h y 32)]))
+
+(defn game-bottom-left
+  [width height]
+  (pixel (game-bottom-left-rect width height) {:color red}))
+
+(defn game-bottom-right-rect
+  [width height]
+  (let [[x y w h] (game-view-rect width height)]
+    [(+ x w 32) (+ y h 32) (- x 32) (- height h y 32)]))
+
+(defn game-bottom-right
+  [width height]
+  (pixel (game-bottom-right-rect width height) {:color yellow}))
+
+(defn game-bottom-rect
+  [width height]
+  (let [[x y w h] (game-view-rect width height)]
+    [x (+ y h) w (- height y h)]))
+
+(defn game-bottom
+  [width height]
+  (pixel (game-bottom-rect width height) {:color gray}))
+
 (defn game-screen
   ([size]
    (let [[w h] size]
      (game-screen w h)))
   ([width height]
    (panel
-     (let [[x y w h :as gr] (game-screen-rect width height)]
+     (let [[x y w h :as gr] (game-view-rect width height)]
        [(game-view gr)
+        (game-left width height)
+        (game-right width height)
+        (game-bottom-left width height)
+        (game-bottom-right width height)
+        (game-bottom width height)
+
         (blocks [(- x 32) y 32 height])
         (blocks [(+ x w) y 32 height])
         (blocks [0 (+ y h) width 32])]))))

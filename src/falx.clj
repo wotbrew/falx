@@ -47,7 +47,7 @@
   []
   (game/replace-actor! {:id 0
                         :name "Fred"})
-  (game/update-actor! 0 actor/put (pos/cell [3 3] :foo)))
+  (game/update-actor! 0 actor/put (pos/cell [6 6] :foo)))
 
 (defn -main
   [& args]

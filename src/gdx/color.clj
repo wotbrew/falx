@@ -24,12 +24,14 @@
     :float-bits (get-float-bits color)))
 
 (defn color
-  [red green blue alpha]
-  (compile
-    {:red   red
-     :green green
-     :blue  blue
-     :alpha alpha}))
+  ([red green blue]
+   (color red green blue 1))
+  ([red green blue alpha]
+   (compile
+     {:red   (double red)
+      :green (double green)
+      :blue  (double blue)
+      :alpha (double alpha)})))
 
 (defn mult
   [a b]
