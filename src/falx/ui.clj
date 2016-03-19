@@ -4,7 +4,9 @@
             [falx.sprite :as sprite]
             [falx.util :as util]
             [falx.world :as world]
-            [gdx.color :as color]))
+            [gdx.color :as color]
+            [clj-gdx :as gdx]
+            [falx.point :as point]))
 
 ;; ====
 ;; Colors
@@ -223,19 +225,39 @@
      (util/floor-to-nearest (- height hmargin) 32)]))
 
 (defn game-view
-  [rect]
-  {:type :ui/game-view
-   :rect rect})
+  [rect sw sh]
+  {:type   :ui/game-view
+   :camera {:type :camera/orthographic,
+            :point [400.0 300.0],
+            :size [sw sh],
+            :flip-y? true}
+   :rect   rect})
+
+(defmethod process :ui/game-view
+  [e frame state]
+  (let [input (:input frame)
+        keyboard (:keyboard input)
+        camera (:camera e)
+        pressed (:pressed keyboard)]
+    (assoc e
+      :camera
+      (cond->
+        camera
+        (contains? pressed :w) (update :point point/add 0 -1)
+        (contains? pressed :a) (update :point point/add -1 0)
+        (contains? pressed :d) (update :point point/add 1 0)
+        (contains? pressed :s) (update :point point/add 0 1)))))
 
 (defmethod draw! :ui/game-view
   [e frame]
   (let [world (:world frame)
         actors (world/get-all-actors world)]
-    (doseq [a actors
-            :let [point (:point a)]
-            :when point
-            :let [[x y] point]]
-      (draw/sprite! sprite/human-male (* x 32) (* y 32) 32 32))))
+    (gdx/using-camera (:camera e gdx/default-camera)
+      (doseq [a actors
+              :let [point (:point a)]
+              :when point
+              :let [[x y] point]]
+        (draw/sprite! sprite/human-male (* x 32) (* y 32) 32 32)))))
 
 (defn game-left-rect
   [width height]
@@ -289,7 +311,7 @@
   ([width height]
    (panel
      (let [[x y w h :as gr] (game-view-rect width height)]
-       [(game-view gr)
+       [(game-view gr width height)
         (game-left width height)
         (game-right width height)
         (game-bottom-left width height)

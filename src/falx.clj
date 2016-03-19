@@ -25,11 +25,12 @@
 
 (gdx/defrender
   (try
+    (await game/screen)
     (let [frame (get-frame)
-          ui (-> (ui/game-screen (:size (:display frame)))
-                 (ui/process frame {}))]
-      (ui/draw! ui frame)
+          ui @game/screen]
       (game/publish-coll! (ui/get-events ui frame))
+      (send game/screen ui/process frame {})
+      (ui/draw! ui frame)
       (draw/object! (:fps frame) 0 0 64 32)
       (draw/object! (:input frame) 0 32 800 32)
       (let [[x y] (:point (:mouse (:input frame)))]
@@ -45,6 +46,8 @@
 
 (defn init!
   []
+  (let [display (gdx/get-display)]
+    (send game/screen (constantly (ui/game-screen (:size display)))))
   (game/replace-actor! {:id 0
                         :name "Fred"})
   (game/update-actor! 0 actor/put (pos/cell [6 6] :foo)))

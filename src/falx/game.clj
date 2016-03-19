@@ -84,3 +84,6 @@
 (def input
   (agent {:mouse gdx/default-mouse
           :keyboard gdx/default-keyboard}))
+
+(def screen
+  (agent nil))
