@@ -24,14 +24,15 @@
     (doto
       (agent (world/world []))
       (add-watch ::publish-events
-                 (fn [_ _ old new]
+                 (fn [_ a old new]
                    (when (and (not (identical? old new))
                               (seq (:events new)))
-                     (let [{:keys [world events]} (world/split-events new)]
-                       ;;gotta block to preserve order, can I use async/put! here?
-                       ;;it doesn't need to be syncnronous as long as order of dispatch is preserved
-                       (async/>!! c events)
-                       world)))))))
+                     (send a
+                           #(let [{:keys [world events]} (world/split-events %)]
+                             ;;gotta block to preserve order, can I use async/put! here?
+                             ;;it doesn't need to be syncnronous as long as order of dispatch is preserved
+                             (async/>!! c events)
+                             world))))))))
 
 (defn game
   []
@@ -156,7 +157,7 @@
   ([game type f]
    (install-event-fn game type f 1))
   ([game type f n]
-   (install-event-xform game type (map f) n)))
+   (install-event-xform game type (keep f) n)))
 
 (defn install-event-xform-blocking
   ([game type xform]
@@ -173,4 +174,4 @@
   ([game type f]
    (install-event-fn-blocking game type f 1))
   ([game type f n]
-   (install-event-xform-blocking game type (map f) n)))
+   (install-event-xform-blocking game type (keep f) n)))

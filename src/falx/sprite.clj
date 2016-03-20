@@ -31,6 +31,9 @@
   [x y]
   (tile32 "Misc" x y))
 
+(def selection
+  (misc32 0 0))
+
 (def pixel
   (misc32 0 1))
 

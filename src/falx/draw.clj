@@ -2,7 +2,8 @@
   "Drawing functions"
   (:require [clj-gdx :as gdx]
             [falx.size :as size]
-            [falx.sprite :as sprite])
+            [falx.sprite :as sprite]
+            [gdx.color :as color])
   (:import (clojure.lang IPersistentMap)))
 
 (defn sprite!
@@ -140,3 +141,9 @@
              (gdx/draw-sprite! sprite x y tw th context)
              (recur (+ y tw))))
          (recur (+ x th)))))))
+
+(defmethod map! :actor.type/creature
+  [m x y w h context]
+  (when (:selected? m)
+    (sprite! sprite/selection x y w h {:color color/green}))
+  (sprite! sprite/human-male x y w h context))

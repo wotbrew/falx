@@ -1,7 +1,6 @@
 (ns falx.game.click
   (:require [gdx.camera :as camera]
             [falx.position :as pos]
-            [clojure.core.async :as async]
             [clojure.tools.logging :refer [debug]]
             [falx.game :as game]
             [falx.world :as world]))
@@ -16,10 +15,16 @@
 
 (defn world-clicked->actor-clicked-coll
   [world {:keys [cell]}]
-  (for [a (world/query-actors world :cell cell)]
-    {:type :ui.event/actor-clicked
-     :id (:id a)
-     :actor a}))
+  (let [as (world/query-actors world :cell cell)]
+    (concat
+      (for [a as]
+        {:type  :ui.event/actor-clicked
+         :id    (:id a)
+         :actor a})
+      (for [a as]
+        {:type [:ui.event/actor-clicked (:type a)]
+         :id (:id a)
+         :actor a}))))
 
 (defn install!
   [game]

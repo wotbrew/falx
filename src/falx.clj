@@ -10,7 +10,8 @@
 
             [falx.game
              [click :as game-click]
-             [debug :as game-debug]]))
+             [debug :as game-debug]
+             [select :as game-select]]))
 
 (def max-fps 60)
 
@@ -26,7 +27,8 @@
     (doto
       (-> (game/game)
           game-click/install!
-          game-debug/install!)
+          game-debug/install!
+          game-select/install!)
       (game/publish! {:type :falx.event/game-started}))))
 
 (gdx/defrender
@@ -51,7 +53,10 @@
   []
   (let [display (gdx/get-display)]
     (send (:ui-agent game) (constantly (ui/game-screen (:size display)))))
-  (game/replace-actor! game {:id 0 :name "Fred" :layer :creature})
+  (game/replace-actor! game {:id 0
+                             :name "Fred"
+                             :type :actor.type/creature
+                             :layer :layer.type/creature})
   (game/update-actor! game 0 actor/put (pos/cell [6 6] "testing-level")))
 
 (defn -main

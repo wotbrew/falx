@@ -2,12 +2,21 @@
   (:require [clojure.tools.logging :refer [debug]]
             [clojure.core.async :as async]))
 
+(def silence?
+  #{})
+
+(def display-details?
+  #{#_[:ui.event/actor-clicked :actor.type/creature]})
+
 (defn print-event!
   [event]
-  (when (not (:silent? event))
-    (debug "--------------------")
-    (debug "Event:" (:type event))
-    (debug "  " event)))
+  (let [type (:type event)]
+    (when (and (not (:silent? event))
+               (not (silence? type)))
+      (debug "--------------------")
+      (debug "Event:" type)
+      (when (display-details? type)
+        (debug "  " event)))))
 
 (defn install!
   [game]

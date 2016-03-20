@@ -293,11 +293,12 @@
               :let [point (:point a)]
               :when point
               :let [[x y] point]]
-        (draw/sprite! sprite/human-male
-                      (* x cell-width)
-                      (* y cell-height)
-                      cell-width
-                      cell-height)))))
+        (draw/object!
+          a
+          (* x cell-width)
+          (* y cell-height)
+          cell-width
+          cell-height)))))
 
 (defn game-left-rect
   [width height]
