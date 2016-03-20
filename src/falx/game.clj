@@ -1,89 +1,139 @@
 (ns falx.game
   (:require [falx.world :as world]
-            [clj-gdx :as gdx]
-            [clojure.core.async :as async :refer [go >! <! chan]]
-            [clojure.tools.logging :refer [debug]])
-  (:refer-clojure :exclude [empty]))
+            [falx.frame :as frame]
+            [clojure.core.async :as async :refer [go go-loop >! <! chan]]
+            [clojure.tools.logging :refer [debug]]
+            [falx.ui :as ui])
+  (:refer-clojure :exclude [empty])
+  (:import (java.util UUID)))
 
-(defonce event-chan (chan 512))
+(defn event-chan
+  []
+  (chan 512))
 
-(defonce event-mult (async/mult event-chan))
-
-(defonce event-pub
+(defn event-pub
+  [event-mult]
   (let [c (chan)]
     (async/tap event-mult c)
     (async/pub c :type)))
 
-(defn publish!
-  [event]
-  (go (>! event-chan event)))
-
-(defn publish-coll!
-  [event-coll]
-  (async/onto-chan event-chan event-coll false))
-
-(defonce pending-world-events-chan
+(defn world-agent
+  [event-chan]
   (let [c (async/chan 1024 cat)]
     (async/pipe c event-chan false)
-    c))
+    (doto
+      (agent (world/world []))
+      (add-watch ::publish-events
+                 (fn [_ _ old new]
+                   (when (and (not (identical? old new))
+                              (seq (:events new)))
+                     (let [{:keys [world events]} (world/split-events new)]
+                       ;;gotta block to preserve order, can I use async/put! here?
+                       ;;it doesn't need to be syncnronous as long as order of dispatch is preserved
+                       (async/>!! c events)
+                       world)))))))
 
-(def world
-  (doto
-    (agent (world/world []))
-    (add-watch ::publish-events
-               (fn [_ _ old new]
-                 (when (and (not (identical? old new))
-                            (seq (:events new)))
-                   (let [{:keys [world events]} (world/split-events new)]
-                     ;;gotta block to preserve order, can I use async/put! here?
-                     ;;it doesn't need to be syncnronous as long as order of dispatch is preserved
-                     (doseq [event events]
-                       (debug "Event:" (:type event)))
-                     (async/>!! pending-world-events-chan events)
-                     world))))))
+(defn game
+  []
+  (let [id (str (UUID/randomUUID))
+        event-chan (event-chan)
+        event-mult (async/mult event-chan)
+        event-pub (event-pub event-mult)
+        world-agent (world-agent event-chan)
+        ui-agent (agent {})
+        ui-state-agent (agent {})]
+    (debug "Created game" id)
+    {:id             id
+     :event-chan     event-chan
+     :event-mult     event-mult
+     :event-pub      event-pub
+     :world-agent    world-agent
+     :ui-agent       ui-agent
+     :ui-state-agent ui-state-agent}))
+
+(defn close!
+  [game]
+  (debug "Closing game" (:id game))
+  (let [{:keys [event-chan event-pub]} game]
+    (async/close! event-chan)
+    (async/unsub-all event-pub)
+    (debug "Game closed" (:id game))
+    nil))
+
+(defn publish-coll!
+  [game event-coll]
+  (async/onto-chan (:event-chan game) event-coll false))
+
+(defn publish!
+  ([game event]
+   (async/go
+     (>! (:event-chan game) event)))
+  ([game event & events]
+   (publish-coll! game (cons event events))))
+
+(defn get-world
+  [game]
+  @(:world-agent game))
+
+(defn get-ui
+  [game]
+  @(:ui-agent game))
+
+(defn get-ui-state
+  [game]
+  @(:ui-state-agent game))
 
 (defn update-world!
-  ([f]
-   (send world f)
+  ([game f]
+   (send (:world-agent game) f)
    nil)
-  ([f & args]
-   (update-world! #(apply f % args))))
+  ([game f & args]
+   (update-world! game #(apply f % args))))
 
 (defn get-actor
-  [id]
-  (world/get-actor @world id))
+  [game id]
+  (world/get-actor (get-world game) id))
 
 (defn query-actors
-  ([k v]
-   (world/query-actors @world k v))
-  ([k v & kvs]
-   (apply world/query-actors @world k v kvs)))
+  ([game k v]
+   (world/query-actors (get-world game) k v))
+  ([game k v & kvs]
+   (apply world/query-actors (get-world game) k v kvs)))
 
 (defn replace-actor!
-  [actor]
-  (update-world! world/replace-actor actor))
+  [game actor]
+  (update-world! game world/replace-actor actor))
 
 (defn add-actor!
-  [actor]
-  (replace-actor! actor))
+  [game actor]
+  (replace-actor! game actor))
 
 (defn merge-actor!
-  [actor]
-  (update-world! world/merge-actor actor))
+  [game actor]
+  (update-world! game world/merge-actor actor))
 
 (defn remove-actor!
-  [id]
-  (update-world! world/remove-actor id))
+  [game id]
+  (update-world! game world/remove-actor id))
 
 (defn update-actor!
-  ([id f]
-   (update-world! world/update-actor id f))
-  ([id f & args]
-   (update-actor! id #(apply f % args))))
+  ([game id f]
+   (update-world! game world/update-actor id f))
+  ([game id f & args]
+   (update-actor! game id #(apply f % args))))
 
-(def input
-  (agent {:mouse gdx/default-mouse
-          :keyboard gdx/default-keyboard}))
+(defn get-current-frame
+  [game]
+  (frame/get-current-frame (get-world game)))
 
-(def screen
-  (agent nil))
+(defn process-frame!
+  ([game]
+   (process-frame! game (get-current-frame game)))
+  ([game frame]
+   (let [{:keys [ui-agent ui-state-agent]} game
+         ui @ui-agent
+         ui-state @ui-state-agent]
+     (publish-coll! game (ui/get-events ui frame))
+     (send ui-agent ui/process frame ui-state)
+     (send ui-state-agent ui/next-state ui)
+     nil)))

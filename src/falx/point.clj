@@ -3,11 +3,11 @@
 
 (defn line-right
   ([point]
-    (let [[x y] point]
-      (line-right x y)))
+   (let [[x y] point]
+     (line-right x y)))
   ([x y]
-    (for [x (iterate inc x)]
-      [x y])))
+   (for [x (iterate inc x)]
+     [x y])))
 
 (defn line-left
   ([point]
@@ -35,8 +35,8 @@
 
 (defn add
   ([point1 point2]
-    (let [[x2 y2] point2]
-      (add point1 x2 y2)))
+   (let [[x2 y2] point2]
+     (add point1 x2 y2)))
   ([point x2 y2]
    (let [[x y] point]
      (add x y x2 y2)))
@@ -60,6 +60,13 @@
    (mult point n n))
   ([x y n]
    (mult x y n n)))
+
+(defn floor
+  ([point]
+   (let [[x y] point]
+     (floor x y)))
+  ([x y]
+   [(int x) (int y)]))
 
 (def north [0 -1])
 

@@ -6,7 +6,9 @@
             [falx.world :as world]
             [gdx.color :as color]
             [clj-gdx :as gdx]
-            [falx.point :as point]))
+            [falx.point :as point]
+            [falx.input :as input]
+            [gdx.camera :as camera]))
 
 ;; ====
 ;; Colors
@@ -231,33 +233,71 @@
             :point [400.0 300.0],
             :size [sw sh],
             :flip-y? true}
+   :cell-size [32 32]
+   :cell-width 32
+   :cell-height 32
+   :level "testing-level"
    :rect   rect})
 
-(defmethod process :ui/game-view
-  [e frame state]
-  (let [input (:input frame)
-        keyboard (:keyboard input)
+(def cam-speed
+  250)
+
+(def cam-fast-speed
+  (* cam-speed 2.5))
+
+(defn process-camera
+  [e input delta]
+  (let [keyboard (:keyboard input)
         camera (:camera e)
-        pressed (:pressed keyboard)]
+        pressed? (:pressed keyboard #{})
+        cam-fast? (pressed? :shift-left)
+        cam-speed (* delta (if cam-fast? cam-fast-speed cam-speed))]
     (assoc e
       :camera
       (cond->
         camera
-        (contains? pressed :w) (update :point point/add 0 -1)
-        (contains? pressed :a) (update :point point/add -1 0)
-        (contains? pressed :d) (update :point point/add 1 0)
-        (contains? pressed :s) (update :point point/add 0 1)))))
+        (pressed? :w) (update :point point/add 0 (- cam-speed))
+        (pressed? :a) (update :point point/add (- cam-speed) 0)
+        (pressed? :d) (update :point point/add cam-speed 0)
+        (pressed? :s) (update :point point/add 0 cam-speed)))))
+
+(defmethod process :ui/game-view
+  [e frame state]
+  (let [{:keys [input delta]} frame]
+    (cond->
+      (-> (process-camera e input delta)))))
+
+(defmethod get-events :ui/game-view
+  [e frame]
+  (let [input (:input frame)
+        mouse (:mouse input)
+        {:keys [camera rect]} e]
+    (when (input/clicked? input rect)
+      [(merge
+         {:type   :ui.event/game-view-clicked
+          :camera camera
+          :point  (:point mouse)}
+         (select-keys e
+                      [:cell-size
+                       :cell-width
+                       :cell-height
+                       :level]))])))
 
 (defmethod draw! :ui/game-view
   [e frame]
   (let [world (:world frame)
-        actors (world/get-all-actors world)]
+        actors (world/get-all-actors world)
+        {:keys [cell-width cell-height ]} e]
     (gdx/using-camera (:camera e gdx/default-camera)
       (doseq [a actors
               :let [point (:point a)]
               :when point
               :let [[x y] point]]
-        (draw/sprite! sprite/human-male (* x 32) (* y 32) 32 32)))))
+        (draw/sprite! sprite/human-male
+                      (* x cell-width)
+                      (* y cell-height)
+                      cell-width
+                      cell-height)))))
 
 (defn game-left-rect
   [width height]
