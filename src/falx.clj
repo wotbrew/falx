@@ -23,9 +23,11 @@
   (do
     (when (and (bound? #'game) (some? game))
       (game/close! game))
-    (-> (game/game)
-        game-click/install!
-        game-debug/install!)))
+    (doto
+      (-> (game/game)
+          game-click/install!
+          game-debug/install!)
+      (game/publish! {:type :falx.event/game-started}))))
 
 (gdx/defrender
   (try
@@ -49,8 +51,8 @@
   []
   (let [display (gdx/get-display)]
     (send (:ui-agent game) (constantly (ui/game-screen (:size display)))))
-  (game/replace-actor! game {:id 0 :name "Fred"})
-  (game/update-actor! game 0 actor/put (pos/cell [6 6] :foo)))
+  (game/replace-actor! game {:id 0 :name "Fred" :layer :creature})
+  (game/update-actor! game 0 actor/put (pos/cell [6 6] "testing-level")))
 
 (defn -main
   [& args]

@@ -286,7 +286,7 @@
 (defmethod draw! :ui/game-view
   [e frame]
   (let [world (:world frame)
-        actors (world/get-all-actors world)
+        actors (world/query-actors world :level (:level e))
         {:keys [cell-width cell-height ]} e]
     (gdx/using-camera (:camera e gdx/default-camera)
       (doseq [a actors

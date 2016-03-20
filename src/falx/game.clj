@@ -130,6 +130,9 @@
   ([game]
    (process-frame! game (get-current-frame game)))
   ([game frame]
+   (publish! game {:type :game.event/frame
+                   :frame frame
+                   :silent? true})
    (let [{:keys [ui-agent ui-state-agent]} game
          ui @ui-agent
          ui-state @ui-state-agent]
@@ -137,3 +140,37 @@
      (send ui-agent ui/process frame ui-state)
      (send ui-state-agent ui/next-state ui)
      nil)))
+
+(defn install-event-xform
+  ([game type xform]
+   (install-event-xform game type xform 1))
+  ([game type xform n]
+   (let [event-pub (:event-pub game)
+         event-chan (:event-chan game)
+         c (async/chan)]
+     (async/sub event-pub type c)
+     (async/pipeline n event-chan xform c)
+     game)))
+
+(defn install-event-fn
+  ([game type f]
+   (install-event-fn game type f 1))
+  ([game type f n]
+   (install-event-xform game type (map f) n)))
+
+(defn install-event-xform-blocking
+  ([game type xform]
+   (install-event-xform-blocking game type xform 1))
+  ([game type xform n]
+   (let [event-pub (:event-pub game)
+         event-chan (:event-chan game)
+         c (async/chan)]
+     (async/sub event-pub type c)
+     (async/pipeline-blocking n event-chan xform c)
+     game)))
+
+(defn install-event-fn-blocking
+  ([game type f]
+   (install-event-fn-blocking game type f 1))
+  ([game type f n]
+   (install-event-xform-blocking game type (map f) n)))
