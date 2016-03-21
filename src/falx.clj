@@ -11,7 +11,8 @@
             [falx.game
              [click :as game-click]
              [debug :as game-debug]
-             [select :as game-select]]))
+             [select :as game-select]
+             [move :as game-move]]))
 
 (def max-fps 60)
 
@@ -28,7 +29,8 @@
       (-> (game/game)
           game-click/install!
           game-debug/install!
-          game-select/install!)
+          game-select/install!
+          game-move/install!)
       (game/publish! {:type :falx.event/game-started}))))
 
 (gdx/defrender
@@ -55,6 +57,7 @@
     (send (:ui-agent game) (constantly (ui/game-screen (:size display)))))
   (game/replace-actor! game {:id 0
                              :name "Fred"
+                             :solid? true
                              :type :actor.type/creature
                              :layer :layer.type/creature})
   (game/update-actor! game 0 actor/put (pos/cell [6 6] "testing-level")))
