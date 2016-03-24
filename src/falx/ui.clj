@@ -272,16 +272,20 @@
   (let [input (:input frame)
         mouse (:mouse input)
         {:keys [camera rect]} e]
-    (when (input/clicked? input rect)
-      [(merge
-         {:type   :ui.event/game-view-clicked
-          :camera camera
-          :point  (:point mouse)}
-         (select-keys e
-                      [:cell-size
-                       :cell-width
-                       :cell-height
-                       :level]))])))
+    (cond->
+      []
+      ;;
+      (input/some-click input rect)
+      (conj (merge
+              {:type   :ui.event/game-view-clicked
+               :camera camera
+               :button (input/some-click input rect)
+               :point  (:point mouse)}
+              (select-keys e
+                           [:cell-size
+                            :cell-width
+                            :cell-height
+                            :level]))))))
 
 (defmethod draw! :ui/game-view
   [e frame]

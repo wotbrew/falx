@@ -30,6 +30,6 @@
   (debug "Installing select module")
   (game/install-event-fn
     game
-    [:ui.event/actor-clicked :actor.type/creature]
+    [:ui.event/actor-clicked :actor.type/creature :left]
     #(try-select! game (:actor %)))
   game)

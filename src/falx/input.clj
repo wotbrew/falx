@@ -18,11 +18,29 @@
    (and (mouse-button-hit? input button)
         (mouse-in? input rect))))
 
-(defn clicked?
+(defn left-clicked?
   ([input]
    (mouse-button-hit? input :left))
   ([input rect]
    (mouse-button-hit? input :left rect)))
+
+(defn right-clicked?
+  ([input]
+   (mouse-button-hit? input :right))
+  ([input rect]
+   (mouse-button-hit? input :right rect)))
+
+(defn some-click
+  ([input]
+   (or (when (left-clicked? input)
+         :left)
+       (when (right-clicked? input)
+         :right)))
+  ([input rect]
+   (or (when (left-clicked? input rect)
+         :left)
+       (when (right-clicked? input rect)
+         :right))))
 
 (defn key-hit?
   [input key]

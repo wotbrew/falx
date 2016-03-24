@@ -142,6 +142,28 @@
      (send ui-state-agent ui/next-state ui)
      nil)))
 
+(defn install-event-effect
+  ([game f]
+   (let [event-mult (:event-mult game)
+         c (async/chan)]
+     (async/tap event-mult c)
+     (go-loop
+       []
+       (when-some [x (<! c)]
+         (f x)
+         (recur)))
+     game))
+  ([game type f]
+   (let [event-pub (:event-pub game)
+         c (async/chan)]
+     (async/sub event-pub type c)
+     (go-loop
+       []
+       (when-some [x (<! c)]
+         (f x)
+         (recur)))
+     game)))
+
 (defn install-event-xform
   ([game type xform]
    (install-event-xform game type xform 1))
@@ -175,3 +197,15 @@
    (install-event-fn-blocking game type f 1))
   ([game type f n]
    (install-event-xform-blocking game type (keep f) n)))
+
+(defn install-event-async-fn
+  ([game type f]
+   (install-event-async-fn game type f 1))
+  ([game type f n]
+   (let [event-pub (:event-pub game)
+         event-chan (:event-chan game)
+         c (async/chan)]
+     (async/sub event-pub type c)
+     (async/pipeline-async n event-chan (fn [x ch]
+                                          (async/pipe (f x) ch true)) c)
+     game)))
