@@ -55,8 +55,7 @@
   [old-actor actor]
   {:type :world.event/actor-changed
    :old-actor old-actor
-   :actor actor
-   :id (:id actor)})
+   :actor actor})
 
 (defn- split-actor-events
   [world actor]
@@ -138,6 +137,11 @@
   [world actor cell]
   (not (some-obstructs? world actor cell)))
 
+(defn solid-at?
+  "Is there a solid entity at the given cell?"
+  [world cell]
+  (some :solid? (get-at world cell)))
+
 (defn put
   "If possible, places the actor given by `id` at the given cell. Returns the new world."
   [world id cell]
@@ -166,4 +170,3 @@
     (if (and actor (can-step? world actor cell))
       (update-actor world id actor/put cell)
       world)))
-

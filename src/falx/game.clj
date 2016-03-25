@@ -7,20 +7,20 @@
   (:refer-clojure :exclude [empty])
   (:import (java.util UUID)))
 
-(defn event-chan
+(defn bus-chan
   []
   (chan 512))
 
-(defn event-pub
-  [event-mult]
+(defn bus-pub
+  [bus-mult]
   (let [c (chan)]
-    (async/tap event-mult c)
+    (async/tap bus-mult c)
     (async/pub c :type)))
 
 (defn world-agent
-  [event-chan]
+  [bus-chan]
   (let [c (async/chan 1024 cat)]
-    (async/pipe c event-chan false)
+    (async/pipe c bus-chan false)
     (doto
       (agent (world/world []))
       (add-watch ::publish-events
@@ -37,40 +37,40 @@
 (defn game
   []
   (let [id (str (UUID/randomUUID))
-        event-chan (event-chan)
-        event-mult (async/mult event-chan)
-        event-pub (event-pub event-mult)
-        world-agent (world-agent event-chan)
-        ui-agent (agent {})
+        bus-chan (bus-chan)
+        bus-mult (async/mult bus-chan)
+        bus-pub (bus-pub bus-mult)
+        world-agent (world-agent bus-chan)
+        ui-atom (atom {})
         ui-state-agent (agent {})]
     (debug "Created game" id)
     {:id             id
-     :event-chan     event-chan
-     :event-mult     event-mult
-     :event-pub      event-pub
+     :bus-chan     bus-chan
+     :bus-mult     bus-mult
+     :bus-pub      bus-pub
      :world-agent    world-agent
-     :ui-agent       ui-agent
+     :ui-atom       ui-atom
      :ui-state-agent ui-state-agent}))
 
 (defn close!
   [game]
   (debug "Closing game" (:id game))
-  (let [{:keys [event-chan event-pub]} game]
-    (async/close! event-chan)
-    (async/unsub-all event-pub)
+  (let [{:keys [bus-chan bus-pub]} game]
+    (async/close! bus-chan)
+    (async/unsub-all bus-pub)
     (debug "Game closed" (:id game))
     nil))
 
 (defn publish-coll!
-  [game event-coll]
-  (async/onto-chan (:event-chan game) event-coll false))
+  [game msgs]
+  (async/onto-chan (:bus-chan game) msgs false))
 
 (defn publish!
-  ([game event]
+  ([game msg]
    (async/go
-     (>! (:event-chan game) event)))
-  ([game event & events]
-   (publish-coll! game (cons event events))))
+     (>! (:bus-chan game) msg)))
+  ([game msg & msgs]
+   (publish-coll! game (cons msg msgs))))
 
 (defn get-world
   [game]
@@ -78,7 +78,7 @@
 
 (defn get-ui
   [game]
-  @(:ui-agent game))
+  @(:ui-atom game))
 
 (defn get-ui-state
   [game]
@@ -100,6 +100,14 @@
    (world/query-actors (get-world game) k v))
   ([game k v & kvs]
    (apply world/query-actors (get-world game) k v kvs)))
+
+(defn get-at
+  [game cell]
+  (world/get-at (get-world game) cell))
+
+(defn solid-at?
+  [game cell]
+  (world/solid-at? (get-world game) cell))
 
 (defn replace-actor!
   [game actor]
@@ -134,78 +142,53 @@
    (publish! game {:type :game.event/frame
                    :frame frame
                    :silent? true})
-   (let [{:keys [ui-agent ui-state-agent]} game
-         ui @ui-agent
+   (let [{:keys [ui-atom ui-state-agent]} game
+         ui @ui-atom
          ui-state @ui-state-agent]
      (publish-coll! game (ui/get-events ui frame))
-     (send ui-agent ui/process frame ui-state)
-     (send ui-state-agent ui/next-state ui)
+     (let [nui (swap! ui-atom ui/process frame ui-state)]
+       (send ui-state-agent ui/next-state nui))
      nil)))
 
-(defn install-event-effect
+(defn plug!
+  ([game chan]
+   (async/pipe chan (:bus-chan game) false))
+  ([game chan & chs]
+    (doseq [c (cons chan chs)]
+      (plug! game c))))
+
+(defn sub!
+  ([game chan]
+    (let [bus (:bus-mult game)]
+      (async/tap bus chan)
+      chan))
+  ([game type chan]
+    (let [bus (:bus-pub game)]
+      (async/sub bus type chan)
+      chan)))
+
+(defn sub
+  ([game]
+    (let [c (async/chan)]
+      (sub! game c)))
+  ([game type]
+    (let [c (async/chan)]
+      (sub! game type c)))
+  ([game type & types]
+    (async/merge (map #(sub game %) (cons type types)))))
+
+(defn subfn!
   ([game f]
-   (let [event-mult (:event-mult game)
-         c (async/chan)]
-     (async/tap event-mult c)
+    (let [c (sub game)]
+      (go-loop
+        []
+        (when-some [x (<! c)]
+          (f x)
+          (recur)))))
+  ([game type f]
+   (let [c (sub game type)]
      (go-loop
        []
        (when-some [x (<! c)]
          (f x)
-         (recur)))
-     game))
-  ([game type f]
-   (let [event-pub (:event-pub game)
-         c (async/chan)]
-     (async/sub event-pub type c)
-     (go-loop
-       []
-       (when-some [x (<! c)]
-         (f x)
-         (recur)))
-     game)))
-
-(defn install-event-xform
-  ([game type xform]
-   (install-event-xform game type xform 1))
-  ([game type xform n]
-   (let [event-pub (:event-pub game)
-         event-chan (:event-chan game)
-         c (async/chan)]
-     (async/sub event-pub type c)
-     (async/pipeline n event-chan xform c)
-     game)))
-
-(defn install-event-fn
-  ([game type f]
-   (install-event-fn game type f 1))
-  ([game type f n]
-   (install-event-xform game type (keep f) n)))
-
-(defn install-event-xform-blocking
-  ([game type xform]
-   (install-event-xform-blocking game type xform 1))
-  ([game type xform n]
-   (let [event-pub (:event-pub game)
-         event-chan (:event-chan game)
-         c (async/chan)]
-     (async/sub event-pub type c)
-     (async/pipeline-blocking n event-chan xform c)
-     game)))
-
-(defn install-event-fn-blocking
-  ([game type f]
-   (install-event-fn-blocking game type f 1))
-  ([game type f n]
-   (install-event-xform-blocking game type (keep f) n)))
-
-(defn install-event-async-fn
-  ([game type f]
-   (install-event-async-fn game type f 1))
-  ([game type f n]
-   (let [event-pub (:event-pub game)
-         event-chan (:event-chan game)
-         c (async/chan)]
-     (async/sub event-pub type c)
-     (async/pipeline-async n event-chan (fn [x ch]
-                                          (async/pipe (f x) ch true)) c)
-     game)))
+         (recur))))))

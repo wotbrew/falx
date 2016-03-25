@@ -1,14 +1,12 @@
 (ns falx.ui
-  (:require [falx.draw :as draw]
-            [falx.rect :as rect]
+  (:require [falx.rect :as rect]
             [falx.sprite :as sprite]
             [falx.util :as util]
-            [falx.world :as world]
             [gdx.color :as color]
-            [clj-gdx :as gdx]
             [falx.point :as point]
             [falx.input :as input]
-            [gdx.camera :as camera]))
+            [gdx.camera :as camera]
+            [falx.position :as pos]))
 
 ;; ====
 ;; Colors
@@ -37,13 +35,6 @@
 ;; ====
 ;; Widgets
 
-(defmulti draw! (fn [e frame] (:type e)))
-
-(defmethod draw! :default
-  [e frame]
-  (when (:rect e)
-    (draw/string! (:type e) (:rect e))))
-
 (defmulti process (fn [e frame state] (:type e)))
 
 (defmethod process :default
@@ -68,14 +59,32 @@
   [e frame]
   true)
 
+(defn clicked-event
+  [element button point]
+  {:type    [:ui.event/clicked (:type element)]
+   :button  button
+   :point   point
+   :element element})
+
+(defn hover-enter-event
+  [element point]
+  {:type [:ui.event/hover-enter (:type element)]
+   :element element
+   :point point})
+
+(defn hover-exit-event
+  [element point]
+  {:type [:ui.event/hover-exit (:type element)]
+   :element element
+   :point point})
+
+
+;; Widgets - Definitions
+
 (defn panel
   [coll]
   {:type :ui/panel
    :coll coll})
-
-(defmethod draw! :ui/panel
-  [e frame]
-  (run! #(draw! % frame) (:coll e)))
 
 (defmethod process :ui/panel
   [e frame state]
@@ -100,9 +109,6 @@
     :rect rect
     :context context}))
 
-(defmethod draw! :ui/sprite
-  [e _]
-  (draw/sprite! (:sprite e) (:rect e) (:context e)))
 
 (defn pixel
   ([rect]
@@ -123,9 +129,6 @@
     :rect rect
     :context context}))
 
-(defmethod draw! :ui/box
-  [e _]
-  (draw/box! (:rect e) (:context e)))
 
 (defn tiled
   ([sprite rect]
@@ -138,9 +141,6 @@
     :rect rect
     :context context}))
 
-(defmethod draw! :ui/tiled
-  [e _]
-  (draw/tiled! (:sprite e) (:rect e) (:context e)))
 
 (defn blocks
   [rect]
@@ -157,25 +157,12 @@
     :rect rect
     :context context}))
 
-(defmethod draw! :ui/string
-  [e _]
-  (draw/string! (:string e) (:rect e) (:context e)))
 
 (defn button
   [s rect]
   {:type   :ui/button
    :string s
    :rect   rect})
-
-(defmethod draw! :ui/button
-  [e frame]
-  (let [[x y w h] (:rect e)
-        context (cond
-                  (not (:enabled? e)) {:color gray}
-                  (:hovering? e) {:color white}
-                  :else {:color light-gray})]
-    (draw/box! x y w h context)
-    (draw/centered-string! (:string e) x y w h context)))
 
 (defn- process-enabled-button
   [e frame state]
@@ -199,17 +186,15 @@
 
 (defmethod get-events :ui/button
   [e frame]
-  (cond->
-    []
-    (:entered-hovering? e) (conj {:type :ui.event/button-hover-enter
-                                  :button e})
-    (:exited-hovering? e) (conj {:type :ui.event/button-hover-exit
-                                 :button e})
-    (and (:enabled? e) (:clicked? e)) (conj {:type :ui.event/button-clicked
-                                             :button e})))
+  (let [point (-> frame :input :mouse :point)]
+    (cond->
+      []
+      (:entered-hovering? e) (conj (hover-enter-event e point))
+      (:exited-hovering? e) (conj (hover-exit-event e point))
+      (and (:enabled? e) (:clicked? e)) (conj (clicked-event e :left point)))))
 
 ;; =====
-;; Game Screen
+;; Widgets - Game Screen
 
 (def game-screen-vmargin
   (* 5 32))
@@ -267,42 +252,50 @@
     (cond->
       (-> (process-camera e input delta)))))
 
+(defn get-world-cell
+  [game-view point]
+  (let [{:keys [camera level cell-width cell-height]} game-view
+        [x y] (camera/get-world-point camera point)]
+    (pos/cell [(int (/ x cell-width))
+               (int (/ y cell-height))]
+              level)))
+
+(defn get-world-clicked-events
+  [game-view point button]
+  (let [cell (get-world-cell game-view point)]
+    [{:type   :ui.event/world-clicked
+      :button button
+      :cell   cell}
+     {:type   [:ui.event/world-clicked button]
+      :button button
+      :cell   cell}]))
+
+(defn get-actor-clicked-events
+  [actor button]
+  [{:type  :ui.event/actor-clicked
+    :button button
+    :actor actor}
+   {:type   [:ui.event/actor-clicked button]
+    :button button
+    :actor  actor}
+   {:type [:ui.event/actor-clicked (:type actor)]
+    :button button
+    :actor actor}
+   {:type [:ui.event/actor-clicked (:type actor) button]
+    :button button
+    :actor actor}])
+
 (defmethod get-events :ui/game-view
   [e frame]
   (let [input (:input frame)
         mouse (:mouse input)
-        {:keys [camera rect]} e]
+        rect (:rect e)
+        button (input/some-click input rect)]
     (cond->
       []
       ;;
-      (input/some-click input rect)
-      (conj (merge
-              {:type   :ui.event/game-view-clicked
-               :camera camera
-               :button (input/some-click input rect)
-               :point  (:point mouse)}
-              (select-keys e
-                           [:cell-size
-                            :cell-width
-                            :cell-height
-                            :level]))))))
-
-(defmethod draw! :ui/game-view
-  [e frame]
-  (let [world (:world frame)
-        actors (world/query-actors world :level (:level e))
-        {:keys [cell-width cell-height ]} e]
-    (gdx/using-camera (:camera e gdx/default-camera)
-      (doseq [a actors
-              :let [point (:point a)]
-              :when point
-              :let [[x y] point]]
-        (draw/object!
-          a
-          (* x cell-width)
-          (* y cell-height)
-          cell-width
-          cell-height)))))
+      button
+      (conj (clicked-event e button (:point mouse))))))
 
 (defn game-left-rect
   [width height]
