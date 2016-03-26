@@ -9,15 +9,11 @@
             [falx.ui :as ui]
 
             [falx.flow
+             [ai :as flow-ai]
              [ui :as flow-ui]
              [debug :as flow-debug]]))
 
 (def max-fps 60)
-
-(defn get-input
-  []
-  {:mouse @gdx/mouse-state
-   :keyboard @gdx/keyboard-state})
 
 (defn init!
   [game]
@@ -37,6 +33,7 @@
     (doto (game/game)
       flow-debug/install!
       flow-ui/install!
+      flow-ai/install!
       (game/publish! {:type :falx.event/game-started})
       init!
       (game/publish! {:type :falx.event/game-initialized}))))
@@ -58,7 +55,6 @@
   (assoc gdx/default-app
     :max-background-fps max-fps
     :max-foreground-fps max-fps))
-
 
 (defn -main
   [& args]

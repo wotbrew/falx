@@ -6,7 +6,69 @@
             [falx.point :as point]
             [falx.input :as input]
             [gdx.camera :as camera]
-            [falx.position :as pos]))
+            [falx.position :as pos]
+            [falx.world :as world]
+            [falx.creature :as creature]
+            [falx.actor :as actor]
+            [falx.request :as request]))
+
+;; ====
+;; Selection
+
+(defn get-selected-creatures
+  [world]
+  (world/query-actors world ::selected? true))
+
+(defn selected-creature?
+  [creature]
+  (::selected? creature))
+
+(defn selectable-creature?
+  [creature]
+  (creature/creature? creature))
+
+(defn can-select-creature?
+  [creature]
+  (and (selectable-creature? creature)
+       (not (selected-creature? creature))))
+
+(defn select-creature
+  [creature]
+  (if (can-select-creature? creature)
+    (-> (assoc creature ::selected? true)
+        (actor/publish {:type :ui.event/creature-selected}))
+    creature))
+
+(defn can-unselect-creature?
+  [creature]
+  (selected-creature? creature))
+
+(defn unselect-creature
+  [creature]
+  (if (can-unselect-creature? creature)
+    (-> (dissoc creature ::selected?)
+        (actor/publish {:type :ui.event/creature-unselected}))
+    creature))
+
+(defn toggle-creature-selection
+  [creature]
+  (if (selected-creature? creature)
+    (unselect-creature creature)
+    (select-creature creature)))
+
+;; ====
+;; Game View Clicks
+
+(defn get-creature-click-requests
+  [creature]
+  [(request/toggle-creature-selection creature)])
+
+(defn get-world-click-requests
+  [world cell]
+  (when-not (world/solid-at? world cell)
+    (for [a (get-selected-creatures world)
+          :when (not= cell (:cell a))]
+      (request/give-goal a (creature/move-goal cell)))))
 
 ;; ====
 ;; Colors
@@ -224,11 +286,11 @@
    :level "testing-level"
    :rect   rect})
 
-(def cam-speed
+(def ^:dynamic *cam-speed*
   250)
 
-(def cam-fast-speed
-  (* cam-speed 2.5))
+(def ^:dynamic *cam-fast-speed*
+  (* *cam-speed* 2.5))
 
 (defn process-camera
   [e input delta]
@@ -236,7 +298,7 @@
         camera (:camera e)
         pressed? (:pressed keyboard #{})
         cam-fast? (pressed? :shift-left)
-        cam-speed (* delta (if cam-fast? cam-fast-speed cam-speed))]
+        cam-speed (* delta (if cam-fast? *cam-fast-speed* *cam-fast-speed*))]
     (assoc e
       :camera
       (cond->
@@ -285,17 +347,24 @@
     :button button
     :actor actor}])
 
+(defn get-game-view-click-events
+  [game-view world button point]
+  (concat [(clicked-event game-view button point)]
+          (get-world-clicked-events game-view point button)
+          (let [cell (get-world-cell game-view point)]
+            (mapcat #(get-actor-clicked-events % button) (world/get-at world cell)))))
+
 (defmethod get-events :ui/game-view
   [e frame]
   (let [input (:input frame)
-        mouse (:mouse input)
+        point (:point (:mouse input))
         rect (:rect e)
         button (input/some-click input rect)]
     (cond->
       []
       ;;
       button
-      (conj (clicked-event e button (:point mouse))))))
+      (into (get-game-view-click-events e  (:world frame) button point)))))
 
 (defn game-left-rect
   [width height]

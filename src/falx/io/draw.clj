@@ -156,7 +156,7 @@
 
 (defmethod map! :actor.type/creature
   [m x y w h context]
-  (when (:selected? m)
+  (when (ui/selected-creature? m)
     (sprite! sprite/selection x y w h {:color color/green}))
   (sprite! sprite/human-male x y w h context))
 

@@ -14,7 +14,10 @@
     m))
 
 (def silent-message?
-  #{})
+  #{:game.event/frame
+    :request/tick-ai
+    :request/print-message
+    :ai.event/tick-complete})
 
 (def display-message-details?
   #{[:creature.event/goal-given :goal.type/move]

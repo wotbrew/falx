@@ -82,13 +82,6 @@
       (-> (clojure.core/update db :eav retract-eav id k)
           (clojure.core/update :ave retract-ave id k ev)))))
 
-(defn merge
-  "For a map `m` with an `:id` representing entity identity. Merge the keys of the map as entity attributes in the db.
-  Returns the new db."
-  [db m]
-  (let [id (:id m)]
-    (reduce-kv #(assert %1 id %2 %3) db m)))
-
 (defn replace
   "For a map `m` with an `:id` representing entity identity. Use the keys of the map as entity attributes in the db.
   Returns the new db. Removes any attributes already on the entity that are not present in `m`."

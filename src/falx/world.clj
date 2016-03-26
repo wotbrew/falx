@@ -51,24 +51,40 @@
   [world]
   (db/get-entities (:db world)))
 
-(defn actor-changed-event
+(defn actor-created-events
+  [actor]
+  [{:type  :world.event/actor-created
+    :actor actor}
+   {:type  [:world.event/actor-created (:type actor)]
+    :actor actor}])
+
+(defn actor-changed-events
   [old-actor actor]
-  {:type :world.event/actor-changed
-   :old-actor old-actor
-   :actor actor})
+  [{:type      :world.event/actor-changed
+    :old-actor old-actor
+    :actor     actor}
+   {:type      [:world.event/actor-changed (:type actor)]
+    :old-actor old-actor
+    :actor     actor}])
 
 (defn- split-actor-events
   [world actor]
   (let [{:keys [actor events]} (actor/split-events actor)
         ea (get-actor world (:id actor))]
-    {:actor  actor
+    {:actor actor
      :events
-     (if (not= ea actor)
-       (cons (actor-changed-event
-               ea
-               actor)
-             events)
-       events)}))
+            (cond
+              (nil? ea) (concat (actor-created-events
+                                  actor)
+                                (actor-changed-events
+                                  nil
+                                  actor)
+                                events)
+              (not= ea actor) (concat (actor-changed-events
+                                        ea
+                                        actor)
+                                      events)
+              :else events)}))
 
 (defn replace-actor
   "Replaces the actor in the world with the one provided. Assumes the actor contains `:id`."
@@ -82,20 +98,6 @@
   "Same as `replace-actor`"
   [world actor]
   (replace-actor world actor))
-
-(defn merge-actor
-  "Adds any attributes given in the `actor` to those already in the world."
-  [world actor]
-  (let [{:keys [actor events]} (actor/split-events actor)
-        id (:id actor)
-        old-actor (get-actor world id)
-        merged (as-> world world
-                     (update world :db db/merge actor)
-                     (reduce publish world events))
-        new-actor (get-actor merged id)]
-    (if (not= old-actor new-actor)
-      (publish merged (actor-changed-event old-actor new-actor))
-      merged)))
 
 (defn update-actor
   "Applies the function `f` and any args to the actor given by `id`.

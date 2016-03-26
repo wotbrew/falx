@@ -70,14 +70,41 @@
   {:type MessageType
    s/Any s/Any})
 
+;; Input
+
+(def Key
+  s/Any)
+
 (def Button
   s/Any)
+
+(def Keyboard
+  {:hit #{Key}
+   :pressed #{Key}})
+
+(def Mouse
+  {:point Point
+   :hit #{Button}
+   :pressed #{Button}
+   :delta s/Num})
+
+(def Input
+  {:keyboard Keyboard
+   :mouse Mouse})
+
+;; Frame
+
+(def Frame
+  {:delta s/Num
+   :fps s/Int
+   :display s/Any
+   :input Input
+   :world World})
 
 ;; Messages - Requests
 
 (def RequestPrintMessage
   {:type (s/eq :request/print-message)
-   :silent? (s/eq true)
    :message Message})
 
 (def RequestPrintActor
@@ -97,6 +124,14 @@
   {:type (s/eq :request/select)
    :actor Actor})
 
+(def RequestSpawnAI
+  {:type (s/eq :request/spawn-ai)
+   :actor Actor})
+
+(def RequestTickAI
+  {:type (s/eq :request/tick-ai)
+   :actor Actor})
+
 ;; Messages - Actor Events
 
 (def ActorEventPut
@@ -110,14 +145,6 @@
    :cell Cell})
 
 ;; Messages - Creature Events
-
-(def CreatureEventSelected
-  {:type (s/eq :creature.event/selected)
-   :actor Actor})
-
-(def CreatureEventUnselected
-  {:type (s/eq :creature.event/unselected)
-   :actor Actor})
 
 (def CreatureEventGoalGiven
   {:type  [(s/one (s/eq :creature.event/goal-given) "k")
@@ -133,13 +160,44 @@
 
 ;; Messages - World Events
 
-(def WorldEventActorChanged
-  {:type (s/eq :world.event/actor-changed)
-   :old-actor Actor
+(def WorldEventActorCreated
+  {:type (s/either (s/eq :world.event/actor-created)
+                   [(s/one (s/eq :world.event/actor-created) "k")
+                    ActorType])
    :actor Actor
    :world World})
 
+(def WorldEventActorChanged
+  {:type      (s/either (s/eq :world.event/actor-changed)
+                        [(s/one (s/eq :world.event/actor-changed) "k")
+                         ActorType])
+   :old-actor Actor
+   :actor     Actor
+   :world     World})
+
+;; Messages - Game Events
+
+(def GameEventClosing
+  {:type (s/eq :game.event/closing)
+   :id s/Str})
+
+(def GameEventStarting
+  {:type (s/eq :game.event/starting)
+   :id s/Str})
+
+(def GameEventFrame
+  {:type (s/eq :game.event/frame)
+   :frame Frame})
+
 ;; Messages - UI Events
+
+(def UIEventCreatureSelected
+  {:type (s/eq :ui.event/creature-selected)
+   :actor Actor})
+
+(def UIEventCreatureUnselected
+  {:type (s/eq :ui.event/creature-unselected)
+   :actor Actor})
 
 (def UIEventClicked
   {:type    [(s/one (s/eq :ui.event/clicked) "k")

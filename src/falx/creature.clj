@@ -5,40 +5,6 @@
   [actor]
   (= (:type actor) :actor.type/creature))
 
-(defn selectable?
-  [creature]
-  (creature? creature))
-
-(defn can-select?
-  [creature]
-  (and (selectable? creature)
-       (not (:selected? creature))))
-
-(defn select
-  [creature]
-  (if (can-select? creature)
-    (-> (assoc creature :selected? true)
-        (actor/publish {:type :creature.event/selected}))
-    creature))
-
-(defn can-unselect?
-  [creature]
-  (and (selectable? creature)
-       (:selected? creature)))
-
-(defn unselect
-  [creature]
-  (if (can-unselect? creature)
-    (-> (dissoc creature :selected?)
-        (actor/publish {:type :creature.event/unselected}))
-    creature))
-
-(defn toggle-select
-  [creature]
-  (if (:selected? creature)
-    (unselect creature)
-    (select creature)))
-
 (defn goal-removed-event
   [goal]
   {:type     [:creature.event/goal-removed (:type goal)]
@@ -50,8 +16,10 @@
       (actor/publish (goal-removed-event goal))))
 
 (defn get-goals
-  [creature type]
-  (-> creature :goals (get type)))
+  ([creature]
+   (into [] cat (-> creature :goals vals)))
+  ([creature type]
+   (-> creature :goals (get type))))
 
 (defn goal-added-event
   [goal]
@@ -77,6 +45,8 @@
    :exclusive? true
    :cell cell})
 
-(defn move
-  [creature cell]
-  (give-goal creature (move-goal cell)))
+(defn find-path-goal
+  [cell]
+  {:type :goal.type/find-path
+   :exclusive? true
+   :cell cell})
