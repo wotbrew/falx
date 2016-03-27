@@ -16,6 +16,10 @@
 
 (def default-app app/default)
 
+(defn started?
+  []
+  (app/started?))
+
 (defn get-fps
   []
   (app/get-fps))

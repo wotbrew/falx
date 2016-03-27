@@ -8,67 +8,72 @@
             [gdx.camera :as camera]
             [falx.position :as pos]
             [falx.world :as world]
-            [falx.creature :as creature]
             [falx.actor :as actor]
-            [falx.request :as request]))
+            [falx.request :as request]
+            [falx.event :as event]
+            [falx.goal :as goal]))
 
 ;; ====
 ;; Selection
 
-(defn get-selected-creatures
+(defn get-selected-actors
   [world]
   (world/query-actors world ::selected? true))
 
-(defn selected-creature?
-  [creature]
-  (::selected? creature))
+(defn selected-actor?
+  [actor]
+  (::selected? actor))
 
-(defn selectable-creature?
-  [creature]
-  (creature/creature? creature))
+(defn selectable-actor?
+  [actor]
+  (actor/creature? actor))
 
-(defn can-select-creature?
-  [creature]
-  (and (selectable-creature? creature)
-       (not (selected-creature? creature))))
+(defn can-select-actor?
+  [actor]
+  (and (selectable-actor? actor)
+       (not (selected-actor? actor))))
 
-(defn select-creature
-  [creature]
-  (if (can-select-creature? creature)
-    (-> (assoc creature ::selected? true)
-        (actor/publish {:type :ui.event/creature-selected}))
-    creature))
+(defn select-actor
+  [actor]
+  (if (can-select-actor? actor)
+    (as-> actor x
+          (assoc x ::selected? true)
+          (actor/publish x (event/actor-selected x)))
+    actor))
 
-(defn can-unselect-creature?
-  [creature]
-  (selected-creature? creature))
+(defn can-unselect-actor?
+  [actor]
+  (selected-actor? actor))
 
-(defn unselect-creature
-  [creature]
-  (if (can-unselect-creature? creature)
-    (-> (dissoc creature ::selected?)
-        (actor/publish {:type :ui.event/creature-unselected}))
-    creature))
+(defn unselect-actor
+  [actor]
+  (if (can-unselect-actor? actor)
+    (as-> actor x
+          (dissoc x ::selected?)
+          (actor/publish x (event/actor-unselected x)))
+    actor))
 
-(defn toggle-creature-selection
-  [creature]
-  (if (selected-creature? creature)
-    (unselect-creature creature)
-    (select-creature creature)))
+(defn toggle-actor-selection
+  [actor]
+  (if (selected-actor? actor)
+    (unselect-actor actor)
+    (select-actor actor)))
 
 ;; ====
 ;; Game View Clicks
 
-(defn get-creature-click-requests
-  [creature]
-  [(request/toggle-creature-selection creature)])
+(defn get-actor-click-messages
+  [actor]
+  (concat
+    (when (selectable-actor? actor)
+      [(request/toggle-actor-selection actor)])))
 
-(defn get-world-click-requests
+(defn get-world-click-messages
   [world cell]
   (when-not (world/solid-at? world cell)
-    (for [a (get-selected-creatures world)
+    (for [a (get-selected-actors world)
           :when (not= cell (:cell a))]
-      (request/give-goal a (creature/move-goal cell)))))
+      (request/give-goal a (goal/move cell)))))
 
 ;; ====
 ;; Colors
@@ -121,26 +126,6 @@
   [e frame]
   true)
 
-(defn clicked-event
-  [element button point]
-  {:type    [:ui.event/clicked (:type element)]
-   :button  button
-   :point   point
-   :element element})
-
-(defn hover-enter-event
-  [element point]
-  {:type [:ui.event/hover-enter (:type element)]
-   :element element
-   :point point})
-
-(defn hover-exit-event
-  [element point]
-  {:type [:ui.event/hover-exit (:type element)]
-   :element element
-   :point point})
-
-
 ;; Widgets - Definitions
 
 (defn panel
@@ -171,7 +156,6 @@
     :rect rect
     :context context}))
 
-
 (defn pixel
   ([rect]
    (pixel rect {}))
@@ -191,7 +175,6 @@
     :rect rect
     :context context}))
 
-
 (defn tiled
   ([sprite rect]
    {:type :ui/tiled
@@ -202,7 +185,6 @@
     :sprite sprite
     :rect rect
     :context context}))
-
 
 (defn blocks
   [rect]
@@ -218,7 +200,6 @@
     :string s
     :rect rect
     :context context}))
-
 
 (defn button
   [s rect]
@@ -251,9 +232,9 @@
   (let [point (-> frame :input :mouse :point)]
     (cond->
       []
-      (:entered-hovering? e) (conj (hover-enter-event e point))
-      (:exited-hovering? e) (conj (hover-exit-event e point))
-      (and (:enabled? e) (:clicked? e)) (conj (clicked-event e :left point)))))
+      (:entered-hovering? e) (conj (event/ui-hover-enter e point))
+      (:exited-hovering? e) (conj (event/ui-hover-exit e point))
+      (and (:enabled? e) (:clicked? e)) (conj (event/ui-clicked e :left point)))))
 
 ;; =====
 ;; Widgets - Game Screen
@@ -322,37 +303,13 @@
                (int (/ y cell-height))]
               level)))
 
-(defn get-world-clicked-events
-  [game-view point button]
-  (let [cell (get-world-cell game-view point)]
-    [{:type   :ui.event/world-clicked
-      :button button
-      :cell   cell}
-     {:type   [:ui.event/world-clicked button]
-      :button button
-      :cell   cell}]))
-
-(defn get-actor-clicked-events
-  [actor button]
-  [{:type  :ui.event/actor-clicked
-    :button button
-    :actor actor}
-   {:type   [:ui.event/actor-clicked button]
-    :button button
-    :actor  actor}
-   {:type [:ui.event/actor-clicked (:type actor)]
-    :button button
-    :actor actor}
-   {:type [:ui.event/actor-clicked (:type actor) button]
-    :button button
-    :actor actor}])
 
 (defn get-game-view-click-events
   [game-view world button point]
-  (concat [(clicked-event game-view button point)]
-          (get-world-clicked-events game-view point button)
-          (let [cell (get-world-cell game-view point)]
-            (mapcat #(get-actor-clicked-events % button) (world/get-at world cell)))))
+  (let [cell (get-world-cell game-view point)]
+    [(event/ui-clicked game-view button point)
+     (event/world-clicked cell button)
+     (event/multi (map #(event/actor-clicked % button) (world/get-at world cell)))]))
 
 (defmethod get-events :ui/game-view
   [e frame]

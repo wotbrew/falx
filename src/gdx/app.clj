@@ -94,6 +94,10 @@
      (do ~@body)
      @(on-render-thread-call (fn [] ~@body))))
 
+(defn started?
+  []
+  (some? Gdx/app))
+
 (defn ^Graphics get-graphics
   []
   (when Gdx/app

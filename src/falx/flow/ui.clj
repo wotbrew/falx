@@ -1,24 +1,21 @@
 (ns falx.flow.ui
   (:require [falx.game :as game]
-            [falx.creature :as creature]
-            [falx.ui :as ui]
-            [falx.request :as request]
-            [falx.world :as world]))
+            [falx.ui :as ui]))
 
 (defn get-select-request-chan
   [game]
   (game/subxf
     game
-    (mapcat (comp #'ui/get-creature-click-requests :actor))
-    [:ui.event/actor-clicked :actor.type/creature :left]))
+    (mapcat (comp #'ui/get-actor-click-messages :actor))
+    [:event/actor-clicked :left]))
 
 (defn get-move-goal-chan
   [game]
   (game/subxf
     game
     (mapcat (fn [{:keys [cell]}]
-              (ui/get-world-click-requests (game/get-world game) cell)))
-    [:ui.event/world-clicked :left]))
+              (ui/get-world-click-messages (game/get-world game) cell)))
+    [:event/world-clicked :left]))
 
 (defn install!
   [game]
@@ -27,5 +24,5 @@
                 (get-move-goal-chan game))
 
     (game/subfn!
-      :request/toggle-creature-selection
-      #(game/update-actor! game (:id (:actor %)) ui/toggle-creature-selection))))
+      :request/toggle-actor-selection
+      #(game/update-actor! game (:id (:actor %)) ui/toggle-actor-selection))))

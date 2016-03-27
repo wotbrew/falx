@@ -1,32 +1,38 @@
 (ns falx.ai
-  (:require [falx.creature :as creature]))
+  (:require [falx.point :as point]
+            [falx.actor :as actor]
+            [falx.request :as request]
+            [falx.goal :as goal]
+            [falx.position :as pos]))
 
-(defn tick-complete-event
-  ([actor]
-   (tick-complete-event actor 100))
-  ([actor timeout]
-   {:type    :ai.event/tick-complete
-    :timeout timeout
-    :actor   actor}))
-
-(defmulti act (fn [world creature goal] (:type goal)))
+(defmulti act (fn [world actor goal] (:type goal)))
 
 (defmethod act :default
-  [world creature goal])
+  [world actor goal])
 
 (defmethod act :goal.type/move
-  [world creature {:keys [cell]}]
-  (when-not (-> creature :goals (contains? :goal.type/find-path))
-    #_[{:type  :request/find-path
-      :actor creature
-      :cell  cell}]))
+  [world actor {:keys [cell]}]
+  (when-not (or (actor/has-goal? actor :goal.type/find-path)
+                (actor/has-goal? actor :goal.type/walk-path))
+    [(request/give-goal
+       actor
+       (goal/find-path cell))
+     (request/tick-ai actor 100)]))
 
 (defmethod act :goal.type/find-path
-  [world creature {:keys [cell]}]
-  )
+  [world actor {:keys [cell]}]
+  (when-not (actor/has-goal? actor :goal.type/walk-path)
+    (let [to (:point cell)
+          level (:level cell)
+          from (:point actor)
+          path (when from (point/get-a*-path (constantly true) from to))]
+      (when (seq path)
+        [(request/give-goal
+           actor
+           (goal/walk-path
+             (mapv #(pos/cell % level) path)))
+         (request/tick-ai actor 100)]))))
 
 (defn tick
-  [world creature]
-  (concat
-    (mapcat #(act world creature %) (creature/get-goals creature))
-    [(tick-complete-event creature)]))
+  [world actor]
+  (mapcat #(act world actor %) (actor/get-goals actor)))

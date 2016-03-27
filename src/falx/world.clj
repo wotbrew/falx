@@ -3,7 +3,8 @@
   The world contains actors, each identified by an `:id` that denote the entities in the game."
   (:require [falx.db :as db]
             [falx.actor :as actor]
-            [falx.react :as react])
+            [falx.react :as react]
+            [falx.event :as event])
   (:refer-clojure :exclude [empty]))
 
 (def empty
@@ -30,8 +31,8 @@
   of `:world`, and `:events`."
   [world]
   (let [w (assoc world :events [])]
-    {:world w
-     :events (mapv #(assoc % :world w) (:events world []))}))
+    {:world  w
+     :events (:events world)}))
 
 (defn get-actor
   "Returns the actor given by `id` or `nil` if none is found."
@@ -51,22 +52,6 @@
   [world]
   (db/get-entities (:db world)))
 
-(defn actor-created-events
-  [actor]
-  [{:type  :world.event/actor-created
-    :actor actor}
-   {:type  [:world.event/actor-created (:type actor)]
-    :actor actor}])
-
-(defn actor-changed-events
-  [old-actor actor]
-  [{:type      :world.event/actor-changed
-    :old-actor old-actor
-    :actor     actor}
-   {:type      [:world.event/actor-changed (:type actor)]
-    :old-actor old-actor
-    :actor     actor}])
-
 (defn- split-actor-events
   [world actor]
   (let [{:keys [actor events]} (actor/split-events actor)
@@ -74,16 +59,17 @@
     {:actor actor
      :events
             (cond
-              (nil? ea) (concat (actor-created-events
-                                  actor)
-                                (actor-changed-events
-                                  nil
-                                  actor)
-                                events)
-              (not= ea actor) (concat (actor-changed-events
-                                        ea
-                                        actor)
-                                      events)
+              (nil? ea)
+              [(event/actor-created actor)
+               (event/actor-changed
+                 nil
+                 actor)
+               (event/multi events)]
+
+              (not= ea actor)
+              [(event/actor-changed ea actor)
+               (event/multi events)]
+
               :else events)}))
 
 (defn replace-actor

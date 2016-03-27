@@ -1,5 +1,11 @@
 (ns falx.request)
 
+(defn in-ms
+  [msg time-ms]
+  {:type :request/in-ms
+   :message msg
+   :ms time-ms})
+
 (defn give-goal
   [actor goal]
   {:type :request/give-goal
@@ -18,9 +24,11 @@
    :actor actor})
 
 (defn tick-ai
-  [actor]
-  {:type :request/tick-ai
-   :actor actor})
+  ([actor]
+   {:type  :request/tick-ai
+    :actor actor})
+  ([actor time-ms]
+    (in-ms (tick-ai actor) time-ms)))
 
 (defn print-message
   [msg]
@@ -32,17 +40,17 @@
   {:type :request/print-actor
    :actor actor})
 
-(defn select-creature
+(defn select-actor
   [actor]
-  {:type :request/select-creature
+  {:type :request/select-actor
    :actor actor})
 
-(defn unselect-creature
+(defn unselect-actor
   [actor]
-  {:type :request/unselect-creature
+  {:type :request/unselect-actor
    :actor actor})
 
-(defn toggle-creature-selection
+(defn toggle-actor-selection
   [actor]
-  {:type :request/toggle-creature-selection
+  {:type :request/toggle-actor-selection
    :actor actor})

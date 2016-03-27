@@ -3,7 +3,8 @@
             [falx.frame :as frame]
             [clojure.core.async :as async :refer [go go-loop >! <! chan]]
             [clojure.tools.logging :refer [debug]]
-            [falx.ui :as ui])
+            [falx.ui :as ui]
+            [falx.event :as event])
   (:refer-clojure :exclude [empty])
   (:import (java.util UUID)))
 
@@ -147,9 +148,7 @@
   ([game]
    (process-frame! game (get-current-frame game)))
   ([game frame]
-   (publish! game {:type :game.event/frame
-                   :frame frame
-                   :silent? true})
+   (publish! game (event/frame frame))
    (let [{:keys [ui-atom ui-state-agent]} game
          ui @ui-atom
          ui-state @ui-state-agent]

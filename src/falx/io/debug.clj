@@ -1,4 +1,4 @@
-(ns falx.io.print
+(ns falx.io.debug
   (:require [clojure.pprint :as pp]
             [clojure.tools.logging :refer [debug]]))
 
@@ -14,15 +14,15 @@
     m))
 
 (def silent-message?
-  #{:game.event/frame
+  #{:event/frame
+    :event/multi
+    :event/ai-tick-complete
     :request/tick-ai
-    :request/print-message
-    :ai.event/tick-complete})
+    :request/in-ms
+    :request/print-message})
 
 (def display-message-details?
-  #{[:creature.event/goal-given :goal.type/move]
-    :creature.event/unselected
-    :creature.event/selected})
+  #{})
 
 (defn message!
   [msg]

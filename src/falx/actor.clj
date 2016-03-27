@@ -2,7 +2,9 @@
   "Contains functions on actors within the game. Each actor is a map
   identified by its :id."
   (:require [falx.react :as react]
-            [falx.position :as pos])
+            [falx.position :as pos]
+            [falx.event :as event]
+            [falx.util :as util])
   (:refer-clojure :exclude [empty]))
 
 (defn actor
@@ -22,7 +24,7 @@
   [actor]
   (let [a (assoc actor :events [])]
     {:actor  a
-     :events (mapv #(assoc % :actor a) (:events actor))}))
+     :events (:events actor)}))
 
 (defn publish
   "Publishes an event to the actor"
@@ -88,17 +90,6 @@
       :level (:level cell)
       :slice (pos/slice (:layer actor) (:level cell)))))
 
-(defn put-event
-  [old-cell cell]
-  {:type :actor.event/put
-   :old-cell old-cell
-   :cell cell})
-
-(defn unput-event
-  [cell]
-  {:type :actor.event/unput
-   :cell cell})
-
 (defn put
   "Puts the actor at the `cell`, removes it from its old position.
   Returns the actor."
@@ -108,15 +99,16 @@
         moved? (not= old-cell (:cell a))]
     (cond->
       a
-      moved? (publish (put-event old-cell cell))
-      old-cell (publish (unput-event cell)))))
+      moved? (publish (event/actor-put a old-cell cell))
+      old-cell (publish (event/actor-unput a cell)))))
 
 (defn unput
   "Removes location information from the `actor`. Returns the actor."
   [actor]
   (if (some? (:cell actor))
-    (-> (dissoc actor :cell :point :level :slice)
-        (publish (unput-event (:cell actor))))
+    (as-> actor x
+          (dissoc x :cell :point :level :slice)
+          (publish x (event/actor-unput x (:cell actor))))
     actor))
 
 (defn can-step?
@@ -130,3 +122,34 @@
   (if (can-step? actor cell)
     (put actor cell)
     actor))
+
+(defn creature?
+  [actor]
+  (= (:type actor) :actor.type/creature))
+
+(defn get-goals
+  ([actor]
+   (into [] cat (-> actor :goals vals)))
+  ([actor goal]
+   (-> actor :goals (get (:type goal goal)))))
+
+(defn remove-goal
+  [actor goal]
+  (if (keyword? goal)
+    (reduce remove-goal actor (get-goals actor goal))
+    (as-> actor x
+          (util/disjoc-in x [:goals (:type goal)] goal)
+          (publish x (event/actor-goal-removed x goal)))))
+
+(defn give-goal
+  [actor goal]
+  (as-> actor x
+        (reduce remove-goal x (:removes goal))
+        (update-in x [:goals (:type goal)] (fnil conj #{}) goal)
+        (publish x (event/actor-goal-added x goal))))
+
+(defn has-goal?
+  [actor goal]
+  (if (keyword? goal)
+    (-> actor :goals (get goal) seq some?)
+    (-> actor :goals (get (:type goal)) (contains? goal))))

@@ -11,9 +11,9 @@
             [falx.flow
              [ai :as flow-ai]
              [ui :as flow-ui]
-             [debug :as flow-debug]]))
-
-(def max-fps 60)
+             [debug :as flow-debug]
+             [util :as flow-util]]
+            [falx.event :as event]))
 
 (defn init!
   [game]
@@ -24,19 +24,21 @@
                              :solid? true
                              :type :actor.type/creature
                              :layer :layer.type/creature})
-  (game/update-actor! game 0 actor/put (pos/cell [6 6] "testing-level")))
+  (game/update-actor! game 0 actor/put (pos/cell [6 6] "testing-level"))
+  (game/publish! game (event/game-started game)))
 
 (def game
   (do
     (when (and (bound? #'game) (some? game))
       (game/close! game))
-    (doto (game/game)
-      flow-debug/install!
-      flow-ui/install!
-      flow-ai/install!
-      (game/publish! {:type :falx.event/game-started})
-      init!
-      (game/publish! {:type :falx.event/game-initialized}))))
+    (let [g (doto (game/game)
+              flow-debug/install!
+              flow-ui/install!
+              flow-ai/install!
+              flow-util/install!)]
+      (when (gdx/started?)
+        (init! g))
+      g)))
 
 (gdx/defrender
   (try
@@ -51,6 +53,9 @@
       (error e)
       (Thread/sleep 5000))))
 
+(def max-fps
+  60)
+
 (def app
   (assoc gdx/default-app
     :max-background-fps max-fps
@@ -60,6 +65,7 @@
   [& args]
   (info "Starting application")
   (gdx/start-app! app)
+  (init! game)
   (info "Started application"))
 
 (comment
