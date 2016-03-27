@@ -25,18 +25,12 @@
   (multi
     [{:type  :event/actor-goal-removed
       :actor actor
-      :goal  goal}
-     {:type  [:event/actor-goal-removed (:type goal)]
-      :actor actor
       :goal  goal}]))
 
 (defn actor-goal-added
   [actor goal]
   (multi
     [{:type  :event/actor-goal-added
-      :actor actor
-      :goal  goal}
-     {:type  [:event/actor-goal-added (:type goal)]
       :actor actor
       :goal  goal}]))
 

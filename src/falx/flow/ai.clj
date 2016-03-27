@@ -14,37 +14,62 @@
     (keep (comp request/spawn-ai :actor))
     [:event/actor-created :actor.type/creature]))
 
-(defn get-tick-chan
+(defn get-auto-tick-chan
   [game]
-  (game/subxf game
-              (map (comp request/tick-ai :actor))
-              :request/spawn-ai))
+  (let [c (game/sub game :request/spawn-ai)
+        out (async/chan 64)]
+    (go-loop
+      []
+      (if-some [x (<! c)]
+        (let [actor (:actor x)]
+          (go-loop
+            []
+            (<! (async/timeout 1000))
+            (when (>! out (request/tick-ai actor))
+              (recur)))
+          (recur))
+        (async/close! out)))
+    out))
+
+(defn get-goal-tick-chan
+  [game]
+  (game/subxf game (map (comp request/tick-ai :actor))
+              :event/actor-goal-added))
 
 (defn get-messages-chan
   [game]
   (game/subxf game
               (mapcat (fn [{:keys [actor]}]
                         (let [w (game/get-world game)
-                              id (:id actor)]
-                          ;;relookup the actor so it is the same as
-                          ;;that in the world
+                              id (:id actor)
+                              actor (world/get-actor w id)]
                           (try
-                            (cons
-                              (request/tick-ai actor 1000)
-                              (ai/tick w (world/get-actor w id)))
+                            (await (:world-agent game))
+                            (ai/tick w actor)
                             (catch Throwable e
-                              (error e "AI Tick error!")
-                              [(request/tick-ai actor 5000)])))))
+                              (error e "AI Tick error!"))))))
+
               :request/tick-ai))
 
 (defn install!
   [game]
   (doto game
     (game/plug! (get-spawn-chan game)
-                (get-tick-chan game)
+                (get-auto-tick-chan game)
+                (get-goal-tick-chan game)
                 (get-messages-chan game))
 
     (game/subfn!
       :request/give-goal
       (fn [{:keys [actor goal]}]
-        (game/update-actor! game (:id actor) actor/give-goal goal)))))
+        (game/update-actor! game (:id actor) actor/give-goal goal)))
+
+    (game/subfn!
+      :request/remove-goal
+      (fn [{:keys [actor goal]}]
+        (game/update-actor! game (:id actor) actor/remove-goal goal)))
+
+    (game/subfn!
+      :request/step
+      (fn [{:keys [actor cell]}]
+        (game/update-actor! game (:id actor) actor/step cell)))))

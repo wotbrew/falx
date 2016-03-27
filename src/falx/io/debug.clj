@@ -16,7 +16,12 @@
 (def silent-message?
   #{:event/frame
     :event/multi
+    :event/actor-goal-added
+    :event/actor-goal-removed
+    :event/actor-changed
+    [:event/actor-changed :actor.type/creature]
     :event/ai-tick-complete
+    :request/give-goal
     :request/tick-ai
     :request/in-ms
     :request/print-message})

@@ -16,8 +16,7 @@
                 (actor/has-goal? actor :goal.type/walk-path))
     [(request/give-goal
        actor
-       (goal/find-path cell))
-     (request/tick-ai actor 100)]))
+       (goal/find-path cell))]))
 
 (defmethod act :goal.type/find-path
   [world actor {:keys [cell]}]
@@ -30,8 +29,20 @@
         [(request/give-goal
            actor
            (goal/walk-path
-             (mapv #(pos/cell % level) path)))
-         (request/tick-ai actor 100)]))))
+             (apply list (rest (map #(pos/cell % level) path)))))]))))
+
+(defmethod act :goal.type/walk-path
+  [world actor {:keys [path]}]
+  (when (seq path)
+    (let [head (peek path)
+          tail (pop path)]
+      (when (actor/can-step? actor head)
+        [(request/step actor head)
+         (request/in-ms
+           (request/give-goal
+             actor
+             (goal/walk-path tail))
+           100)]))))
 
 (defn tick
   [world actor]

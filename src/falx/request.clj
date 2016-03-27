@@ -18,6 +18,12 @@
    :actor actor
    :goal goal})
 
+(defn step
+  [actor cell]
+  {:type :request/step
+   :actor actor
+   :cell cell})
+
 (defn spawn-ai
   [actor]
   {:type :request/spawn-ai
