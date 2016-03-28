@@ -1,12 +1,17 @@
-(ns falx.frame
-  (:require [clj-gdx :as gdx]
-            [falx.input :as input]))
+(ns falx.frame)
 
-(defn get-current-frame
-  [world]
-  {:delta (gdx/get-delta-time)
-   :fps (gdx/get-fps)
-   :display (gdx/get-display)
-   :input (input/get-current-input)
-   :world world})
+(defrecord FrameTime [^double delta ^long fps])
 
+(defn frame-time
+  [delta fps]
+  (->FrameTime delta fps))
+
+(defrecord Frame [game display frame-time])
+
+(defn frame
+  [game display frame-time]
+  (->Frame game display frame-time))
+
+(defn get-delta
+  [frame]
+  (-> frame :frame-time :delta))

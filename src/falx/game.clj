@@ -1,209 +1,230 @@
 (ns falx.game
-  (:require [falx.world :as world]
-            [falx.frame :as frame]
-            [clojure.core.async :as async :refer [go go-loop >! <! chan]]
-            [clojure.tools.logging :refer [debug]]
-            [falx.ui :as ui]
-            [falx.event :as event])
-  (:refer-clojure :exclude [empty])
-  (:import (java.util UUID)))
+  (:require [falx.protocol :as p]
+            [falx.event :as event]
+            [falx.util :as util]
+            [clojure.set :as set]
+            [falx.frame :as frame]))
 
-(defn bus-chan
-  []
-  (chan 512))
+(defn add-subm
+  ([g subm]
+   (update g :subs #(merge-with (fnil into []) % subm)))
+  ([g subm & more]
+   (reduce add-subm g (cons subm more))))
 
-(defn bus-pub
-  [bus-mult]
-  (let [c (chan)]
-    (async/tap bus-mult c)
-    (async/pub c :type)))
+(defn add-sub
+  ([g kind sub]
+   (update-in g [:subs kind] (fnil conj []) sub))
+  ([g kind sub & more]
+   (reduce #(add-sub %1 kind %2) g (cons sub more))))
 
-(defn world-agent
-  [bus-chan]
-  (let [c (async/chan 1024 cat)]
-    (async/pipe c bus-chan false)
-    (doto
-      (agent (world/world []))
-      (add-watch ::publish-events
-                 (fn [_ a old new]
-                   (when (and (not (identical? old new))
-                              (seq (:events new)))
-                     (send a
-                           #(let [{:keys [world events]} (world/split-events %)]
-                             ;;gotta block to preserve order, can I use async/put! here?
-                             ;;it doesn't need to be syncnronous as long as order of dispatch is preserved
-                             (async/>!! c events)
-                             world))))))))
+(defn get-subs
+  [g kind]
+  (-> g :subs (get kind)))
 
-(defn publish-coll!
-  [game msgs]
-  (async/onto-chan (:bus-chan game) msgs false))
+(defn run-subs
+  ([g kind]
+   (let [subs (get-subs g kind)]
+     (reduce #(%2 %1) g subs)))
+  ([g kind x]
+   (let [subs (get-subs g kind)]
+     (reduce #(%2 %1 x) g subs)))
+  ([g kind x y]
+   (let [subs (get-subs g kind)]
+     (reduce #(%2 %1 x y) g subs)))
+  ([g kind x y & args]
+   (let [subs (get-subs g kind)]
+     (reduce #(apply %2 %1 x y args) g subs))))
 
-(defn publish!
-  ([game msg]
-   (async/go
-     (>! (:bus-chan game) msg)))
-  ([game msg & msgs]
-   (publish-coll! game (cons msg msgs))))
+(defn publish
+  ([g event]
+   (-> (update g :events (fnil conj []) event)
+       (run-subs :event event)))
+  ([g event & more]
+   (reduce publish g (cons event more))))
 
-(defn close!
-  [game]
-  (debug "Closing game" (:id game))
-  (let [{:keys [bus-chan bus-pub]} game]
-    (publish! game {:type :game.event/closing
-                    :id (:id game)})
-    (async/close! bus-chan)
-    (async/unsub-all bus-pub)
-    (debug "Game closed" (:id game))
-    nil))
+(defn perform
+  ([g] g)
+  ([g action]
+   (-> (p/-perform action g)
+       (run-subs :action)))
+  ([g action & actions]
+   (reduce perform g (cons action actions))))
 
-(defn game
-  []
-  (let [id (str (UUID/randomUUID))
-        bus-chan (bus-chan)
-        bus-mult (async/mult bus-chan)
-        bus-pub (bus-pub bus-mult)
-        world-agent (world-agent bus-chan)
-        ui-atom (atom {})
-        ui-state-agent (agent {})]
-    (debug "Created game" id)
-    (doto
-      {:id             id
-       :bus-chan       bus-chan
-       :bus-mult       bus-mult
-       :bus-pub        bus-pub
-       :world-agent    world-agent
-       :ui-atom        ui-atom
-       :ui-state-agent ui-state-agent}
-      (publish! {:type :game.event/starting
-                 :id id}))))
+(defn in-time
+  [g offset-secs]
+  (+ (:time g 0.0) offset-secs))
 
-(defn get-ui
-  [game]
-  @(:ui-atom game))
+(defn schedule
+  [g action time]
+  (update g :scheduled (fnil update (sorted-map)) time (fnil conj []) action))
 
-(defn get-ui-state
-  [game]
-  @(:ui-state-agent game))
+(defn schedule-in
+  [g action in-secs]
+  (schedule g action (in-time g in-secs)))
 
-(defn update-ui-state!
-  ([game f]
-   (send (:ui-state-agent game) f)
-   nil)
-  ([game f & args]
-   (update-ui-state! game #(apply f % args))))
+(defn run-scheduled-actions
+  ([g]
+   (run-scheduled-actions g (:time g 0.0)))
+  ([g time]
+   (if (nil? (:scheduled g))
+     g
+     (let [kvs (subseq (:scheduled g) <= time)]
+       (-> (transduce (mapcat val) perform g kvs)
+           (update :scheduled #(transduce (map key) dissoc % kvs)))))))
 
-(defn get-world
-  [game]
-  @(:world-agent game))
+(defn request
+  ([g req]
+   (-> (update g :requests (fnil conj []) req)
+       (run-subs :requests req)))
+  ([g req & more]
+   (reduce request g (cons req more))))
 
-(defn update-world!
-  ([game f]
-   (send (:world-agent game) f)
-   nil)
-  ([game f & args]
-   (update-world! game #(apply f % args))))
+(defn respond
+  [g req response]
+  (-> (p/-respond req g response)
+      (run-subs :response req response)))
 
 (defn get-actor
-  [game id]
-  (world/get-actor (get-world game) id))
+  [g id]
+  (-> g :eav (get id)))
 
-(defn query-actors
-  ([game k v]
-   (world/query-actors (get-world game) k v))
-  ([game k v & kvs]
-   (apply world/query-actors (get-world game) k v kvs)))
+(defn get-attr
+  ([g id k]
+   (-> g :eav (get id) (get k)))
+  ([g id k not-found]
+   (-> g :eav (get id) (get k not-found))))
 
-(defn get-at
-  [game cell]
-  (world/get-at (get-world game) cell))
+(defn rem-attr
+  ([g id k]
+   (let [v (get-attr g id k)]
+     (-> g
+         (util/dissoc-in [:eav id k])
+         (util/disjoc-in [:ave k v] id))))
+  ([g id k & ks]
+   (reduce #(rem-attr %1 id %2) g (cons k ks))))
 
-(defn solid-at?
-  [game cell]
-  (world/solid-at? (get-world game) cell))
+(defn set-attr
+  ([g id k v]
+   (-> g
+       (assoc-in [:eav id k] v)
+       (update-in [:ave k v] util/set-conj id)))
+  ([g id k v & kvs]
+   (->> (cons [k v] (partition 2 kvs))
+        (reduce #(set-attr %1 id (first %2) (second %2)) g))))
 
-(defn replace-actor!
-  [game actor]
-  (update-world! game world/replace-actor actor))
+(defn rem-actor
+  [g id]
+  (let [ks (keys (get-actor g id))]
+    (reduce #(rem-attr %1 id %2) g ks)))
 
-(defn add-actor!
-  [game actor]
-  (replace-actor! game actor))
+(defn merge-actor
+  ([g a]
+   (merge-actor g (:id a) a))
+  ([g id m]
+   (reduce-kv #(set-attr %1 id %2 %3) g m))
+  ([g id m & more]
+   (reduce #(merge-actor %1 id %2) g (cons m more))))
 
-(defn remove-actor!
-  [game id]
-  (update-world! game world/remove-actor id))
+(defn add-actor
+  ([g a]
+   (add-actor g (:id a) a))
+  ([g id m]
+   (-> (rem-actor g id)
+       (merge-actor id m))))
 
-(defn update-actor!
-  ([game id f]
-   (update-world! game world/update-actor id f))
-  ([game id f & args]
-   (update-actor! game id #(apply f % args))))
+(defn update-actor
+  ([g id f]
+   (if-some [a (get-actor g id)]
+     (add-actor g (f a))
+     g))
+  ([g id f & args]
+   (update-actor g id #(apply f % args))))
 
-(defn get-current-frame
-  [game]
-  (frame/get-current-frame (get-world game)))
+(defn iquery
+  ([g m]
+   (reduce-kv #(set/intersection %1 (iquery g %2 %3)) #{} m))
+  ([g k v]
+   (-> g :ave (get k) (get v #{})))
+  ([g k v & kvs]
+   (iquery g (into {k v} (partition 2 kvs)))))
 
-(defn process-frame!
-  ([game]
-   (process-frame! game (get-current-frame game)))
-  ([game frame]
-   (publish! game (event/frame frame))
-   (let [{:keys [ui-atom ui-state-agent]} game
-         ui @ui-atom
-         ui-state @ui-state-agent]
-     (publish-coll! game (ui/get-events ui frame))
-     (let [nui (swap! ui-atom ui/process frame ui-state)]
-       (update-ui-state! game ui/next-state nui))
-     nil)))
+(defn query
+  ([g m]
+   (map #(get-actor g %) (iquery g m)))
+  ([g k v]
+   (map #(get-actor g %) (iquery g k v)))
+  ([g k v & kvs]
+   (query g (into {k v} (partition 2 kvs)))))
 
-(defn plug!
-  ([game chan]
-   (async/pipe chan (:bus-chan game) false))
-  ([game chan & chs]
-   (doseq [c (cons chan chs)]
-     (plug! game c))))
+(defn simulate
+  [g frame]
+  (-> (update g :time (fnil + 0.0) (frame/get-delta frame))
+      (run-subs :sim)))
 
-(defn sub!
-  ([game chan]
-   (let [bus (:bus-mult game)]
-     (async/tap bus chan)
-     chan))
-  ([game type chan]
-   (let [bus (:bus-pub game)]
-     (async/sub bus type chan)
-     chan)))
+(defn set-display
+  [g display]
+  (if (= display (:display g))
+    g
+    (-> (assoc g :display display)
+        (publish (event/display-changed (:display g) display)))))
 
-(defn sub
-  ([game]
-   (let [c (async/chan)]
-     (sub! game c)))
-  ([game type]
-   (let [c (async/chan)]
-     (sub! game type c)))
-  ([game type & types]
-   (async/merge (map #(sub game %) (cons type types)))))
+(defn set-display-from-frame
+  [g frame]
+  (set-display g (:display frame)))
 
-(defn subxf
-  ([game xform]
-   (sub! game (chan 32 xform)))
-  ([game xform type]
-   (sub! game type (chan 32 xform)))
-  ([game xform type & types]
-   (async/merge (map #(subxf game xform %) (cons type types)))))
+(defn set-input
+  [g input]
+  (if (not= input (:input g))
+    (-> (assoc g :input input)
+        (publish (event/input-changed (:input g) input)))
+    g))
 
-(defn subfn!
-  ([game f]
-   (let [c (sub game)]
-     (go-loop
-       []
-       (when-some [x (<! c)]
-         (f x)
-         (recur)))))
-  ([game type f]
-   (let [c (sub game type)]
-     (go-loop
-       []
-       (when-some [x (<! c)]
-         (f x)
-         (recur))))))
+(def default-settings
+  {:cell-size [32 32]})
+
+(defn get-setting
+  ([g k]
+   (-> g :settings (get k)))
+  ([g k not-found]
+   (-> g :settings (get k not-found))))
+
+(defn set-setting
+  ([g k v]
+   (let [ov (get-setting g k ::not-found)]
+     (if (= ov v)
+       g
+       (-> (assoc-in g [:settings k] v)
+           (publish (event/setting-changed k ov v))))))
+  ([g k v & kvs]
+   (reduce #(set-setting %1 (first %2) (second %2)) g (cons [k v] (partition 2 kvs)))))
+
+(defmulti default-event-handler (fn [g event] (:type event)))
+
+(defmethod default-event-handler :default
+  [g event]
+  g)
+
+(defmethod default-event-handler :event/multi
+  [g event]
+  (reduce publish g (:events event)))
+
+(defn run-event-subs
+  [g event]
+  (run-subs g (:type event) event))
+
+(def default-subm
+  {:frame [#'simulate
+           #'set-display-from-frame]
+   :input [#'set-input]
+   :sim   [#'run-scheduled-actions]
+   :event [#'default-event-handler
+           #'run-event-subs]})
+
+(defn game
+  ([]
+   (game {}))
+  ([subm & more]
+   (apply add-subm {:settings default-settings}
+          default-subm
+          subm
+          more)))

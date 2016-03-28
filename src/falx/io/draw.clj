@@ -2,10 +2,7 @@
   "Drawing functions"
   (:require [clj-gdx :as gdx]
             [falx.size :as size]
-            [falx.sprite :as sprite]
-            [gdx.color :as color]
-            [falx.world :as world]
-            [falx.ui :as ui])
+            [falx.sprite :as sprite])
   (:import (clojure.lang IPersistentMap)))
 
 (defn sprite!
@@ -150,62 +147,3 @@
              (gdx/draw-sprite! sprite x y tw th context)
              (recur (+ y tw))))
          (recur (+ x th)))))))
-
-;; ====
-;; Actors
-
-(defmethod map! :actor.type/creature
-  [m x y w h context]
-  (when (ui/selected-actor? m)
-    (sprite! sprite/selection x y w h {:color color/green}))
-  (sprite! sprite/human-male x y w h context))
-
-;; ====
-;; Widgets
-
-(defmethod widget! :ui/panel
-  [e frame]
-  (run! #(widget! % frame) (:coll e)))
-
-(defmethod widget! :ui/sprite
-  [e _]
-  (sprite! (:sprite e) (:rect e) (:context e)))
-
-(defmethod widget! :ui/box
-  [e _]
-  (box! (:rect e) (:context e)))
-
-(defmethod widget! :ui/tiled
-  [e _]
-  (tiled! (:sprite e) (:rect e) (:context e)))
-
-(defmethod widget! :ui/string
-  [e _]
-  (string! (:string e) (:rect e) (:context e)))
-
-(defmethod widget! :ui/button
-  [e frame]
-  (let [[x y w h] (:rect e)
-        context (cond
-                  (not (:enabled? e)) {:color ui/gray}
-                  (:hovering? e) {:color ui/white}
-                  :else {:color ui/light-gray})]
-    (box! x y w h context)
-    (centered-string! (:string e) x y w h context)))
-
-(defmethod widget! :ui/game-view
-  [e frame]
-  (let [world (:world frame)
-        actors (world/query-actors world :level (:level e))
-        {:keys [cell-width cell-height ]} e]
-    (gdx/using-camera (:camera e gdx/default-camera)
-      (doseq [a actors
-              :let [point (:point a)]
-              :when point
-              :let [[x y] point]]
-        (object!
-          a
-          (* x cell-width)
-          (* y cell-height)
-          cell-width
-          cell-height)))))

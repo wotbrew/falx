@@ -1,146 +1,69 @@
 (ns falx.event)
 
-(defn multi
-  [events]
-  {:type :event/multi
-   :events events})
+(defn display-changed
+  [old-display display]
+  {:type :event/display-changed
+   :old-display old-display
+   :display display
+   :debug? true})
 
-;; Actors
+(defn input-changed
+  [old-input input]
+  {:type :event/input-changed
+   :old-input old-input
+   :input input})
 
-(defn actor-put
-  [actor old-cell cell]
-  {:type :event/actor-put
-   :actor actor
-   :old-cell old-cell
-   :cell cell})
+(defn mouse-changed
+  [old-mouse mouse]
+  {:type :event/mouse-changed
+   :old-mouse old-mouse
+   :mouse mouse})
 
-(defn actor-unput
-  [actor cell]
-  {:type :event/actor-unput
-   :actor actor
-   :cell cell})
+(defn keyboard-changed
+  [old-keyboard keyboard]
+  {:type :event/keyboard-changed
+   :old-keyboard old-keyboard
+   :keyboard keyboard})
 
-(defn actor-stepped
-  [actor cell]
-  {:type :event/actor-stepped
-   :actor actor
-   :cell cell})
+(defn key-hit
+  [key]
+  {:type :event/key-hit
+   :key key
+   :debug? true})
 
-(defn actor-goal-removed
-  [actor goal]
-  (multi
-    [{:type  :event/actor-goal-removed
-      :actor actor
-      :goal  goal}]))
-
-(defn actor-goal-added
-  [actor goal]
-  (multi
-    [{:type  :event/actor-goal-added
-      :actor actor
-      :goal  goal}]))
-
-(defn actor-clicked
-  [actor input button]
-  (multi
-    [{:type  :event/actor-clicked
-      :input input
-      :button button
-      :actor actor}
-     {:type   [:event/actor-clicked button]
-      :input input
-      :button button
-      :actor  actor}
-     {:type [:event/actor-clicked (:type actor)]
-      :input input
-      :button button
-      :actor actor}
-     {:type [:event/actor-clicked (:type actor) button]
-      :input input
-      :button button
-      :actor actor}]))
-
-(defn actor-created
-  [actor]
-  (multi
-    [{:type  :event/actor-created
-      :actor actor}
-     {:type  [:event/actor-created (:type actor)]
-      :actor actor}]))
-
-(defn actor-changed
-  [old-actor actor]
-  (multi
-    [{:type      :event/actor-changed
-      :old-actor old-actor
-      :actor     actor}
-     {:type      [:event/actor-changed (:type actor)]
-      :old-actor old-actor
-      :actor     actor}]))
-
-(defn actor-selected
-  [actor]
-  {:type :event/actor-selected
-   :actor actor})
-
-(defn actor-unselected
-  [actor]
-  {:type :event/actor-unselected
-   :actor actor})
-
-;; Game
-
-(defn game-closing
-  [game]
-  {:type :event/game-closing
-   :id (:id game)})
-
-(defn game-starting
-  [game]
-  {:type :event/game-starting
-   :id (:id game)})
-
-(defn game-started
-  [game]
-  {:type :event/game-started
-   :id (:id game)})
-
-(defn frame
-  [frame]
-  {:type :event/frame
-   :frame frame})
-
-;; World
-
-(defn world-clicked
-  [cell input button]
-  (multi
-    [{:type   :event/world-clicked
-      :input input
-      :button button
-      :cell   cell}
-     {:type   [:event/world-clicked button]
-      :input input
-      :button button
-      :cell   cell}]))
-
-;; UI
-
-(defn ui-clicked
-  [element button point]
-  {:type [:event/ui-clicked (:type element)]
+(defn button-hit
+  [button]
+  {:type :event/button-hit
    :button button
-   :point point
-   :element element})
+   :debug? true})
 
-(defn ui-hover-enter
-  [element point]
-  {:type [:event/ui-hover-enter (:type element)]
-   :element element
-   :point point})
+(defn multi
+  [coll]
+  {:type :event/multi
+   :events coll})
 
-(defn ui-hover-exit
-  [element point]
-  {:type [:event/ui-hover-exit (:type element)]
-   :element element
-   :point point})
+(defn setting-changed
+  [k old-value v]
+  (multi
+    [{:type      :event/setting-changed
+      :setting   k
+      :old-value old-value
+      :value     v}
+     {:type      [:event/setting-changed k]
+      :setting   k
+      :old-value old-value
+      :value     v}]))
+
+(defn pos-changed
+  [old-actor actor]
+  {:type :event/pos-changed
+   :old-actor old-actor
+   :actor actor
+   :debug? true})
+
+(defn pos-removed
+  [old-actor actor]
+  {:type :event/pos-removed
+   :old-actor old-actor
+   :actor actor
+   :debug? true})
