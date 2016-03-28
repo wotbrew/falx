@@ -50,6 +50,11 @@
   {:type :request/select-actor
    :actor actor})
 
+(defn select-only-actor
+  [actor]
+  {:type :request/select-only-actor
+   :actor actor})
+
 (defn unselect-actor
   [actor]
   {:type :request/unselect-actor

@@ -57,4 +57,4 @@
     (game/subfn!
       :request/step
       (fn [{:keys [actor cell]}]
-        (game/update-actor! game (:id actor) actor/step cell)))))
+        (game/update-world! game world/step (:id actor) cell)))))

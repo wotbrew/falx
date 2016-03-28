@@ -3,7 +3,8 @@
             [falx.actor :as actor]
             [falx.request :as request]
             [falx.goal :as goal]
-            [falx.position :as pos]))
+            [falx.position :as pos]
+            [falx.world :as world]))
 
 (defmulti react (fn [world actor event] (:type event)))
 
@@ -42,7 +43,7 @@
   (let [origin-cell (:cell actor)
         level (:level origin-cell)
         point-path (when origin-cell
-                     (point/get-a*-path (constantly true)
+                     (point/get-a*-path #(not (world/solid-at? world (pos/cell % level)))
                                         (:point origin-cell)
                                         (:point cell)))
         path (rest (map #(pos/cell % level) point-path))]

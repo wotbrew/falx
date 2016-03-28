@@ -156,5 +156,5 @@
   [world id cell]
   (let [actor (get-actor world id)]
     (if (and actor (can-step? world actor cell))
-      (update-actor world id actor/put cell)
+      (update-actor world id actor/step cell)
       world)))

@@ -46,3 +46,10 @@
   [input key]
   (contains? (-> input :keyboard :hit) key))
 
+(defn key-pressed?
+  [input key]
+  (contains? (-> input :keyboard :pressed) key))
+
+(defn mod-pressed?
+  [input]
+  (key-pressed? input :shift-left))

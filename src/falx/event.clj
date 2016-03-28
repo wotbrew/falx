@@ -41,18 +41,22 @@
       :goal  goal}]))
 
 (defn actor-clicked
-  [actor button]
+  [actor input button]
   (multi
     [{:type  :event/actor-clicked
+      :input input
       :button button
       :actor actor}
      {:type   [:event/actor-clicked button]
+      :input input
       :button button
       :actor  actor}
      {:type [:event/actor-clicked (:type actor)]
+      :input input
       :button button
       :actor actor}
      {:type [:event/actor-clicked (:type actor) button]
+      :input input
       :button button
       :actor actor}]))
 
@@ -109,12 +113,14 @@
 ;; World
 
 (defn world-clicked
-  [cell button]
+  [cell input button]
   (multi
     [{:type   :event/world-clicked
+      :input input
       :button button
       :cell   cell}
      {:type   [:event/world-clicked button]
+      :input input
       :button button
       :cell   cell}]))
 

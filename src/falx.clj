@@ -24,7 +24,13 @@
                              :solid? true
                              :type :actor.type/creature
                              :layer :layer.type/creature})
+  (game/replace-actor! game {:id 1
+                             :name "Bob"
+                             :solid? true
+                             :type :actor.type/creature
+                             :layer :layer.type/creature})
   (game/update-actor! game 0 actor/put (pos/cell [6 6] "testing-level"))
+  (game/update-actor! game 1 actor/put (pos/cell [8 8] "testing-level"))
   (game/publish! game (event/game-started game)))
 
 (def game

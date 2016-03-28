@@ -59,6 +59,13 @@
     (unselect-actor actor)
     (select-actor actor)))
 
+(defn select-only-actor
+  [world actor]
+  (->
+    (reduce #(world/update-actor %1 (:id %2) unselect-actor) world
+            (get-selected-actors world))
+    (world/update-actor (:id actor) select-actor)))
+
 ;; ====
 ;; Game View Clicks
 
@@ -66,7 +73,7 @@
   [actor]
   (concat
     (when (selectable-actor? actor)
-      [(request/toggle-actor-selection actor)])))
+      [(request/select-only-actor actor)])))
 
 (defn get-world-click-messages
   [world cell]
@@ -305,11 +312,11 @@
 
 
 (defn get-game-view-click-events
-  [game-view world button point]
+  [game-view world input button point]
   (let [cell (get-world-cell game-view point)]
     [(event/ui-clicked game-view button point)
-     (event/world-clicked cell button)
-     (event/multi (map #(event/actor-clicked % button) (world/get-at world cell)))]))
+     (event/world-clicked cell input button)
+     (event/multi (map #(event/actor-clicked % input button) (world/get-at world cell)))]))
 
 (defmethod get-events :ui/game-view
   [e frame]
@@ -321,7 +328,7 @@
       []
       ;;
       button
-      (into (get-game-view-click-events e  (:world frame) button point)))))
+      (into (get-game-view-click-events e (:world frame) input button point)))))
 
 (defn game-left-rect
   [width height]

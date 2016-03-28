@@ -24,5 +24,5 @@
                 (get-move-goal-chan game))
 
     (game/subfn!
-      :request/toggle-actor-selection
-      #(game/update-actor! game (:id (:actor %)) ui/toggle-actor-selection))))
+      :request/select-only-actor
+      #(game/update-world! game ui/select-only-actor (:actor %)))))
