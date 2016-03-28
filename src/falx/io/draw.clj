@@ -2,7 +2,9 @@
   "Drawing functions"
   (:require [clj-gdx :as gdx]
             [falx.size :as size]
-            [falx.sprite :as sprite])
+            [falx.sprite :as sprite]
+            [gdx.color :as color]
+            [falx.game :as g])
   (:import (clojure.lang IPersistentMap)))
 
 (defn sprite!
@@ -147,3 +149,74 @@
              (gdx/draw-sprite! sprite x y tw th context)
              (recur (+ y tw))))
          (recur (+ x th)))))))
+
+(defn actor!
+  [a x y w h context]
+  (when (:selected? a)
+    (sprite! sprite/selection x y w h {:color color/green}))
+  (sprite! sprite/human-male x y w h))
+
+(defn world!
+  [g x y w h]
+  (let [x (int x)
+        y (int y)
+        w (int w)
+        h (int h)
+        xl (- x 32)
+        yl (- y 32)
+        xr (+ x w 32)
+        yr (+ y h 32)]
+    (doseq [a (g/query g :level :testing)
+            :let [point (:point a)]
+            :when point
+            :let [[wx wy] point
+                  wxp (* 32 (int wx))
+                  wyp (* 32 (int wy))]
+            :when (and (<= xl wxp xr)
+                       (<= yl wyp yr))]
+      (actor! a
+              wxp
+              wyp
+              32
+              32
+              nil))))
+
+(defmulti ui-element!* (fn [g e x y w h] (:type e)))
+
+(defmethod ui-element!* :default
+  [g e x y w h])
+
+(defn ui-element!
+  [g e xo yo]
+  (when-not (:hide? e)
+    (when-some [[x y w h] (:rect e)]
+      (let [x2 (+ x xo)
+            y2 (+ y yo)]
+        (ui-element!* g e x2 y2 w h)
+        (run! #(ui-element! g % x2 y2) (keep #(if (map? %)
+                                               %
+                                               (g/get-actor g %))
+                                             (:ui-children e)))))))
+
+(defn ui!
+  [g]
+  (run! #(ui-element! g % 0 0) (g/query g :ui-root? true)))
+
+(defmethod ui-element!* :actor/ui-sprite
+  [g e x y w h]
+  (sprite! (:sprite e) x y w h (:context e)))
+
+(defmethod ui-element!* :actor/ui-box
+  [g e x y w h]
+  (box! x y w h (:context e)))
+
+(defmethod ui-element!* :actor/ui-player-index
+  [g e x y w h]
+  (when-some [a (first (g/query g :player (:index e)))]
+    (actor! a x y w h nil)))
+
+(defmethod ui-element!* :actor/viewport
+  [g e x y w h]
+  (gdx/using-camera
+    (:camera e gdx/default-camera)
+    (world! g 0 0 w h)))

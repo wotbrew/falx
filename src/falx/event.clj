@@ -4,7 +4,13 @@
   [old-display display]
   {:type :event/display-changed
    :old-display old-display
-   :display display
+   :display display})
+
+(defn screen-size-changed
+  [old-size size]
+  {:type :event/screen-size-changed
+   :old-size old-size
+   :size size
    :debug? true})
 
 (defn input-changed

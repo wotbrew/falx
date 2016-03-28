@@ -7,6 +7,18 @@
 (defmethod derive-events* :default
   [g event])
 
+(defn derive-events
+  [g event]
+  (let [f (fn ! [event] (cons event (mapcat ! (derive-events* g event))))]
+    (rest (f event))))
+
+(defn publish-derived-events
+  [g event]
+  (reduce g/publish g (derive-events g event)))
+
+(def subm
+  {:event/input-changed [#'publish-derived-events]})
+
 (defmethod derive-events* :event/input-changed
   [g {:keys [old-input input]}]
   (let [{:keys [mouse keyboard]} input
@@ -27,15 +39,3 @@
   (for [k (:hit keyboard)
         :when (not (contains? (:hit old-keyboard) k))]
     (event/key-hit k)))
-
-(defn derive-events
-  [g event]
-  (let [f (fn ! [event] (cons event (mapcat ! (derive-events* g event))))]
-    (rest (f event))))
-
-(defn publish-derived-events
-  [g event]
-  (reduce g/publish g (derive-events g event)))
-
-(def subm
-  {:event/input-changed [#'publish-derived-events]})

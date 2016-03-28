@@ -127,10 +127,17 @@
 
 (defn add-actor
   ([g a]
-   (add-actor g (:id a) a))
+   (add-actor g (or (:id a) (inc (:max-id g -1))) a))
   ([g id m]
-   (-> (rem-actor g id)
+   (-> (if (number? id)
+         (update g :max-id (fnil max 0) id)
+         g)
+       (rem-actor id)
        (merge-actor id m))))
+
+(defn add-actor-coll
+  [g acoll]
+  (reduce add-actor g acoll))
 
 (defn update-actor
   ([g id f]
@@ -198,11 +205,30 @@
   ([g k v & kvs]
    (reduce #(set-setting %1 (first %2) (second %2)) g (cons [k v] (partition 2 kvs)))))
 
+(defmulti handle
+  "The default handle fn for the given actor type & event"
+  (fn [g a event] [(:type a) (:type event)]))
+
+(defmethod handle :default
+  [g a event]
+  g)
+
+(defmulti uhandle
+  "The default handle fn for the given actor id & event"
+  (fn [g a event] [(:id a) (:type event)]))
+
+(defmethod uhandle :default
+  [g a event]
+  g)
+
 (defmulti default-event-handler (fn [g event] (:type event)))
 
 (defmethod default-event-handler :default
   [g event]
-  g)
+  (reduce #(-> (handle %1 %2 event)
+               (uhandle %2 event))
+          g
+          (query g [:handles? (:type event)] true)))
 
 (defmethod default-event-handler :event/multi
   [g event]
