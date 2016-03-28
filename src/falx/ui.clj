@@ -37,10 +37,10 @@
     :rect   rect
     :context context}))
 
-(defn player-index
-  ([idx rect]
-   {:type :actor/ui-player-index
-    :index idx
+(defn actor
+  ([id rect]
+   {:type :actor/ui-actor
+    :id id
     :rect rect}))
 
 (defn pixel
@@ -57,7 +57,15 @@
     :rect    rect
     :context context}))
 
-(defn flatten-children
-  [a]
-  (cons (update a :ui-children (partial mapv :id))
-        (mapcat #(flatten-children %) (:ui-children a))))
+(defn get-all-actor-ids
+  [g]
+  (let [f (fn ! [a]
+            (let [rst (mapcat ! (:ui-children a))]
+              (if-some [id (:id a (when-not (map? a) a))]
+                (cons id rst)
+                rst)))]
+    (mapcat f (g/query g :ui-root? true))))
+
+(defn remove-ui
+  [g]
+  (reduce g/rem-actor g (get-all-actor-ids g)))

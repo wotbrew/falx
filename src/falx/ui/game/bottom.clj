@@ -22,6 +22,6 @@
   (assoc g :rect (get-rect (first size) (second size))))
 
 (defn get-actors
-  [sw sh]
+  [g sw sh]
   (let [[x y w h] (get-rect sw sh)]
     [(get-panel x y w h)]))

@@ -210,9 +210,9 @@
   [g e x y w h]
   (box! x y w h (:context e)))
 
-(defmethod ui-element!* :actor/ui-player-index
+(defmethod ui-element!* :actor/ui-actor
   [g e x y w h]
-  (when-some [a (first (g/query g :player (:index e)))]
+  (when-some [a (g/get-actor g (:id e))]
     (actor! a x y w h nil)))
 
 (defmethod ui-element!* :actor/viewport

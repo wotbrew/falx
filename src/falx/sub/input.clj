@@ -17,7 +17,12 @@
   (reduce g/publish g (derive-events g event)))
 
 (def subm
-  {:event/input-changed [#'publish-derived-events]})
+  {:event/input-changed [#'publish-derived-events]
+   :event/frame [#'publish-derived-events]})
+
+(defmethod derive-events* :event/multi
+  [g {:keys [events]}]
+  events)
 
 (defmethod derive-events* :event/input-changed
   [g {:keys [old-input input]}]
@@ -39,3 +44,13 @@
   (for [k (:hit keyboard)
         :when (not (contains? (:hit old-keyboard) k))]
     (event/key-hit k)))
+
+(defmethod derive-events* :event/frame
+  [g frame]
+  (let [input (:input g)
+       {:keys [keyboard mouse]} input]
+    (concat
+      (for [k (:pressed keyboard)]
+        (event/key-pressed k))
+      (for [b (:pressed mouse)]
+        (event/button-pressed b)))))

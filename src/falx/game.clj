@@ -112,6 +112,15 @@
    (->> (cons [k v] (partition 2 kvs))
         (reduce #(set-attr %1 id (first %2) (second %2)) g))))
 
+(defn update-attr
+  ([g id k f]
+   (let [v (get-attr g id k ::not-found)]
+     (if (identical? ::not-found v)
+       g
+       (set-attr g id k (f v)))))
+  ([g id k f & args]
+   (update-attr g id k #(apply f % args))))
+
 (defn rem-actor
   [g id]
   (let [ks (keys (get-actor g id))]
@@ -165,8 +174,11 @@
 
 (defn simulate
   [g frame]
-  (-> (update g :time (fnil + 0.0) (frame/get-delta frame))
-      (run-subs :sim)))
+  (let [delta (frame/get-delta frame)]
+    (-> (update g :time (fnil + 0.0) delta)
+        (assoc :delta delta)
+        (run-subs :sim)
+        (publish (event/frame frame)))))
 
 (defn set-display
   [g display]

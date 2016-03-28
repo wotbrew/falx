@@ -33,14 +33,22 @@
 
 (def gstate
   (agent
-    (-> (g/game sub-input/subm sub-ui/subm)
-        (g/add-actor {:id 0
-                      :name "fred"
-                      :player? true
-                      :player 0})
-        (world/set-pos 0 (pos/cell [4 4] :testing))
-        (g/add-actor-coll
-          (ui-game/get-actors (first default-screen-size) (second default-screen-size))))))
+    (let [g (-> (g/game sub-input/subm sub-ui/subm)
+                (g/add-actor {:id      0
+                              :name    "fred"
+                              :player? true
+                              :player  0})
+                (world/set-pos 0 (pos/cell [4 4] :testing)))]
+      (g/add-actor-coll
+        g
+        (ui-game/get-actors
+          g
+          800
+          600)))
+    :error-handler
+    (fn [a exc]
+      (error exc))
+    :error-mode :continue))
 
 (defn push-events!
   []
@@ -65,8 +73,8 @@
 
 (defn update-gstate!
   [frame input]
-  (send gstate g/run-subs :frame frame)
   (send gstate g/run-subs :input input)
+  (send gstate g/run-subs :frame frame)
   (push-events!)
   (serve-requests!))
 
@@ -76,7 +84,8 @@
 (gdx/defrender
   (try
     (when debug-ui?
-      (send gstate #(g/add-actor-coll % (ui-game/get-actors (-> % :display :size (or default-screen-size) first)
+      (send gstate #(g/add-actor-coll % (ui-game/get-actors %
+                                                            (-> % :display :size (or default-screen-size) first)
                                                             (-> % :display :size (or default-screen-size) second)))))
     (let [g @gstate
           display (gdx/get-display)
@@ -88,9 +97,7 @@
       (update-gstate! frame input)
       (gdx/using-camera gdx/default-camera
         (draw/ui! g))
-
-      (draw/string! {:fps fps
-                     :time (:time g)} 0 0 800 64))
+      (draw/string! {:fps fps} 0 0 800 64))
     (catch Throwable e
       (error e)
       (Thread/sleep 5000))))

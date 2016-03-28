@@ -11,4 +11,3 @@
 (defn rem-pos
   [a]
   (dissoc a :cell :point :level :slice))
-

@@ -1,5 +1,10 @@
 (ns falx.event)
 
+(defn multi
+  [coll]
+  {:type :event/multi
+   :events coll})
+
 (defn display-changed
   [old-display display]
   {:type :event/display-changed
@@ -33,20 +38,35 @@
 
 (defn key-hit
   [key]
-  {:type :event/key-hit
-   :key key
-   :debug? true})
+  (multi
+    [{:type :event/key-hit
+      :key  key}
+     {:type [:event/key-hit key]
+      :key key}]))
 
 (defn button-hit
   [button]
-  {:type :event/button-hit
-   :button button
-   :debug? true})
+  (multi
+    [{:type   :event/button-hit
+      :button button}
+     {:type [:event/button-hit button]
+      :button button}]))
 
-(defn multi
-  [coll]
-  {:type :event/multi
-   :events coll})
+(defn key-pressed
+  [key]
+  (multi
+    [{:type :event/key-pressed
+      :key  key}
+     {:type [:event/key-pressed key]
+      :key  key}]))
+
+(defn button-pressed
+  [button]
+  (multi
+    [{:type   :event/button-pressed
+      :button button}
+     {:type   [:event/button-pressed button]
+      :button button}]))
 
 (defn setting-changed
   [k old-value v]
@@ -73,3 +93,13 @@
    :old-actor old-actor
    :actor actor
    :debug? true})
+
+(defn frame
+  [frame]
+  {:type :event/frame
+   :frame frame})
+
+(defn input
+  [input]
+  {:type :event/input
+   :input input})
