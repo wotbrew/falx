@@ -30,11 +30,10 @@
    :actor actor})
 
 (defn tick-ai
-  ([actor]
-   {:type  :request/tick-ai
-    :actor actor})
-  ([actor time-ms]
-    (in-ms (tick-ai actor) time-ms)))
+  [actor event]
+  {:type  :request/tick-ai
+   :actor actor
+   :event event})
 
 (defn print-message
   [msg]

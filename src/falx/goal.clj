@@ -21,3 +21,15 @@
    :removes #{:goal.type/walk-path
               :goal.type/find-path}
    :path path})
+
+(defn step
+  [cell]
+  {:type :goal.type/step
+   :removes #{:goal.type/step}
+   :cell cell})
+
+(defn continue
+  [pred-goal goal]
+  {:type :goal.type/continue
+   :pred pred-goal
+   :goal goal})

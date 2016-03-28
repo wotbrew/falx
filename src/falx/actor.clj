@@ -120,7 +120,9 @@
   "Attempts to step into the `cell`. Returns the `actor`, possibly at the new `cell`."
   [actor cell]
   (if (can-step? actor cell)
-    (put actor cell)
+    (as-> actor x
+          (put x cell)
+          (publish x (event/actor-stepped x cell)))
     actor))
 
 (defn creature?

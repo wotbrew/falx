@@ -5,45 +5,80 @@
             [falx.goal :as goal]
             [falx.position :as pos]))
 
-(defmulti act (fn [world actor goal] (:type goal)))
+(defmulti react (fn [world actor event] (:type event)))
 
-(defmethod act :default
-  [world actor goal])
+(defmulti goal-react (fn [world actor goal event] [(:type goal) (:type event)]))
 
-(defmethod act :goal.type/move
+(defmethod react :default
+  [_ _ _])
+
+(defmethod goal-react :default
+  [_ _ _ _])
+
+(defmulti goal-added (fn [world actor goal] (:type goal)))
+
+(defmethod goal-added :default
+  [_ _ _])
+
+(defmulti goal-removed (fn [world actor goal] (:type goal)))
+
+(defmethod goal-removed :default
+  [_ _ _])
+
+(defmethod react :event/actor-goal-added
+  [world actor event]
+  (goal-added world actor (:goal event)))
+
+(defmethod react :event/actor-goal-removed
+  [world actor event]
+  (goal-removed world actor (:goal event)))
+
+(defmethod goal-added :goal.type/move
   [world actor {:keys [cell]}]
-  (when-not (or (actor/has-goal? actor :goal.type/find-path)
-                (actor/has-goal? actor :goal.type/walk-path))
-    [(request/give-goal
-       actor
-       (goal/find-path cell))]))
+  [(request/give-goal actor (goal/find-path cell))])
 
-(defmethod act :goal.type/find-path
+(defmethod goal-added :goal.type/find-path
   [world actor {:keys [cell]}]
-  (when-not (actor/has-goal? actor :goal.type/walk-path)
-    (let [to (:point cell)
-          level (:level cell)
-          from (:point actor)
-          path (when from (point/get-a*-path (constantly true) from to))]
-      (when (seq path)
-        [(request/give-goal
-           actor
-           (goal/walk-path
-             (apply list (rest (map #(pos/cell % level) path)))))]))))
+  (let [origin-cell (:cell actor)
+        level (:level origin-cell)
+        point-path (when origin-cell
+                     (point/get-a*-path (constantly true)
+                                        (:point origin-cell)
+                                        (:point cell)))
+        path (rest (map #(pos/cell % level) point-path))]
+    (when (seq path)
+      [(request/give-goal actor (goal/walk-path path))])))
 
-(defmethod act :goal.type/walk-path
+(defmethod goal-added :goal.type/walk-path
   [world actor {:keys [path]}]
   (when (seq path)
-    (let [head (peek path)
-          tail (pop path)]
-      (when (actor/can-step? actor head)
-        [(request/step actor head)
-         (request/in-ms
-           (request/give-goal
-             actor
-             (goal/walk-path tail))
-           100)]))))
+    [(request/give-goal actor (goal/step (first path)))]))
+
+(defmethod goal-react [:goal.type/walk-path :event/actor-stepped]
+  [world actor {:keys [path]} {:keys [cell]}]
+  (when (= (first path) cell)
+    [(-> (request/give-goal actor (goal/continue
+                                    (first (actor/get-goals actor :goal.type/move))
+                                    (goal/walk-path (rest path))))
+         (request/in-ms 100))]))
+
+(defmethod goal-added :goal.type/step
+  [world actor {:keys [cell]}]
+  (when (actor/can-step? actor cell)
+    [(request/step actor cell)]))
+
+(defmethod goal-react [:goal.type/step :event/actor-stepped]
+  [world actor goal event]
+  (when (= (:cell goal) (:cell event))
+    [(request/remove-goal actor goal)]))
+
+(defmethod goal-added :goal.type/continue
+  [world actor {:keys [pred goal]}]
+  (when (actor/has-goal? actor pred)
+    [(request/give-goal actor goal)]))
 
 (defn tick
-  [world actor]
-  (mapcat #(act world actor %) (actor/get-goals actor)))
+  [world actor event]
+  (concat
+    (react world actor event)
+    (mapcat #(goal-react world actor % event) (actor/get-goals actor))))

@@ -20,6 +20,12 @@
    :actor actor
    :cell cell})
 
+(defn actor-stepped
+  [actor cell]
+  {:type :event/actor-stepped
+   :actor actor
+   :cell cell})
+
 (defn actor-goal-removed
   [actor goal]
   (multi

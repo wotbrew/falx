@@ -14,38 +14,24 @@
     (keep (comp request/spawn-ai :actor))
     [:event/actor-created :actor.type/creature]))
 
-(defn get-auto-tick-chan
+(defn get-tick-chan
   [game]
-  (let [c (game/sub game :request/spawn-ai)
-        out (async/chan 64)]
-    (go-loop
-      []
-      (if-some [x (<! c)]
-        (let [actor (:actor x)]
-          (go-loop
-            []
-            (<! (async/timeout 1000))
-            (when (>! out (request/tick-ai actor))
-              (recur)))
-          (recur))
-        (async/close! out)))
-    out))
-
-(defn get-goal-tick-chan
-  [game]
-  (game/subxf game (map (comp request/tick-ai :actor))
-              :event/actor-goal-added))
+  (game/subxf game (map (fn [event]
+                        (request/tick-ai (:actor event) event)))
+            :event/actor-goal-added
+            :event/actor-goal-removed
+            :event/actor-stepped))
 
 (defn get-messages-chan
   [game]
   (game/subxf game
-              (mapcat (fn [{:keys [actor]}]
+              (mapcat (fn [{:keys [actor event]}]
+                        (await (:world-agent game))
                         (let [w (game/get-world game)
                               id (:id actor)
                               actor (world/get-actor w id)]
                           (try
-                            (await (:world-agent game))
-                            (ai/tick w actor)
+                            (ai/tick w actor event)
                             (catch Throwable e
                               (error e "AI Tick error!"))))))
 
@@ -55,8 +41,7 @@
   [game]
   (doto game
     (game/plug! (get-spawn-chan game)
-                (get-auto-tick-chan game)
-                (get-goal-tick-chan game)
+                (get-tick-chan game)
                 (get-messages-chan game))
 
     (game/subfn!
