@@ -173,6 +173,8 @@
   ([s x y w]
    (draw-string! s x y w {}))
   ([s x y w context]
+    (draw-string! s x y w context (:font context default-font)))
+  ([s x y w context font]
    (using-font-options
      context
-     (batch/draw-string-wrapped! *sprite-batch* (font/find (:font context default-font)) s x y w))))
+     (batch/draw-string-wrapped! *sprite-batch* (font/find font) s x y w))))

@@ -31,6 +31,13 @@
 (def default-screen-size
   (:size default-display))
 
+(defn get-screen
+  [g]
+  (->> (ui-game/get-actors g
+                           (-> g :display :size (or default-screen-size) first)
+                           (-> g :display :size (or default-screen-size) second))
+       (mapcat ui/flatten-children)))
+
 (def gstate
   (agent
     (let [g (-> (g/game sub-input/subm sub-ui/subm)
@@ -41,10 +48,7 @@
                 (world/set-pos 0 (pos/cell [4 4] :testing)))]
       (g/add-actor-coll
         g
-        (ui-game/get-actors
-          g
-          800
-          600)))
+        (get-screen g)))
     :error-handler
     (fn [a exc]
       (error exc))
@@ -81,12 +85,12 @@
 (def debug-ui?
   true)
 
+
 (gdx/defrender
   (try
-    (when debug-ui?
-      (send gstate #(g/add-actor-coll % (ui-game/get-actors %
-                                                            (-> % :display :size (or default-screen-size) first)
-                                                            (-> % :display :size (or default-screen-size) second)))))
+    (when (and debug-ui?
+               (zero? (mod (gdx/get-frame-id) 15)))
+      (send gstate #(g/add-actor-coll % (get-screen %))))
     (let [g @gstate
           display (gdx/get-display)
           input (input/input @gdx/keyboard-state @gdx/mouse-state)
@@ -97,7 +101,7 @@
       (update-gstate! frame input)
       (gdx/using-camera gdx/default-camera
         (draw/ui! g))
-      (draw/string! {:fps fps} 0 0 800 64))
+      (draw/string! {:fps fps} 0 0 800 64 {:font gdx/default-font}))
     (catch Throwable e
       (error e)
       (Thread/sleep 5000))))

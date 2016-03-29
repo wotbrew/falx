@@ -4,8 +4,12 @@
             [falx.size :as size]
             [falx.sprite :as sprite]
             [gdx.color :as color]
-            [falx.game :as g])
+            [falx.game :as g]
+            [clojure.java.io :as io])
   (:import (clojure.lang IPersistentMap)))
+
+(def font
+  (gdx/font (io/resource "default.fnt")))
 
 (defn sprite!
   "Draws a sprite in the rectangle."
@@ -29,7 +33,8 @@
   ([s x y w h]
    (string! s x y w h nil))
   ([s x y w h context]
-   (gdx/draw-string! s x y w context)))
+   (gdx/draw-string! s x y w context (or (:font context)
+                                         font))))
 
 (defn centered-string!
   "Draws the object as a string, centering the text in the rectangle."
@@ -44,7 +49,8 @@
    (let [font (:font context gdx/default-font)
          bounds (gdx/get-string-wrapped-bounds s w font)
          [x y w] (size/centered-rect bounds x y w h)]
-     (gdx/draw-string! s x y w context))))
+     (gdx/draw-string! s x y w context (or (:font context)
+                                           font)))))
 
 (defmulti map! (fn [m x y w h context] (:type m)))
 
@@ -212,7 +218,7 @@
 
 (defmethod ui-element!* :actor/ui-actor
   [g e x y w h]
-  (when-some [a (g/get-actor g (:id e))]
+  (when-some [a (g/get-actor g (:actor-id e))]
     (actor! a x y w h nil)))
 
 (defmethod ui-element!* :actor/viewport
@@ -220,3 +226,15 @@
   (gdx/using-camera
     (:camera e gdx/default-camera)
     (world! g 0 0 w h)))
+
+(defmulti stat-label!
+  (fn [a stat x y w h] stat))
+
+(defmethod stat-label! :default
+  [a stat x y w h]
+  (string! stat x y w h))
+
+(defmethod ui-element!* :actor/ui-stat-label
+  [g {:keys [actor-id stat]} x y w h]
+  (when-some [a (g/get-actor g actor-id)]
+    (stat-label! a stat x y w h)))

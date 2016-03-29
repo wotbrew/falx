@@ -3,7 +3,8 @@
             [clojure.java.io :as io])
   (:refer-clojure :exclude [find])
   (:import (com.badlogic.gdx.graphics.g2d BitmapFont BitmapFont$TextBounds)
-           (com.badlogic.gdx.graphics Color)))
+           (com.badlogic.gdx.graphics Color)
+           (com.badlogic.gdx.files FileHandle)))
 
 (defn font
   [& {:keys [file flip-y?] :as opts}]
@@ -12,13 +13,17 @@
     (when file
       {:file (.getPath (io/as-file file))})))
 
-(defonce cache (atom {}))
+(def cache (atom {}))
 
 (defn load!
   [font]
   (app/on-render-thread
     (or (get @cache font)
-        (-> (swap! cache assoc font (BitmapFont. (boolean (:flip-y? font))))
+        (-> (swap! cache assoc font
+                   (if (:file font)
+                     (BitmapFont. (FileHandle. (str (:file font)))
+                                  (boolean (:flip-y? font)))
+                     (BitmapFont. (boolean (:flip-y? font)))))
             (get font)))))
 
 (defn find

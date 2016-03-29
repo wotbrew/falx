@@ -40,7 +40,7 @@
 (defn actor
   ([id rect]
    {:type :actor/ui-actor
-    :id id
+    :actor-id id
     :rect rect}))
 
 (defn pixel
@@ -51,11 +51,18 @@
 
 (defn box
   ([rect]
-   (box rect nil))
+   (box rect {:color light-gray}))
   ([rect context]
    {:type    :actor/ui-box
     :rect    rect
     :context context}))
+
+(defn stat-label
+  [id stat rect]
+  {:type :actor/ui-stat-label
+   :actor-id id
+   :stat stat
+   :rect rect})
 
 (defn get-all-actor-ids
   [g]
@@ -65,6 +72,12 @@
                 (cons id rst)
                 rst)))]
     (mapcat f (g/query g :ui-root? true))))
+
+(defn flatten-children
+  [a]
+  (when (:id a)
+    (cons (update a :ui-children (partial mapv (some-fn :id identity)))
+          (mapcat #(flatten-children %) (:ui-children a)))))
 
 (defn remove-ui
   [g]
