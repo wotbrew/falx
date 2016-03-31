@@ -82,3 +82,11 @@
 (defn remove-ui
   [g]
   (reduce g/rem-actor g (get-all-actor-ids g)))
+
+(defn relative-to
+  [x y elements]
+  (for [e elements]
+    (if (:rect e)
+      (let [[x2 y2 w h] (:rect e)]
+        (assoc e :rect [(+ x x2) (+ y y2) w h]))
+      e)))

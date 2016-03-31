@@ -14,11 +14,12 @@
 
 (defn get-player-panel
   [g a x y]
-  {:id   [::player (:player a)]
-   :type :actor/ui-box
-   :context {:color ui/light-gray}
-   :rect [x y player-panel-width player-panel-height]
-   :ui-children [(ui/actor (:id a) [0 3 64 64])]})
+  {:id          [::player (:player a)]
+   :type        :actor/ui-box
+   :context     {:color ui/light-gray}
+   :rect        [x y player-panel-width player-panel-height]
+   :ui-children (->> [(ui/actor (:id a) [0 3 64 64])]
+                     (ui/relative-to x y))})
 
 (defn get-player-panels
   [g x y]
@@ -34,15 +35,17 @@
   [g a x y]
   (let [id (:id a)
         w player-info-panel-width]
-    {:id          [::player-info (:player a)]
-     :type        :actor/ui-box
+    {:id      [::player-info (:player a)]
+     :type    :actor/ui-box
      :context {:color ui/light-gray}
-     :rect        [x y player-info-panel-width player-panel-height]
-     :ui-children [(ui/stat-label id "hp"  [2 1 w 14])
-                   (ui/stat-label id "ap"  [2 (+ 1 (* 15 1)) w 14])
-                   (ui/stat-label id "pft" [2 (+ 1 (* 15 2)) w 14])
-                   (ui/stat-label id "mft" [2 (+ 1 (* 15 3)) w 14])
-                   (ui/stat-label id "mor" [2 (+ 1 (* 15 4)) w 14])]}))
+     :rect    [x y player-info-panel-width player-panel-height]
+     :ui-children
+              (->> [(ui/stat-label id "hp" [2 1 w 14])
+                    (ui/stat-label id "ap" [2 (+ 1 (* 15 1)) w 14])
+                    (ui/stat-label id "pft" [2 (+ 1 (* 15 2)) w 14])
+                    (ui/stat-label id "mft" [2 (+ 1 (* 15 3)) w 14])
+                    (ui/stat-label id "mor" [2 (+ 1 (* 15 4)) w 14])]
+                   (ui/relative-to x y))}))
 
 (defn get-player-info-panels
   [g x y]
@@ -58,10 +61,10 @@
    :rect                                  [x y w h]
    :ui-root?                              true
    :ui-children                           (concat
-                                            [(ui/pixel [0 0 w h] {:color ui/black})
-                                             (ui/box [0 0 w h] {:color ui/gray})]
-                                            (get-player-panels g 62 3)
-                                            (get-player-info-panels g 3 3))
+                                            [(ui/pixel [x y w h] {:color ui/black})
+                                             (ui/box [x y w h] {:color ui/gray})]
+                                            (get-player-panels g (+ x 62) (+ y 3))
+                                            (get-player-info-panels g (+ x 3) (+ y 3)))
    ;;handles
    [:handles? :event/screen-size-changed] true})
 

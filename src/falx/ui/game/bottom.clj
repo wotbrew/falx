@@ -8,12 +8,13 @@
 
 (defn get-panel
   [x y w h]
-  {:id ::panel
-   :type :element/panel
-   :rect [x y w h]
-   :ui-root? true
-   :ui-children [(ui/pixel [0 0 w h] {:color ui/black})
-                 (ui/box [0 0 w h] {:color ui/gray})]
+  {:id                                    ::panel
+   :type                                  :element/panel
+   :rect                                  [x y w h]
+   :ui-root?                              true
+   :ui-children                           (->> [(ui/pixel [0 0 w h] {:color ui/black})
+                                                (ui/box [0 0 w h] {:color ui/gray})]
+                                               (ui/relative-to x y))
    ;;handles
    [:handles? :event/screen-size-changed] true})
 

@@ -192,21 +192,21 @@
 (defmethod ui-element!* :default
   [g e x y w h])
 
+(declare ui-element!)
+
 (defn ui-element!
-  [g e xo yo]
+  [g e]
   (when-not (:hide? e)
     (when-some [[x y w h] (:rect e)]
-      (let [x2 (+ x xo)
-            y2 (+ y yo)]
-        (ui-element!* g e x2 y2 w h)
-        (run! #(ui-element! g % x2 y2) (keep #(if (map? %)
-                                               %
-                                               (g/get-actor g %))
-                                             (:ui-children e)))))))
+      (ui-element!* g e x y w h))
+    (run! #(ui-element! g %) (keep #(if (map? %)
+                                     %
+                                     (g/get-actor g %))
+                                   (:ui-children e)))))
 
 (defn ui!
   [g]
-  (run! #(ui-element! g % 0 0) (g/query g :ui-root? true)))
+  (run! #(ui-element! g %) (g/query g :ui-root? true)))
 
 (defmethod ui-element!* :actor/ui-sprite
   [g e x y w h]
