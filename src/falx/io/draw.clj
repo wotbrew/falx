@@ -170,11 +170,13 @@
   (sprite! sprite/human-male x y w h))
 
 (defn world!
-  [g x y w h]
+  [g x y w h cw ch]
   (let [x (int x)
         y (int y)
         w (int w)
         h (int h)
+        cw (int cw)
+        ch (int ch)
         xl (- x 32)
         yl (- y 32)
         xr (+ x w 32)
@@ -183,16 +185,16 @@
             :let [point (:point a)]
             :when point
             :let [[wx wy] point
-                  wxp (* 32 (int wx))
-                  wyp (* 32 (int wy))]
+                  wxp (* cw (int wx))
+                  wyp (* ch (int wy))]
             :when (and (<= xl wxp xr)
                        (<= yl wyp yr))]
       (actor! g
               a
               wxp
               wyp
-              32
-              32))))
+              cw
+              ch))))
 
 (defmulti ui-element!* (fn [g e x y w h] (:type e)))
 
@@ -234,10 +236,11 @@
 (defmethod ui-element!* :element/viewport
   [g e x y w h]
   (let [cam (:camera e gdx/default-camera)
-        [cx cy] (camera/get-world-point cam x y)]
+        [cx cy] (camera/get-world-point cam x y)
+        [cw ch] (g/get-setting g :cell-size [32 32])]
     (gdx/using-camera
       cam
-      (world! g cx cy w h))))
+      (world! g cx cy w h cw ch))))
 
 (defmethod ui-element!* :element/on-hover
   [g e x y w h]
