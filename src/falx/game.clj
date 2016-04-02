@@ -3,7 +3,8 @@
             [falx.event :as event]
             [falx.util :as util]
             [clojure.set :as set]
-            [falx.frame :as frame]))
+            [falx.frame :as frame]
+            [falx.rect :as rect]))
 
 (defn add-subm
   ([g subm]
@@ -94,11 +95,44 @@
   ([g id k not-found]
    (-> g :eav (get id) (get k not-found))))
 
+(defn has-attr?
+  [g id k]
+  (-> g :eav (get id) (contains? k)))
+
+(defn ihaving
+  ([g k]
+   (-> g :ae (get k)))
+  ([g k & ks]
+   (reduce #(set/intersection %1 (ihaving g %2)) #{} (cons k ks))))
+
+(defn having
+  ([g k]
+   (map #(get-actor g %) (ihaving g k)))
+  ([g k & ks]
+   (reduce #(set/intersection %1 (having g %2)) #{} (cons k ks))))
+
+(defn iquery
+  ([g m]
+   (reduce-kv #(set/intersection %1 (iquery g %2 %3)) #{} m))
+  ([g k v]
+   (-> g :ave (get k) (get v #{})))
+  ([g k v & kvs]
+   (iquery g (into {k v} (partition 2 kvs)))))
+
+(defn query
+  ([g m]
+   (map #(get-actor g %) (iquery g m)))
+  ([g k v]
+   (map #(get-actor g %) (iquery g k v)))
+  ([g k v & kvs]
+   (query g (into {k v} (partition 2 kvs)))))
+
 (defn rem-attr
   ([g id k]
    (let [v (get-attr g id k)]
      (-> g
          (util/dissoc-in [:eav id k])
+         (util/disjoc-in [:ae k] id)
          (util/disjoc-in [:ave k v] id))))
   ([g id k & ks]
    (reduce #(rem-attr %1 id %2) g (cons k ks))))
@@ -107,6 +141,7 @@
   ([g id k v]
    (-> g
        (assoc-in [:eav id k] v)
+       (update-in [:ae k] util/set-conj id)
        (update-in [:ave k v] util/set-conj id)))
   ([g id k v & kvs]
    (->> (cons [k v] (partition 2 kvs))
@@ -156,22 +191,6 @@
   ([g id f & args]
    (update-actor g id #(apply f % args))))
 
-(defn iquery
-  ([g m]
-   (reduce-kv #(set/intersection %1 (iquery g %2 %3)) #{} m))
-  ([g k v]
-   (-> g :ave (get k) (get v #{})))
-  ([g k v & kvs]
-   (iquery g (into {k v} (partition 2 kvs)))))
-
-(defn query
-  ([g m]
-   (map #(get-actor g %) (iquery g m)))
-  ([g k v]
-   (map #(get-actor g %) (iquery g k v)))
-  ([g k v & kvs]
-   (query g (into {k v} (partition 2 kvs)))))
-
 (defn simulate
   [g frame]
   (let [delta (frame/get-delta frame)]
@@ -197,6 +216,20 @@
     (-> (assoc g :input input)
         (publish (event/input-changed (:input g) input)))
     g))
+
+(defn get-mouse
+  [g]
+  (-> g :input :mouse))
+
+(defn get-mouse-point
+  [g]
+  (-> g :input :mouse :point))
+
+(defn contains-mouse?
+  ([g rect]
+   (rect/contains-point? rect (get-mouse-point g)))
+  ([g x y w h]
+   (rect/contains-point? x y w h (get-mouse-point g))))
 
 (def default-settings
   {:cell-size [32 32]})
@@ -240,7 +273,7 @@
   (reduce #(-> (handle %1 %2 event)
                (uhandle %2 event))
           g
-          (query g [:handles? (:type event)] true)))
+          (having g [:handles? (:type event)])))
 
 (defmethod default-event-handler :event/multi
   [g event]

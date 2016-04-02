@@ -5,7 +5,8 @@
             [falx.sprite :as sprite]
             [gdx.color :as color]
             [falx.game :as g]
-            [clojure.java.io :as io])
+            [clojure.java.io :as io]
+            [falx.rect :as rect])
   (:import (clojure.lang IPersistentMap)))
 
 (def font
@@ -156,8 +157,13 @@
              (recur (+ y tw))))
          (recur (+ x th)))))))
 
-(defn actor!
-  [a x y w h context]
+(defmulti actor! (fn [g a x y w h] (:type a)))
+
+(defmethod actor! :default
+  [g a x y w h])
+
+(defmethod actor! :actor/creature
+  [g a x y w h]
   (when (:selected? a)
     (sprite! sprite/selection x y w h {:color color/green}))
   (sprite! sprite/human-male x y w h))
@@ -180,61 +186,76 @@
                   wyp (* 32 (int wy))]
             :when (and (<= xl wxp xr)
                        (<= yl wyp yr))]
-      (actor! a
+      (actor! g
+              a
               wxp
               wyp
               32
-              32
-              nil))))
+              32))))
 
 (defmulti ui-element!* (fn [g e x y w h] (:type e)))
 
 (defmethod ui-element!* :default
   [g e x y w h])
 
-(declare ui-element!)
-
 (defn ui-element!
   [g e]
-  (when-not (:hide? e)
-    (when-some [[x y w h] (:rect e)]
-      (ui-element!* g e x y w h))
-    (run! #(ui-element! g %) (keep #(if (map? %)
-                                     %
-                                     (g/get-actor g %))
-                                   (:ui-children e)))))
+  (let [[x y w h] (:rect e)]
+    (ui-element!* g e x y w h)))
 
-(defn ui!
-  [g]
-  (run! #(ui-element! g %) (g/query g :ui-root? true)))
-
-(defmethod ui-element!* :actor/ui-sprite
+(defmethod ui-element!* :element/sprite
   [g e x y w h]
-  (sprite! (:sprite e) x y w h (:context e)))
+  (sprite! (:sprite e) x y w h))
 
-(defmethod ui-element!* :actor/ui-box
+(defmethod ui-element!* :element/backing
   [g e x y w h]
-  (box! x y w h (:context e)))
+  (sprite! sprite/pixel x y w h {:color color/black}))
 
-(defmethod ui-element!* :actor/ui-actor
+(def box-context
+  {:color color/light-gray})
+
+(defmethod ui-element!* :element/box
   [g e x y w h]
-  (when-some [a (g/get-actor g (:actor-id e))]
-    (actor! a x y w h nil)))
+  (box! x y w h box-context))
 
-(defmethod ui-element!* :actor/viewport
+(def highlighted-box-context
+  {:color color/yellow})
+
+(defmethod ui-element!* :element/highlighted-box
+  [g e x y w h]
+  (box! x y w h highlighted-box-context))
+
+(defmethod ui-element!* :element/actor
+  [g e x y w h]
+  (when-some [a (g/get-actor g (:id e))]
+    (actor! g a x y w h)))
+
+(defmethod ui-element!* :element/viewport
   [g e x y w h]
   (gdx/using-camera
     (:camera e gdx/default-camera)
     (world! g 0 0 w h)))
 
-(defmulti stat-label!
-  (fn [a stat x y w h] stat))
+(defmethod ui-element!* :element/on-hover
+  [g e x y w h]
+  (if (g/contains-mouse? g x y w h)
+    (ui-element! g (:hovering e))
+    (ui-element! g (:not-hovering e))))
 
-(defmethod stat-label! :default
-  [a stat x y w h]
-  (string! stat x y w h))
+(defmethod ui-element!* :element/many
+  [g e _ _ _ _]
+  (run! #(ui-element! g %) (:coll e)))
 
-(defmethod ui-element!* :actor/ui-stat-label
-  [g {:keys [actor-id stat]} x y w h]
-  (when-some [a (g/get-actor g actor-id)]
-    (stat-label! a stat x y w h)))
+(defn ui!
+  ([g]
+   (run! #(ui! g %) (g/query g :ui-root? true)))
+  ([g a]
+   (doseq [e (let [els (:elements a)]
+               (if (map? els)
+                 (vals els)
+                 els))]
+     (ui-element! g e))
+   (doseq [c (:ui-children a)
+           :let [child (g/get-actor g c)]
+           :when child]
+     (ui! g child))))

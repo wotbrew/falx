@@ -1,6 +1,7 @@
 (ns falx.ui.game.bottom
   (:require [falx.game :as g]
-            [falx.ui :as ui]))
+            [falx.ui :as ui]
+            [falx.element :as e]))
 
 (defn get-rect
   [sw sh]
@@ -8,19 +9,11 @@
 
 (defn get-panel
   [x y w h]
-  {:id                                    ::panel
-   :type                                  :element/panel
-   :rect                                  [x y w h]
-   :ui-root?                              true
-   :ui-children                           (->> [(ui/pixel [0 0 w h] {:color ui/black})
-                                                (ui/box [0 0 w h] {:color ui/gray})]
-                                               (ui/relative-to x y))
-   ;;handles
-   [:handles? :event/screen-size-changed] true})
-
-(defmethod g/uhandle [::panel :event/screen-size-changed]
-  [g a {:keys [size]}]
-  (assoc g :rect (get-rect (first size) (second size))))
+  {:id       ::panel
+   :type     ::panel
+   :ui-root? true
+   :elements  [(e/backing [x y w h])
+               (e/box [x y w h])]})
 
 (defn get-actors
   [g sw sh]

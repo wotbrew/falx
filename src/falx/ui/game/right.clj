@@ -1,6 +1,8 @@
 (ns falx.ui.game.right
   (:require [falx.game :as g]
-            [falx.ui :as ui]))
+            [falx.ui :as ui]
+            [falx.rect :as rect]
+            [falx.element :as e]))
 
 (defn get-rect
   [sw sh]
@@ -12,14 +14,18 @@
 (def player-panel-height
   76)
 
+(defn player-panel-id
+  [player]
+  [::player player])
+
 (defn get-player-panel
   [g a x y]
-  {:id          [::player (:player a)]
-   :type        :actor/ui-box
-   :context     {:color ui/light-gray}
-   :rect        [x y player-panel-width player-panel-height]
-   :ui-children (->> [(ui/actor (:id a) [0 3 64 64])]
-                     (ui/relative-to x y))})
+  {:id (player-panel-id (:player a))
+   :type ::player-panel
+   :elements [(e/on-hover (e/box [x y player-panel-width player-panel-height])
+                          (e/highlighted-box [x y player-panel-width player-panel-height])
+                          [x y player-panel-width player-panel-height])
+              (e/actor (:id a) [x (+ y 3) 64 64])]})
 
 (defn get-player-panels
   [g x y]
@@ -31,21 +37,16 @@
 (def player-info-panel-width
   57)
 
+(defn player-info-panel-id
+  [player]
+  [::player-info player])
+
 (defn get-player-info-panel
   [g a x y]
-  (let [id (:id a)
-        w player-info-panel-width]
-    {:id      [::player-info (:player a)]
-     :type    :actor/ui-box
-     :context {:color ui/light-gray}
-     :rect    [x y player-info-panel-width player-panel-height]
-     :ui-children
-              (->> [(ui/stat-label id "hp" [2 1 w 14])
-                    (ui/stat-label id "ap" [2 (+ 1 (* 15 1)) w 14])
-                    (ui/stat-label id "pft" [2 (+ 1 (* 15 2)) w 14])
-                    (ui/stat-label id "mft" [2 (+ 1 (* 15 3)) w 14])
-                    (ui/stat-label id "mor" [2 (+ 1 (* 15 4)) w 14])]
-                   (ui/relative-to x y))}))
+  (let [id (:id a)]
+    {:id (player-info-panel-id (:player a))
+     :type ::player-info
+     :elements [(e/box [x y player-info-panel-width player-panel-height])]}))
 
 (defn get-player-info-panels
   [g x y]
@@ -56,23 +57,17 @@
 
 (defn get-panel
   [g x y w h]
-  {:id                                    ::panel
-   :type                                  :element/panel
-   :rect                                  [x y w h]
-   :ui-root?                              true
-   :ui-children                           (concat
-                                            [(ui/pixel [x y w h] {:color ui/black})
-                                             (ui/box [x y w h] {:color ui/gray})]
-                                            (get-player-panels g (+ x 62) (+ y 3))
-                                            (get-player-info-panels g (+ x 3) (+ y 3)))
-   ;;handles
-   [:handles? :event/screen-size-changed] true})
-
-(defmethod g/uhandle [::panel :event/screen-size-changed]
-  [g a {:keys [size]}]
-  (assoc g :rect (get-rect (first size) (second size))))
+  {:id ::panel
+   :type ::panel
+   :ui-root? true
+   :ui-children (concat (map #(player-panel-id %) (range 6))
+                        (map #(player-info-panel-id %) (range 6)))
+   :elements [(e/backing [x y w h])
+              (e/box [x y w (inc h)])]})
 
 (defn get-actors
   [g sw sh]
   (let [[x y w h] (get-rect sw sh)]
-    [(get-panel g x y w h)]))
+    (concat [(get-panel g x y w h)]
+            (get-player-panels g (+ x 62) y)
+            (get-player-info-panels g (+ x 3) y))))

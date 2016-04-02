@@ -35,13 +35,13 @@
   [g]
   (->> (ui-game/get-actors g
                            (-> g :display :size (or default-screen-size) first)
-                           (-> g :display :size (or default-screen-size) second))
-       (mapcat ui/flatten-children)))
+                           (-> g :display :size (or default-screen-size) second))))
 
 (def gstate
   (agent
     (let [g (-> (g/game sub-input/subm sub-ui/subm)
                 (g/add-actor {:id      0
+                              :type :actor/creature
                               :name    "fred"
                               :player? true
                               :player  0})
