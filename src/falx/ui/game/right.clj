@@ -26,25 +26,24 @@
         id (player-panel-id player)]
     {:id id
      :type ::player-panel
-     :player player
+     ::player player
      :ui-rect [x y w h]
      :elements [(e/hover-box [x y w h])
                 (e/actor (:id a) [x (+ y 3) 64 64])]
 
      ;;handles
-     [:handles? [:event/ui-actor-clicked ::player-panel]] true}))
+     [:handles? [:event/actor-clicked ::player-panel]] true}))
 
-(defmethod g/handle [::player-panel [:event/ui-actor-clicked ::player-panel]]
+(defmethod g/handle [::player-panel [:event/actor-clicked ::player-panel]]
   [g a _]
-  (if-some [id (first (g/iquery g :player (:player a)))]
-    (do
-      (g/update-attr g id :selected? not))
+  (if-some [a (g/get-player g (::player a))]
+    (g/update-attr g (:id a) :selected? not)
     g))
 
 (defn get-player-panels
   [g x y]
   (for [n (range 6)
-        :let [a (first (g/query g :player n))]
+        :let [a (g/get-player g n)]
         :when a]
     (get-player-panel g a x (+ y (* n 2) (* n player-panel-height)))))
 
@@ -67,7 +66,7 @@
 (defn get-player-info-panels
   [g x y]
   (for [n (range 6)
-        :let [a (first (g/query g :player n))]
+        :let [a (g/get-player g n)]
         :when a]
     (get-player-info-panel g a x (+ y (* n 2) (* n player-panel-height)))))
 

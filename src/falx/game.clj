@@ -140,6 +140,7 @@
 (defn set-attr
   ([g id k v]
    (-> g
+       (rem-attr id k)
        (assoc-in [:eav id k] v)
        (update-in [:ae k] util/set-conj id)
        (update-in [:ave k v] util/set-conj id)))
@@ -300,3 +301,23 @@
        (add-subm default-subm)))
   ([subm & more]
    (reduce add-subm (game) (cons subm more))))
+
+(defn get-at
+  [g cell]
+  (query g :cell cell))
+
+(defn get-selected
+  [g]
+  (query g :selected? true))
+
+(defn get-fselected
+  [g]
+  (first (get-selected g)))
+
+(defn get-selected-level
+  [g]
+  (:level (get-fselected g)))
+
+(defn get-player
+  [g n]
+  (first (query g :player n)))

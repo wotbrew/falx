@@ -6,7 +6,8 @@
             [falx.element :as e]
             [falx.protocol :as p]
             [gdx.camera :as camera]
-            [falx.event :as event]))
+            [falx.event :as event]
+            [falx.position :as pos]))
 
 (defn update-camera
   ([g f]
@@ -46,7 +47,7 @@
      [:handles? [:event/key-pressed :s]] true
      [:handles? [:event/key-pressed :d]] true
 
-     [:handles? [:event/ui-actor-clicked ::panel]] true}))
+     [:handles? [:event/actor-clicked ::panel]] true}))
 
 (def camera-speed
   100)
@@ -81,14 +82,21 @@
   [g _ _]
   (move-camera g 1 0))
 
-(defmethod g/handle [::panel [:event/ui-actor-clicked ::panel]]
+(defmethod g/handle [::panel [:event/actor-clicked ::panel]]
   [g actor _]
   (let [camera (get-camera g)]
     (g/request g (reify p/IRequest
                    (-get-response [this]
                      (camera/get-world-point camera (g/get-mouse-point g)))
                    (-respond [this g response]
-                     (g/publish g (event/world-clicked response)))))))
+                     (let [[x y] response
+                           [cw ch] (g/get-setting g :cell-size)
+                           level-point [(int (/ x cw)) (int (/ y ch))]
+                           cell (pos/cell level-point (g/get-selected-level g))]
+                       (->> (into [(event/world-clicked response) (event/cell-clicked cell)]
+                                  (map event/actor-clicked)
+                                  (g/query g :cell cell))
+                            (reduce g/publish g ))))))))
 
 (defn get-actors
   [g sw sh]

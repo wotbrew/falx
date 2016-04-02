@@ -180,8 +180,9 @@
         xl (- x 32)
         yl (- y 32)
         xr (+ x w 32)
-        yr (+ y h 32)]
-    (doseq [a (g/query g :level :testing)
+        yr (+ y h 32)
+        level (g/get-selected-level g)]
+    (doseq [a (g/query g :level level)
             :let [point (:point a)]
             :when point
             :let [[wx wy] point

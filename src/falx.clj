@@ -45,7 +45,14 @@
                               :name    "fred"
                               :player? true
                               :player  0})
-                (world/set-pos 0 (pos/cell [4 4] :testing)))]
+                (world/set-pos 0 (pos/cell [4 4] :testing))
+
+                (g/add-actor {:id      1
+                              :type :actor/creature
+                              :name    "bob"
+                              :player? true
+                              :player  1})
+                (world/set-pos 1 (pos/cell [6 5] :testing)))]
       (g/add-actor-coll
         g
         (get-screen g)))
@@ -112,3 +119,12 @@
 
 (comment
   (-main))
+
+(defn set-setting!
+  [k v]
+  (send gstate g/set-setting k v)
+  nil)
+
+(defn get-actor
+  [id]
+  (g/get-actor @gstate id))

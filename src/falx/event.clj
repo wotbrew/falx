@@ -56,19 +56,24 @@
      {:type [:event/button-hit button]
       :button button}]))
 
-(defn ui-actor-clicked
-  [actor]
-  (multi
-    [{:type :event/ui-actor-clicked
-      :actor actor}
-     {:type [:event/ui-actor-clicked (:type actor)]
-      :actor actor}]))
-
 (defn world-clicked
   [point]
   {:type :event/world-clicked
-   :point point
+   :point point})
+
+(defn cell-clicked
+  [cell]
+  {:type :event/cell-clicked
+   :cell cell
    :debug? true})
+
+(defn actor-clicked
+  [actor]
+  (multi
+    [{:type :event/actor-clicked
+      :actor actor}
+     {:type [:event/actor-clicked (:type actor)]
+      :actor actor}]))
 
 (defn key-pressed
   [key]
