@@ -88,15 +88,14 @@
     (g/request g (reify p/IRequest
                    (-get-response [this]
                      (camera/get-world-point camera (g/get-mouse-point g)))
-                   (-respond [this g response]
-                     (let [[x y] response
-                           [cw ch] (g/get-setting g :cell-size)
-                           level-point [(int (/ x cw)) (int (/ y ch))]
+                   (-respond [this g point]
+                     (let [level-point (point/idiv point (g/get-cell-size g))
                            cell (pos/cell level-point (g/get-selected-level g))]
-                       (->> (into [(event/world-clicked response) (event/cell-clicked cell)]
+                       (->> (into [(event/world-clicked point)
+                                   (event/cell-clicked cell)]
                                   (map event/actor-clicked)
-                                  (g/query g :cell cell))
-                            (reduce g/publish g ))))))))
+                                  (g/get-at g cell))
+                            (reduce g/publish g))))))))
 
 (defn get-actors
   [g sw sh]

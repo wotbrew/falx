@@ -238,7 +238,7 @@
   [g e x y w h]
   (let [cam (:camera e gdx/default-camera)
         [cx cy] (camera/get-world-point cam x y)
-        [cw ch] (g/get-setting g :cell-size [32 32])]
+        [cw ch] (g/get-cell-size g)]
     (gdx/using-camera
       cam
       (world! g cx cy w h cw ch))))

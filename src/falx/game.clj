@@ -302,6 +302,10 @@
   ([subm & more]
    (reduce add-subm (game) (cons subm more))))
 
+(defn get-cell-size
+  [g]
+  (get-setting g :cell-size))
+
 (defn get-at
   [g cell]
   (query g :cell cell))

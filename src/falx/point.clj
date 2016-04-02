@@ -1,6 +1,18 @@
 (ns falx.point
   (:import (java.util HashSet PriorityQueue)))
 
+(defn ipoint
+  ([point]
+    (mapv int point))
+  ([x y]
+    [(int x) (int y)]))
+
+(defn dpoint
+  ([point]
+   (mapv double point))
+  ([x y]
+   [(double x) (double y)]))
+
 (defn line-right
   ([point]
    (let [[x y] point]
@@ -44,6 +56,9 @@
    [(+ x x2)
     (+ y y2)]))
 
+(def iadd
+  (comp ipoint add))
+
 (defn mult
   ([point1 point2]
    (let [[x2 y2] point2]
@@ -55,11 +70,31 @@
    [(* x x2)
     (* y y2)]))
 
+(def imult
+  (comp ipoint mult))
+
 (defn scale
   ([point n]
    (mult point n n))
   ([x y n]
    (mult x y n n)))
+
+(def iscale
+  (comp ipoint scale))
+
+(defn div
+  ([point1 point2]
+   (let [[x2 y2] point2]
+     (div point1 x2 y2)))
+  ([point x2 y2]
+   (let [[x y] point]
+     (div x y x2 y2)))
+  ([x y x2 y2]
+   [(/ x x2)
+    (/ y y2)]))
+
+(def idiv
+  (comp ipoint div))
 
 (defn floor
   ([point]
