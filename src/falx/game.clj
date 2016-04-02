@@ -149,10 +149,8 @@
 
 (defn update-attr
   ([g id k f]
-   (let [v (get-attr g id k ::not-found)]
-     (if (identical? ::not-found v)
-       g
-       (set-attr g id k (f v)))))
+   (let [v (get-attr g id k)]
+     (set-attr g id k (f v))))
   ([g id k f & args]
    (update-attr g id k #(apply f % args))))
 
@@ -293,9 +291,12 @@
 
 (defn game
   ([]
-   (game {}))
+   (-> {:settings default-settings
+        :input {:mouse {:point [-1 -1]
+                        :hit #{}
+                        :pressed #{}}
+                :keyboard {:hit #{}
+                           :pressed #{}}}}
+       (add-subm default-subm)))
   ([subm & more]
-   (apply add-subm {:settings default-settings}
-          default-subm
-          subm
-          more)))
+   (reduce add-subm (game) (cons subm more))))

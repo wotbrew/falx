@@ -6,7 +6,8 @@
             [gdx.color :as color]
             [falx.game :as g]
             [clojure.java.io :as io]
-            [falx.rect :as rect])
+            [falx.rect :as rect]
+            [gdx.camera :as camera])
   (:import (clojure.lang IPersistentMap)))
 
 (def font
@@ -232,9 +233,11 @@
 
 (defmethod ui-element!* :element/viewport
   [g e x y w h]
-  (gdx/using-camera
-    (:camera e gdx/default-camera)
-    (world! g 0 0 w h)))
+  (let [cam (:camera e gdx/default-camera)
+        [cx cy] (camera/get-world-point cam x y)]
+    (gdx/using-camera
+      cam
+      (world! g cx cy w h))))
 
 (defmethod ui-element!* :element/on-hover
   [g e x y w h]

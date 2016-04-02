@@ -3,7 +3,10 @@
             [falx.point :as point]
             [falx.ui.game.bottom :as bottom]
             [falx.ui.game.right :as right]
-            [falx.element :as e]))
+            [falx.element :as e]
+            [falx.protocol :as p]
+            [gdx.camera :as camera]
+            [falx.event :as event]))
 
 (defn update-camera
   ([g f]
@@ -29,16 +32,21 @@
 (defn get-panel
   [g sw sh]
   (let [[x1 y1 w1 h1] (right/get-rect sw sh)
-        [x2 y2 w2 h2] (bottom/get-rect sw sh)]
+        [x2 y2 w2 h2] (bottom/get-rect sw sh)
+        bounds [0 0 (- sw w1) (- sh h2)]]
     {:id ::panel
      :type ::panel
-     :elements {:viewport (e/viewport (resolve-camera g sw sh) [0 0 sw sh])}
+     :elements {:viewport (e/viewport (resolve-camera g sw sh)
+                                      bounds)}
      :ui-root? true
+     :ui-rect bounds
      ;;handles
      [:handles? [:event/key-pressed :w]] true
      [:handles? [:event/key-pressed :a]] true
      [:handles? [:event/key-pressed :s]] true
-     [:handles? [:event/key-pressed :d]] true}))
+     [:handles? [:event/key-pressed :d]] true
+
+     [:handles? [:event/ui-actor-clicked ::panel]] true}))
 
 (def camera-speed
   100)
@@ -72,6 +80,15 @@
 (defmethod g/uhandle [::panel [:event/key-pressed :d]]
   [g _ _]
   (move-camera g 1 0))
+
+(defmethod g/handle [::panel [:event/ui-actor-clicked ::panel]]
+  [g actor _]
+  (let [camera (get-camera g)]
+    (g/request g (reify p/IRequest
+                   (-get-response [this]
+                     (camera/get-world-point camera (g/get-mouse-point g)))
+                   (-respond [this g response]
+                     (g/publish g (event/world-clicked response)))))))
 
 (defn get-actors
   [g sw sh]

@@ -9,7 +9,9 @@
 
 (defn derive-events
   [g event]
-  (let [f (fn ! [event] (cons event (mapcat ! (derive-events* g event))))]
+  (let [f (fn ! [event] (if (event/multi? event)
+                          (mapcat ! (:events event))
+                          (cons event (mapcat ! (derive-events* g event)))))]
     (rest (f event))))
 
 (defn publish-derived-events
@@ -19,10 +21,6 @@
 (def subm
   {:event/input-changed [#'publish-derived-events]
    :event/frame [#'publish-derived-events]})
-
-(defmethod derive-events* :event/multi
-  [g {:keys [events]}]
-  events)
 
 (defmethod derive-events* :event/input-changed
   [g {:keys [old-input input]}]

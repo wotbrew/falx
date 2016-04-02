@@ -85,7 +85,6 @@
 (def debug-ui?
   true)
 
-
 (gdx/defrender
   (try
     (when (and debug-ui?
@@ -99,8 +98,7 @@
           frame-time (frame/frame-time delta fps)
           frame (frame/frame g display frame-time)]
       (update-gstate! frame input)
-      (gdx/using-camera gdx/default-camera
-        (draw/ui! g))
+      (draw/ui! g)
       (draw/string! {:fps fps} 0 0 800 64 {:font gdx/default-font}))
     (catch Throwable e
       (error e)

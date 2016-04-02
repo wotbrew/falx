@@ -5,6 +5,10 @@
   {:type :event/multi
    :events coll})
 
+(defn multi?
+  [event]
+  (= (:type event) :event/multi))
+
 (defn display-changed
   [old-display display]
   {:type :event/display-changed
@@ -51,6 +55,20 @@
       :button button}
      {:type [:event/button-hit button]
       :button button}]))
+
+(defn ui-actor-clicked
+  [actor]
+  (multi
+    [{:type :event/ui-actor-clicked
+      :actor actor}
+     {:type [:event/ui-actor-clicked (:type actor)]
+      :actor actor}]))
+
+(defn world-clicked
+  [point]
+  {:type :event/world-clicked
+   :point point
+   :debug? true})
 
 (defn key-pressed
   [key]

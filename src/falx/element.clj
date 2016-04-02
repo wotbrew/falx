@@ -46,8 +46,14 @@
    :coll coll})
 
 (defn on-hover
+  ([not-hovering hovering]
+    (on-hover not-hovering hovering (:rect not-hovering)))
   ([not-hovering hovering rect]
    {:type :element/on-hover
     :rect rect
     :hovering hovering
     :not-hovering not-hovering}))
+
+(defn hover-box
+  [rect]
+  (on-hover (box rect) (highlighted-box rect)))

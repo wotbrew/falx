@@ -20,12 +20,26 @@
 
 (defn get-player-panel
   [g a x y]
-  {:id (player-panel-id (:player a))
-   :type ::player-panel
-   :elements [(e/on-hover (e/box [x y player-panel-width player-panel-height])
-                          (e/highlighted-box [x y player-panel-width player-panel-height])
-                          [x y player-panel-width player-panel-height])
-              (e/actor (:id a) [x (+ y 3) 64 64])]})
+  (let [w player-panel-width
+        h player-panel-height
+        player (:player a)
+        id (player-panel-id player)]
+    {:id id
+     :type ::player-panel
+     :player player
+     :ui-rect [x y w h]
+     :elements [(e/hover-box [x y w h])
+                (e/actor (:id a) [x (+ y 3) 64 64])]
+
+     ;;handles
+     [:handles? [:event/ui-actor-clicked ::player-panel]] true}))
+
+(defmethod g/handle [::player-panel [:event/ui-actor-clicked ::player-panel]]
+  [g a _]
+  (if-some [id (first (g/iquery g :player (:player a)))]
+    (do
+      (g/update-attr g id :selected? not))
+    g))
 
 (defn get-player-panels
   [g x y]
@@ -43,10 +57,12 @@
 
 (defn get-player-info-panel
   [g a x y]
-  (let [id (:id a)]
+  (let [id (:id a)
+        w player-info-panel-width
+        h player-panel-height]
     {:id (player-info-panel-id (:player a))
      :type ::player-info
-     :elements [(e/box [x y player-info-panel-width player-panel-height])]}))
+     :elements [(e/hover-box [x y w h])]}))
 
 (defn get-player-info-panels
   [g x y]
