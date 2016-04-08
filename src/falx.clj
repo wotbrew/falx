@@ -3,7 +3,6 @@
             [falx.game :as g]
             [falx.frame :as frame]
             [falx.input :as input]
-            [falx.world :as world]
             [clojure.tools.logging :refer [error info debug]]
             [falx.io
              [draw :as draw]
@@ -43,16 +42,21 @@
                 (g/add-actor {:id      0
                               :type :actor/creature
                               :name    "fred"
-                              :player? true
                               :player  0})
-                (world/set-pos 0 (pos/cell [4 4] :testing))
+                (g/set-cell 0 (pos/cell [4 4] :testing))
 
                 (g/add-actor {:id      1
                               :type :actor/creature
                               :name    "bob"
-                              :player? true
                               :player  1})
-                (world/set-pos 1 (pos/cell [6 5] :testing)))]
+                (g/set-cell 1 (pos/cell [6 5] :testing))
+
+
+                (g/add-actor {:id      2
+                              :type :actor/creature
+                              :name    "ethel"
+                              :player  2})
+                (g/set-cell 2 (pos/cell [1 2] :testing2)))]
       (g/add-actor-coll
         g
         (get-screen g)))
@@ -68,7 +72,6 @@
                    (let [events (:events g)]
                      (deliver p events)
                      (assoc g :events []))))
-    (await gstate)
     (future (run! debug/event! @p))))
 
 (defn serve-requests!
@@ -78,7 +81,6 @@
                    (let [requests (:requests g)]
                      (deliver p requests)
                      (assoc g :requests []))))
-    (await gstate)
     (future (doseq [req @p]
               (send gstate g/respond req (p/-get-response req))))))
 
@@ -94,6 +96,8 @@
 
 (gdx/defrender
   (try
+    (when (zero? (mod (gdx/get-frame-id) 30))
+      (await gstate))
     (when (and debug-ui?
                (zero? (mod (gdx/get-frame-id) 15)))
       (send gstate #(g/add-actor-coll % (get-screen %))))

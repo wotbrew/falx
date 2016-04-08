@@ -47,7 +47,8 @@
      [:handles? [:event/key-pressed :s]] true
      [:handles? [:event/key-pressed :d]] true
 
-     [:handles? [:event/actor-clicked ::panel]] true}))
+     [:handles? [:event/actor-clicked ::panel]] true
+     [:handles? [:event/actor-clicked :actor/creature]] true}))
 
 (def camera-speed
   100)
@@ -96,6 +97,10 @@
                                   (map event/actor-clicked)
                                   (g/get-at g cell))
                             (reduce g/publish g))))))))
+
+(defmethod g/handle [::panel [:event/actor-clicked :actor/creature]]
+  [g _ {:keys [actor]}]
+  (g/select-only g (:id actor)))
 
 (defn get-actors
   [g sw sh]

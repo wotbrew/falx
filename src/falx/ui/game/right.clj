@@ -1,7 +1,5 @@
 (ns falx.ui.game.right
   (:require [falx.game :as g]
-            [falx.ui :as ui]
-            [falx.rect :as rect]
             [falx.element :as e]))
 
 (defn get-rect
@@ -36,8 +34,9 @@
 
 (defmethod g/handle [::player-panel [:event/actor-clicked ::player-panel]]
   [g a _]
-  (if-some [a (g/get-player g (::player a))]
-    (g/update-attr g (:id a) :selected? not)
+  (if-let [a (and (g/contains-mouse? g (:ui-rect a))
+                  (g/get-player g (::player a)))]
+    (g/select-only g (:id a))
     g))
 
 (defn get-player-panels
