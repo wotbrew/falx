@@ -48,7 +48,8 @@
      [:handles? [:event/key-pressed :d]] true
 
      [:handles? [:event/actor-clicked ::panel]] true
-     [:handles? [:event/actor-clicked :actor/creature]] true}))
+     [:handles? [:event/actor-clicked :actor/creature]] true
+     [:handles? [:event/actor-clicked :actor/terrain]] true}))
 
 (def camera-speed
   100)
@@ -83,6 +84,15 @@
   [g _ _]
   (move-camera g 1 0))
 
+(defn get-world-click-events
+  [g point]
+  (let [level-point (point/idiv point (g/get-cell-size g))
+        cell (pos/cell level-point (g/get-selected-level g))]
+    (concat
+     [(event/world-clicked point)
+      (event/cell-clicked point)]
+     (map event/actor-clicked (g/get-at g cell)))))
+
 (defmethod g/handle [::panel [:event/actor-clicked ::panel]]
   [g actor _]
   (let [camera (get-camera g)]
@@ -90,17 +100,21 @@
                    (-get-response [this]
                      (camera/get-world-point camera (g/get-mouse-point g)))
                    (-respond [this g point]
-                     (let [level-point (point/idiv point (g/get-cell-size g))
-                           cell (pos/cell level-point (g/get-selected-level g))]
-                       (->> (into [(event/world-clicked point)
-                                   (event/cell-clicked cell)]
-                                  (map event/actor-clicked)
-                                  (g/get-at g cell))
-                            (reduce g/publish g))))))))
+                     (->> (get-world-click-events g point)
+                          (reduce g/publish g)))))))
 
 (defmethod g/handle [::panel [:event/actor-clicked :actor/creature]]
   [g _ {:keys [actor]}]
   (g/select-only g (:id actor)))
+
+(defmethod g/handle [::panel [:event/actor-clicked :actor/terrain]]
+  [g _ {:keys [actor]}]
+  (if (:solid? actor)
+    g
+    (let [cell (:cell actor)
+          selected (g/get-selected g)]
+      ;;do stuff
+      g)))
 
 (defn get-actors
   [g sw sh]

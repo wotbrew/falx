@@ -200,7 +200,6 @@
   ([g id m & more]
    (reduce #(merge-actor %1 id %2) g (cons m more))))
 
-
 (defn add-actor
   ([g a]
    (add-actor g (or (:id a) (inc (:max-id g -1))) a))
@@ -215,8 +214,10 @@
          (merge-actor id m)))))
 
 (defn add-actor-coll
-  [g acoll]
-  (reduce add-actor g acoll))
+  ([g acoll]
+   (reduce add-actor g acoll))
+  ([g acoll & more]
+   (reduce add-actor-coll g (cons acoll more))))
 
 (defn update-actor
   ([g id f]

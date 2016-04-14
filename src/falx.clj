@@ -1,5 +1,6 @@
 (ns falx
   (:require [clj-gdx :as gdx]
+            [falx.actor :as a]
             [falx.game :as g]
             [falx.frame :as frame]
             [falx.input :as input]
@@ -36,30 +37,46 @@
                            (-> g :display :size (or default-screen-size) first)
                            (-> g :display :size (or default-screen-size) second))))
 
+(def id-seed (atom -1))
+
+(defn id
+  []
+  (swap! id-seed inc))
+
 (def gstate
   (agent
     (let [g (-> (g/game sub-input/subm sub-ui/subm)
-                (g/add-actor {:id      0
+                (g/add-actor {:id     (id)
                               :type :actor/creature
                               :name    "fred"
+                              :layer :creature
                               :player  0})
                 (g/set-cell 0 (pos/cell [4 4] :testing))
 
-                (g/add-actor {:id      1
+                (g/add-actor {:id      (id)
                               :type :actor/creature
                               :name    "bob"
+                              :layer :creature
                               :player  1})
                 (g/set-cell 1 (pos/cell [6 5] :testing))
 
 
-                (g/add-actor {:id      2
+                (g/add-actor {:id      (id)
                               :type :actor/creature
                               :name    "ethel"
+                              :layer :creature
                               :player  2})
                 (g/set-cell 2 (pos/cell [1 2] :testing2)))]
       (g/add-actor-coll
         g
-        (get-screen g)))
+        (get-screen g)
+        (for [x (range 0 32)
+              y (range 0 32)]
+          (-> {:id (id)
+               :type :actor/terrain
+               :name "Floor"
+               :layer :floor}
+              (a/set-cell (pos/cell [x y] :testing))))))
     :error-handler
     (fn [a exc]
       (error exc))

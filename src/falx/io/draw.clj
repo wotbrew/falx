@@ -1,6 +1,7 @@
 (ns falx.io.draw
   "Drawing functions"
   (:require [clj-gdx :as gdx]
+            [falx.position :as pos]
             [falx.size :as size]
             [falx.sprite :as sprite]
             [gdx.color :as color]
@@ -163,11 +164,19 @@
 (defmethod actor! :default
   [g a x y w h])
 
+(defmethod actor! :actor/terrain
+  [g a x y w h]
+  (string! "_" x y w h))
+
 (defmethod actor! :actor/creature
   [g a x y w h]
   (when (:selected? a)
     (sprite! sprite/selection x y w h {:color color/green}))
   (sprite! sprite/human-male x y w h))
+
+(def layers
+  [:floor
+   :creature])
 
 (defn world!
   [g x y w h cw ch]
@@ -182,7 +191,9 @@
         xr (+ x w 32)
         yr (+ y h 32)
         level (g/get-selected-level g)]
-    (doseq [a (g/query g :level level)
+    (doseq [layer layers
+            :let [slice (pos/slice layer level)]
+            a (g/query g :slice slice)
             :let [point (:point a)]
             :when point
             :let [[wx wy] point

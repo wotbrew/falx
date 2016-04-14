@@ -6,7 +6,7 @@
   (assoc a :cell cell
            :point (:point cell)
            :level (:level cell)
-           :slice (pos/slice (:layer a) cell)))
+           :slice (pos/slice (:layer a) (:level cell))))
 
 (defn rem-cell
   [a]

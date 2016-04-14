@@ -64,7 +64,8 @@
 (defn cell-clicked
   [cell]
   {:type :event/cell-clicked
-   :cell cell})
+   :cell cell
+   :debug? true})
 
 (defn actor-clicked
   [actor]
