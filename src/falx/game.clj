@@ -5,7 +5,8 @@
             [clojure.set :as set]
             [falx.frame :as frame]
             [falx.rect :as rect]
-            [falx.actor :as a]))
+            [falx.actor :as a]
+            [falx.point :as point]))
 
 (defn add-subm
   "Adds a subscriber map (map of kind -> [subfn]) to the game"
@@ -104,6 +105,11 @@
   "Returns the game actor given by the `id`."
   [g id]
   (-> g :eav (get id)))
+
+(defn exists?
+  "Returns true if the actor exists."
+  [g id]
+  (contains? (:eav g) id))
 
 (defn get-attr
   "Returns the attribute `k` of the actor given by `id`."
@@ -351,6 +357,10 @@
   [g]
   (query g :selected? true))
 
+(defn get-selected-ids
+  [g]
+  (iquery g :selected? true))
+
 (defn get-fselected
   [g]
   (first (get-selected g)))
@@ -387,3 +397,36 @@
 (defn rem-cell
   [g id]
   (update-actor g id a/rem-cell))
+
+(defn obstructed?
+  [g id cell]
+  (let [a (get-actor g id)]
+    (some #(a/obstructs? a %) (get-at g cell))))
+
+(defn teleport
+  [g id cell]
+  (if (obstructed? g id cell)
+    g
+    (set-cell g id cell)))
+
+(defn step-to
+  [g id cell]
+  (if (obstructed? g id cell)
+    g
+    g))
+
+(defn walk-to
+  [g id cell]
+  (let [a (get-actor g id)]
+    (if-not (a/can-walk? a)
+      g
+      (-> (update-actor g id a/walk-to cell)
+          (request (reify p/IRequest
+                     (-get-response [this]
+                       (point/get-a*-path (constantly true) (:point a) (:point cell)))
+                     (-respond [this g response]
+                       (if (a/walking-to? (get-actor g id) cell)
+                         (update-actor g id assoc
+                                       :path response
+                                       :activity :walking)
+                         g))))))))

@@ -49,7 +49,10 @@
 
      [:handles? [:event/actor-clicked ::panel]] true
      [:handles? [:event/actor-clicked :actor/creature]] true
-     [:handles? [:event/actor-clicked :actor/terrain]] true}))
+     [:handles? [:event/actor-clicked :actor/terrain]] true
+
+     [:handles? [:event/actor-queried ::panel]] true
+     [:handles? [:event/actor-queried :actor/creature]] true}))
 
 (def camera-speed
   100)
@@ -103,6 +106,29 @@
                      (->> (get-world-click-events g point)
                           (reduce g/publish g)))))))
 
+(defn get-world-queried-events
+  [g point]
+  (let [level-point (point/idiv point (g/get-cell-size g))
+        cell (pos/cell level-point (g/get-selected-level g))]
+    (map event/actor-queried (g/get-at g cell))))
+
+(defmethod g/handle [::panel [:event/actor-queried ::panel]]
+  [g actor _]
+  (let [camera (get-camera g)]
+    (g/request g (reify p/IRequest
+                   (-get-response [this]
+                     (camera/get-world-point camera (g/get-mouse-point g)))
+                   (-respond [this g point]
+                     (->> (get-world-queried-events g point)
+                          (reduce g/publish g)))))))
+
+(defmethod g/handle [::panel [:event/actor-queried :actor/creature]]
+  [g _ {:keys [actor]}]
+  (println "--------")
+  (require 'clojure.pprint)
+  (clojure.pprint/pprint actor)
+  g)
+
 (defmethod g/handle [::panel [:event/actor-clicked :actor/creature]]
   [g _ {:keys [actor]}]
   (g/select-only g (:id actor)))
@@ -111,10 +137,7 @@
   [g _ {:keys [actor]}]
   (if (:solid? actor)
     g
-    (let [cell (:cell actor)
-          selected (g/get-selected g)]
-      ;;do stuff
-      g)))
+    (reduce #(g/walk-to %1 %2 (:cell actor)) g (g/get-selected-ids g))))
 
 (defn get-actors
   [g sw sh]

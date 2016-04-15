@@ -1,5 +1,6 @@
 (ns falx.actor
-  (:require [falx.position :as pos]))
+  (:require [falx.position :as pos]
+            [falx.util :as util]))
 
 (defn set-cell
   [a cell]
@@ -37,3 +38,25 @@
 (defn toggle-selection
   [a]
   (update a :selected? (comp boolean not)))
+
+(defn obstructs?
+  [a1 a2]
+  (and (:solid? a1) (:solid? a2)))
+
+(defn path-to
+  [a cell]
+  (assoc a :pathing-to cell
+           :activity :pathing))
+
+(defn walk-to
+  [a cell]
+  (-> (dissoc a :path)
+      (path-to cell)))
+
+(defn walking-to?
+  [a cell]
+  (= (:walking-to a) cell))
+
+(defn can-walk?
+  [a]
+  (some? (:cell a)))

@@ -64,8 +64,7 @@
 (defn cell-clicked
   [cell]
   {:type :event/cell-clicked
-   :cell cell
-   :debug? true})
+   :cell cell})
 
 (defn actor-clicked
   [actor]
@@ -73,6 +72,14 @@
     [{:type :event/actor-clicked
       :actor actor}
      {:type [:event/actor-clicked (:type actor)]
+      :actor actor}]))
+
+(defn actor-queried
+  [actor]
+  (multi
+    [{:type :event/actor-queried
+      :actor actor}
+     {:type [:event/actor-queried (:type actor)]
       :actor actor}]))
 
 (defn key-pressed

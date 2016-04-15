@@ -36,4 +36,8 @@
                 :let [[x y w h] (:ui-rect a)]
                 :when (g/contains-mouse? g x y w h)]
             (event/actor-clicked a))
+    :right (for [a (g/having g :ui-rect)
+                 :let [[x y w h] (:ui-rect a)]
+                 :when (g/contains-mouse? g x y w h)]
+             (event/actor-queried a))
     []))
