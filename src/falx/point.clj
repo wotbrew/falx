@@ -1,11 +1,11 @@
 (ns falx.point
-  (:import (java.util HashSet PriorityQueue)))
+  (:import (java.util HashSet PriorityQueue ArrayDeque)))
 
 (defn ipoint
   ([point]
-    (mapv int point))
+   (mapv int point))
   ([x y]
-    [(int x) (int y)]))
+   [(int x) (int y)]))
 
 (defn dpoint
   ([point]
@@ -141,6 +141,12 @@
   ([x y]
    (map #(add % x y) directions)))
 
+(defn get-cardinal-adjacent
+  ([[x y]]
+   (get-cardinal-adjacent x y))
+  ([x y]
+   (map #(add % x y) cardinal-directions)))
+
 (defn adjacent?
   ([[x y] [x2 y2]]
    (adjacent? x y x2 y2))
@@ -170,6 +176,23 @@
   ([x y x2 y2]
    [(compare x2 x)
     (compare y2 y)]))
+
+(defn flood
+  ([point]
+   (let [queue (ArrayDeque.)
+         set (HashSet.)]
+     (.add queue point)
+     (.add set point)
+     ((fn ! []
+        (when (pos? (.size queue))
+          (let [n (.poll queue)]
+            (doseq [a (get-cardinal-adjacent n)]
+              (when (.add set a)
+                (.add queue a)))
+            (lazy-seq
+              (cons n (!)))))))))
+  ([x y]
+   (flood [x y])))
 
 ;; =========
 ;; PATHING
