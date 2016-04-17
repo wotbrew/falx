@@ -1,4 +1,6 @@
 (ns falx.db
+  "An implementation of an entity database, useful for indexing arbitrary attributes
+  and querying them."
   (:require [clojure.set :as set]))
 
 (defn- disjoc
@@ -58,6 +60,8 @@
    (query db (into {k v} (partition 2 kvs)))))
 
 (defn add-entity
+  "Adds or replaces an entity in the database.
+  Returns the new db."
   ([db entity]
    (let [id (:id entity)
          existing (get-entity db id)
@@ -77,7 +81,8 @@
   ([db entity & more]
    (reduce add-entity (add-entity db entity) more)))
 
-(defn delete-entity
+(defn remove-entity
+  "Removes the entity from the db. Returns the new db."
   ([db id]
    (if-some [existing (get-entity db id)]
      (let [ave (reduce-kv (fn [ave k v]
@@ -87,9 +92,11 @@
        (-> (dissoc-in db [:eav id])
            (assoc :ave ave)))))
   ([db id & more]
-   (reduce delete-entity (delete-entity db id) more)))
+   (reduce remove-entity (remove-entity db id) more)))
 
 (defn update-entity
+  "Apples `f` and any `args` to the entity given by `id`.
+  Returns the new db."
   ([db id f]
    (if-some [existing (get-entity db id)]
      (add-entity db (f existing))
@@ -98,6 +105,7 @@
    (update-entity db id #(apply f % args))))
 
 (defn db
+  "Creates a new db, optionally initializing with the given entity collection `ecoll`."
   ([]
    {:eav {}
     :ave {}})
