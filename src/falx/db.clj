@@ -146,10 +146,10 @@
          (merge-entity id m)))))
 
 (defn add-entity-coll
-  ([g acoll]
-   (reduce add-entity g acoll))
-  ([g acoll & more]
-   (reduce add-entity-coll g (cons acoll more))))
+  ([g ecoll]
+   (reduce add-entity g ecoll))
+  ([g ecoll & more]
+   (reduce add-entity-coll g (cons ecoll more))))
 
 (defn update-entity
   ([g id f]
@@ -158,3 +158,9 @@
      g))
   ([g id f & args]
    (update-entity g id #(apply f % args))))
+
+(defn db
+  ([]
+   {})
+  ([ecoll]
+   (add-entity-coll (db) ecoll)))
