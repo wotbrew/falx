@@ -64,11 +64,18 @@
   ([db k v & kvs]
    (query db (into {k v} (partition 2 kvs)))))
 
+(defn- incr-id
+  [db]
+  (update db :id (fnil inc -1)))
+
 (defn add-entity
   "Adds or replaces an entity in the database.
   Returns the new db."
   ([db entity]
    (let [id (:id entity)
+         db (if id db (incr-id db))
+         id (or id (:id db 0))
+         entity (assoc entity :id id)
          existing (get-entity db id)
          ave (as-> (:ave db) ave
                    (reduce-kv (fn [ave k v]
