@@ -29,6 +29,11 @@
 (def ^:private set-conj
   (fnil conj #{}))
 
+(defn get-all
+  "Returns a seq of all the entities in the db."
+  [db]
+  (-> db :eav vals))
+
 (defn get-entity
   "Returns the entity given by the `id`."
   [db id]
