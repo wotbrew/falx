@@ -1,139 +1,70 @@
-{:settings {:binds {[:button/left]
-                    [[:replace-selection #{:focused :focused-ui-player}]
-                     [:attack :fselected :focused]]
-                    [:button/left :key.pressed/shift-left]
-                    [[:remove-from-selection #{:focused}]
-                     [:add-to-selection #{:focused :focused-ui-player}]]
+{:binds {:global {:button.hit/left :click
+                  :button.hit/right :alt-click
 
-                    [:key.pressed/w] [:move-cam :up 1.0]
-                    [:key.pressed/a] [:move-cam :left 1.0]
-                    [:key.pressed/s] [:move-cam :down 1.0]
-                    [:key.pressed/d] [:move-cam :right 1.0]
+                  :key.pressed/shift-left :modifer
+                  :key.pressed/shift-right :modifier}
 
-                    [:key.pressed/w :key.pressed/shift-left] [:move-cam :up 2.5]
-                    [:key.pressed/a :key.pressed/shift-left] [:move-cam :left 2.5]
-                    [:key.pressed/s :key.pressed/shift-left] [:move-cam :down 2.5]
-                    [:key.pressed/d :key.pressed/shift-left] [:move-cam :right 2.5]}
+         :game {:click {:modifier :toggle-select
+                        :else [:select
+                               :move]}
+                :alt-click :describe
+                :key.pressed/w {:modifier :cam-up-fast
+                                :else :cam-up}
+                :key.pressed/a {:modifier :cam-left-fast
+                                :else :cam-left}
+                :key.pressed/s {:modifier :cam-down-fast
+                                :else :cam-down}
+                :key.pressed/d {:modifier :cam-right-fast
+                                :else :cam-right}}}
 
-            :display {:cell-size [32 32]
-                      :screen-size [1024 768]
-                      :vsync? true
-                      :max-fps 0}}
+ :display {:cell-size [32 32]
+           :screen-size [1024 768]
+           :vsync? true
+           :max-fps 0}
 
- :entities {32 {}}
+ :world {:things {0 {:name "Fred"
+                     :gender :male
+                     :race :human}}
+         :solid-index {}
+         :opaque-index {}
+         :space {:eav {}
+                 :ave {}}}
 
- :skills {:fire-breathing {:name "Fire Breathing"
-                           :requires {:abilities #{:fire-breath}}
-                           :base 0
-                           :cost 250}}
+ ;; :real, :player, :ai
+ :time :ai
 
- :traits {:tough-skin
-          {:name "Tough Skin"
-           :descr ""
-           :hp 120
-           :dr {:phys 24}}
-          :sword-sister
-          {:name "Sword Sister"
-           :requires {:gender :female
-                      :attributes {:str [:>= 9]}}
-           :ap 1}}
+ :player {:ids #{0, 1, 2, 3}
+          :sorted-ids [0 1 2 3]
+          :selected #{0, 1}}
 
- :abilities {:fire-breath
-             {:name "Fire Breath"
-              :descr ""
-              :short-descr ""
-              :effects [{:area {:type :cone
-                                :length 5}
-                         :global {:sound :fire}
-                         :cells {:animation :fire}
-                         :enemies {:damage {:fire [[:*
-                                                    [:/ 1 [:distance :origin :target]]
-                                                    [:+ 30 [:* 0.4 [:skill :fire-breathing :origin]]]]
-                                                   [:*
-                                                    [:/ 1 [:distance :origin :target]]
-                                                    [:+ 64 [:* 1.0 [:skill :fire-breathing :origin]]]]]}}
-                         :origin {:damage {:fire {:min [:+ 3 [:* 0.04 [:skill :fire-breathing :origin]]]
-                                                  :max [:+ 6 [:* 0.1 [:skill :fire-breathing :origin]]]}}}}]
-              :requires {:ap [:<= 3]}
-              :uses 1}}
+ ;;log contains a bunch of messages
+ ;;can subvec to look at a portion of it
+ :log ["Fred killed the witch!"]
 
- :races {:human {:name "Human"
-                 :genders #{:male :female}
-                 :sprites {:heads [:head1 :head2]
-                           :male :human-male
-                           :female :human-female}
-                 :attributes {:str {:min 3
-                                    :max 10}
-                              :dex {:min 3
-                                    :max 10}
-                              :agi {:min 3
-                                    :max 10}
-                              :vit {:min 3
-                                    :max 10}
-                              :int {:min 3
-                                    :max 10}
-                              :wis {:min 3
-                                    :max 10}
-                              :cha {:min 3
-                                    :max 10}
-                              :arc {:min 3
-                                    :max 10}
-                              :fai {:min 3
-                                    :max 10}}}
-         :draconi {:name "Draconi"
-                   :genders #{:male :female}
-                   :sprites {:heads []
-                             :male :draconi-male
-                             :female :draconi-female}
-                   :attributes {:str {:min 7
-                                      :max 14}
-                                :dex {:min 3
-                                      :max 5}
-                                :agi {:min 7
-                                      :max 14}
-                                :vit {:min 7
-                                      :max 14}
-                                :int {:min 1
-                                      :max 4}
-                                :wis {:min 2
-                                      :max 7}
-                                :cha {:min 3
-                                      :max 7}
-                                :arc {:min 3
-                                      :max 5}
-                                :fai {:min 30
-                                      :max 5}}
-                   :traits #{:tough-skin}
-                   :abilities #{:fire-breath}}}
+ ;;use a stack so we can have a 'back button'
+ :screen [:menu :game :inventory]
 
- :roster {0 {:name "Fred"
-             :gender :male
-             :race :human
-             :sprites {:head :head1
-                       :body :human-male}
-             :equipment {:quiver [{:type :bullet
-                                   :sprites {:inventory :bullet
-                                             :world :bullet}
-                                   :enchantment [:minor-fire]
-                                   :quantity 60}]
-                         :armor [{:type :splint-mail
-                                  :sprites {:inventory :splint-mail
-                                            :world :splint-mail
-                                            :equipped :splint-mail-equipped}}]}
-             :inventory {0 {:type :arrow
-                            :sprites {:inventory :arrow
-                                      :world :arrow}
-                            :quantity 32}}}
-          1 {:name "Ethel"
-             :gender :female
-             :race :draconi
-             :sprites {:body :draconi-female}
-             :traits {:sword-sister}}}}
+ ;;use state is a map of element id to m
+ :ui {:viewport {:camera {:point [552 431]}
+                 ;; map of layer to a map of id -> effect
+                 ;; effects are things like animations etc
+                 :effects {:creature {43 :fire
+                                      55 "Parried!"}}}
+      :mouse {:point [333 443]
+              :cell {:level
+                     :point [3 4]}}}
 
-(comment
-  :levels {"Limbo"
-           {:name "Limbo"
-            :infinite? true}
-           "Grass Test"
-           {:name "Grass Test"
-            :size [32 32]}})
+ ;; ai state for things in the world
+ :ai {0 {:activity :walking}}
+
+ ;;requests can be made to other subsystems here
+ ;;the actions can be interpreted as functions game->game
+ ;;or passed out to other modules as IO events
+ :actions {;; these are executed/applied at end of frame
+           ;; then removed
+           :immediate [{:type :play-sound
+                        :sound :bla}]
+           ;;sorted map of actions to execute
+           ;;at the given time
+           :at-time {3244 {:type :remove-effect
+                           :id 3}}}}
