@@ -5,7 +5,8 @@
   An identity can map to any thing, but maps are given special treatment.
   A map is placable in space by its `:cell`. It can have the properties `:solid?` and `:opaque?`.
   An other abitrary keys are accepted, but the above are specially indexed for efficient query."
-  (:require [falx.space :as space]))
+  (:require [falx.space :as space]
+            [falx.point :as point]))
 
 (defn- disjoc
   [m k v]
@@ -113,6 +114,20 @@
              (valid-cell? w id v cell))
        v
        (assoc v :cell (get-nearest-valid-cell w v cell))))))
+
+;; ===
+;; Pathing
+
+(defn path
+  "Finds a path from the thing to the cell."
+  [w id cell]
+  (when-some [v (get-thing w id)]
+    (when-some [ocell (:cell v)]
+      (let [level (:level cell)
+            walkable? (if (:solid? v)
+                        #(not (solid-at? w level %))
+                        (constantly true))]
+        (point/get-a*-path walkable? (:point ocell) (:point cell))))))
 
 ;; ===
 ;; Changing things
