@@ -29,16 +29,6 @@
 (def ^:private set-conj
   (fnil conj #{}))
 
-(defn get-all-ids
-  "Returns a seq of all the entity ids in the db."
-  [db]
-  (-> db :eav keys))
-
-(defn get-all
-  "Returns a seq of all the entities in the db."
-  [db]
-  (-> db :eav vals))
-
 (defn get-entity
   "Returns the entity given by the `id`."
   [db id]
@@ -52,6 +42,8 @@
 (defn iquery
   "Returns all the entity ids having the attribute `k` with the value `v`.
   If multiple pairs (or a map) is supplied, intersects all entity ids that meet each kv pair."
+  ([db]
+   (keys (:eav db)))
   ([db m]
    (reduce-kv #(set/intersection %1 (iquery db %2 %3)) #{} m))
   ([db k v]
@@ -62,6 +54,8 @@
 (defn query
   "Returns all entities having the attribute `k` with the value `v`.
   If multiple pairs (or a map) is supplied, intersects all entity ids that meet each kv pair."
+  ([db]
+   (vals (:eav db)))
   ([db m]
    (map #(get-entity db %) (iquery db m)))
   ([db k v]

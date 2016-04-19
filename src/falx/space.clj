@@ -63,13 +63,17 @@
   [space id]
   (:cell (get-object space id)))
 
-(defn get-all
-  "Returns all the identities in space or any subset thereof.
+(defn query
+  "Returns all the identities in space or some subset thereof.
   `m` can contain keys {:level, :slice, :layer, :cell} to limit the search."
   ([space]
-   (db/get-all-ids space))
+   (db/iquery space))
   ([space m]
-   (db/iquery space m)))
+   (db/iquery space m))
+  ([space k v]
+   (db/iquery space k v))
+  ([space k v & kvs]
+   (apply db/iquery space k v kvs)))
 
 (def get-at
   "Returns the identities in the given cell."
