@@ -1,4 +1,4 @@
-(ns falx.io.draw
+(ns falx.draw
   "Drawing functions"
   (:require [clj-gdx :as gdx]
             [falx.size :as size]
