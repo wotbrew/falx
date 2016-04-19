@@ -36,6 +36,11 @@
   [w id]
   (-> w :things (get id)))
 
+(defn get-at
+  "Returns a seq of things at the given cell."
+  [w cell]
+  (map #(get-thing w %) (space/get-at (:space w) cell)))
+
 ;; ===
 ;; Solidness
 
@@ -118,7 +123,7 @@
 ;; ===
 ;; Pathing
 
-(defn path
+(defn get-path
   "Finds a path from the thing to the cell."
   [w id cell]
   (when-some [v (get-thing w id)]

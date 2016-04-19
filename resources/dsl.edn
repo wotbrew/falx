@@ -1,4 +1,4 @@
-{:binds {
+{:bind {
          ;;transforms are like indirection for certain keys,
          ;;so you can flip your mouse buttons etc, but a click can be used for binding
          ;;uniformally
@@ -73,13 +73,14 @@
  ;; ai state for things in the world
  :ai {0 {:activity :walking}}
 
- ;;requests can be made to other subsystems here
- ;;the actions can be interpreted as functions game->game
- ;;or passed out to other modules as IO events
+ ;;effects to be performed at the end of the frame
+ :effects [{:type :play-sound
+            :sound :bla}]
+
+ ;;actions to be performed at the end of the frame
  :actions {;; these are executed/applied at end of frame
            ;; then removed
-           :immediate [{:type :play-sound
-                        :sound :bla}]
+           :immediate []
            ;;sorted map of actions to execute
            ;;at the given time
            :at-time {3244 {:type :remove-effect
