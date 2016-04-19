@@ -75,6 +75,11 @@
   ([space k v & kvs]
    (apply db/iquery space k v kvs)))
 
+(defn at?
+  "Is the identity at the given cell."
+  [space id cell]
+  (= cell (get-cell space id)))
+
 (def get-at
   "Returns the identities in the given cell."
   (db/iquery-fn :cell))
