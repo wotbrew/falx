@@ -29,6 +29,11 @@
 (def ^:private set-conj
   (fnil conj #{}))
 
+(defn get-all-ids
+  "Returns a seq of all the entity ids in the db."
+  [db]
+  (-> db :eav keys))
+
 (defn get-all
   "Returns a seq of all the entities in the db."
   [db]
@@ -64,6 +69,18 @@
   ([db k v & kvs]
    (query db (into {k v} (partition 2 kvs)))))
 
+(defn query-fn
+  "Returns a function that given a db and val will return all entities where k = v."
+  [k]
+  (fn [db val]
+    (query db k val)))
+
+(defn iquery-fn
+  "Returns a function that given a db and val will return all entity ids where k = v."
+  [k]
+  (fn [db val]
+    (iquery db k val)))
+
 (defn- incr-id
   [db]
   (update db :id (fnil inc -1)))
@@ -76,7 +93,7 @@
          db (if id db (incr-id db))
          id (or id (:id db 0))
          entity (assoc entity :id id)
-         existing (entity db id)
+         existing (get-entity db id)
          ave (as-> (:ave db) ave
                    (reduce-kv (fn [ave k v]
                                 (if (= v (get entity k ::not-found))
