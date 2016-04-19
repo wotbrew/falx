@@ -1,26 +1,40 @@
-{:binds {:global {:button.hit/left :click
-                  :button.hit/right :alt-click
+{:binds {
+         ;;transforms are like indirection for certain keys,
+         ;;so you can flip your mouse buttons etc, but a click can be used for binding
+         ;;uniformally
+         :transforms {:button.hit/left :click
+                      :button.hit/right :alt-click
+                      :key.pressed/shift-left :modifer
+                      :key.pressed/shift-right :modifier}
 
-                  :key.pressed/shift-left :modifer
-                  :key.pressed/shift-right :modifier}
+         ;;these bindings apply anywhere
+         :global {:key.hit/esc :back}
 
-         :game {:click {:modifier :toggle-select
-                        :else [:select
-                               :move]}
-                :alt-click :describe
-                :key.pressed/w {:modifier :cam-up-fast
-                                :else :cam-up}
-                :key.pressed/a {:modifier :cam-left-fast
-                                :else :cam-left}
-                :key.pressed/s {:modifier :cam-down-fast
-                                :else :cam-down}
-                :key.pressed/d {:modifier :cam-right-fast
-                                :else :cam-right}}}
+         ;;these bindings apply if the current screen is active
+         ;;regardless of any additional context
+         :screen {:game {:key.pressed/w {:modifier :cam-up-fast
+                                         :else :cam-up}
+                         :key.pressed/a {:modifier :cam-left-fast
+                                         :else :cam-left}
+                         :key.pressed/s {:modifier :cam-down-fast
+                                         :else :cam-down}
+                         :key.pressed/d {:modifier :cam-right-fast
+                                         :else :cam-right}}}
+
+         ;;these bindings apply only if the given context ;;is active
+         :context {:game {:click {:modifier :toggle-select
+                                  :else [:select
+                                         :move]}
+                          :alt-click :describe}}}
 
  :display {:cell-size [32 32]
            :screen-size [1024 768]
            :vsync? true
            :max-fps 0}
+
+ :audio {:volume 1.0
+         :music-volume 1.0
+         :effect-volume 1.0}
 
  :world {:things {0 {:name "Fred"
                      :gender :male
@@ -41,8 +55,10 @@
  ;;can subvec to look at a portion of it
  :log ["Fred killed the witch!"]
 
+ ;;context can be resolved to a screen
+ ;;and used to determine what input is valid
  ;;use a stack so we can have a 'back button'
- :screen [:menu :game :inventory]
+ :context '(:casting :inventory :game :menu)
 
  ;;use state is a map of element id to m
  :ui {:viewport {:camera {:point [552 431]}
