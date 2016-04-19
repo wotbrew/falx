@@ -29,12 +29,12 @@
 (def ^:private set-conj
   (fnil conj #{}))
 
-(defn all
+(defn get-all
   "Returns a seq of all the entities in the db."
   [db]
   (-> db :eav vals))
 
-(defn entity
+(defn get-entity
   "Returns the entity given by the `id`."
   [db id]
   (-> db :eav (get id)))
@@ -58,9 +58,9 @@
   "Returns all entities having the attribute `k` with the value `v`.
   If multiple pairs (or a map) is supplied, intersects all entity ids that meet each kv pair."
   ([db m]
-   (map #(entity db %) (iquery db m)))
+   (map #(get-entity db %) (iquery db m)))
   ([db k v]
-   (map #(entity db %) (iquery db k v)))
+   (map #(get-entity db %) (iquery db k v)))
   ([db k v & kvs]
    (query db (into {k v} (partition 2 kvs)))))
 
@@ -96,7 +96,7 @@
 (defn delete
   "Removes the entity from the db. Returns the new db."
   ([db id]
-   (if-some [existing (entity db id)]
+   (if-some [existing (get-entity db id)]
      (let [ave (reduce-kv (fn [ave k v]
                             (disjoc-in ave [k v] id))
                           (:ave db)
@@ -110,7 +110,7 @@
   "Apples `f` and any `args` to the entity given by `id`.
   Returns the new db."
   ([db id f]
-   (if-some [existing (entity db id)]
+   (if-some [existing (get-entity db id)]
      (add db (f existing))
      db))
   ([db id f & args]
