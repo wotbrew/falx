@@ -1,14 +1,9 @@
 (ns falx.io.draw
   "Drawing functions"
   (:require [clj-gdx :as gdx]
-            [falx.position :as pos]
             [falx.size :as size]
             [falx.sprite :as sprite]
-            [gdx.color :as color]
-            [falx.game :as g]
-            [clojure.java.io :as io]
-            [falx.rect :as rect]
-            [gdx.camera :as camera])
+            [clojure.java.io :as io])
   (:import (clojure.lang IPersistentMap)))
 
 (def font
@@ -158,122 +153,3 @@
              (gdx/draw-sprite! sprite x y tw th context)
              (recur (+ y tw))))
          (recur (+ x th)))))))
-
-(defmulti actor! (fn [g a x y w h] (:type a)))
-
-(defmethod actor! :default
-  [g a x y w h])
-
-(defmethod actor! :actor/terrain
-  [g a x y w h]
-  (string! "_" x y w h))
-
-(defmethod actor! :actor/creature
-  [g a x y w h]
-  (when (:selected? a)
-    (sprite! sprite/selection x y w h {:color color/green}))
-  (sprite! sprite/human-male x y w h))
-
-(def layers
-  [:floor
-   :creature])
-
-(defn world!
-  [g x y w h cw ch]
-  (let [x (int x)
-        y (int y)
-        w (int w)
-        h (int h)
-        cw (int cw)
-        ch (int ch)
-        xl (- x 32)
-        yl (- y 32)
-        xr (+ x w 32)
-        yr (+ y h 32)
-        level (g/get-selected-level g)]
-    (doseq [layer layers
-            :let [slice (pos/slice layer level)]
-            a (g/query g :slice slice)
-            :let [point (:point a)]
-            :when point
-            :let [[wx wy] point
-                  wxp (* cw (int wx))
-                  wyp (* ch (int wy))]
-            :when (and (<= xl wxp xr)
-                       (<= yl wyp yr))]
-      (actor! g
-              a
-              wxp
-              wyp
-              cw
-              ch))))
-
-(defmulti ui-element!* (fn [g e x y w h] (:type e)))
-
-(defmethod ui-element!* :default
-  [g e x y w h])
-
-(defn ui-element!
-  [g e]
-  (let [[x y w h] (:rect e)]
-    (ui-element!* g e x y w h)))
-
-(defmethod ui-element!* :element/sprite
-  [g e x y w h]
-  (sprite! (:sprite e) x y w h))
-
-(defmethod ui-element!* :element/backing
-  [g e x y w h]
-  (sprite! sprite/pixel x y w h {:color color/black}))
-
-(def box-context
-  {:color color/light-gray})
-
-(defmethod ui-element!* :element/box
-  [g e x y w h]
-  (box! x y w h box-context))
-
-(def highlighted-box-context
-  {:color color/yellow})
-
-(defmethod ui-element!* :element/highlighted-box
-  [g e x y w h]
-  (box! x y w h highlighted-box-context))
-
-(defmethod ui-element!* :element/actor
-  [g e x y w h]
-  (when-some [a (g/get-actor g (:id e))]
-    (actor! g a x y w h)))
-
-(defmethod ui-element!* :element/viewport
-  [g e x y w h]
-  (let [cam (:camera e gdx/default-camera)
-        [cx cy] (camera/get-world-point cam x y)
-        [cw ch] (g/get-cell-size g)]
-    (gdx/using-camera
-      cam
-      (world! g cx cy w h cw ch))))
-
-(defmethod ui-element!* :element/on-hover
-  [g e x y w h]
-  (if (g/contains-mouse? g x y w h)
-    (ui-element! g (:hovering e))
-    (ui-element! g (:not-hovering e))))
-
-(defmethod ui-element!* :element/many
-  [g e _ _ _ _]
-  (run! #(ui-element! g %) (:coll e)))
-
-(defn ui!
-  ([g]
-   (run! #(ui! g %) (g/query g :ui-root? true)))
-  ([g a]
-   (doseq [e (let [els (:elements a)]
-               (if (map? els)
-                 (vals els)
-                 els))]
-     (ui-element! g e))
-   (doseq [c (:ui-children a)
-           :let [child (g/get-actor g c)]
-           :when child]
-     (ui! g child))))

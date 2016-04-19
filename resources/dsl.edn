@@ -1,0 +1,139 @@
+{:settings {:binds {[:button/left]
+                    [[:replace-selection #{:focused :focused-ui-player}]
+                     [:attack :fselected :focused]]
+                    [:button/left :key.pressed/shift-left]
+                    [[:remove-from-selection #{:focused}]
+                     [:add-to-selection #{:focused :focused-ui-player}]]
+
+                    [:key.pressed/w] [:move-cam :up 1.0]
+                    [:key.pressed/a] [:move-cam :left 1.0]
+                    [:key.pressed/s] [:move-cam :down 1.0]
+                    [:key.pressed/d] [:move-cam :right 1.0]
+
+                    [:key.pressed/w :key.pressed/shift-left] [:move-cam :up 2.5]
+                    [:key.pressed/a :key.pressed/shift-left] [:move-cam :left 2.5]
+                    [:key.pressed/s :key.pressed/shift-left] [:move-cam :down 2.5]
+                    [:key.pressed/d :key.pressed/shift-left] [:move-cam :right 2.5]}
+
+            :display {:cell-size [32 32]
+                      :screen-size [1024 768]
+                      :vsync? true
+                      :max-fps 0}}
+
+ :entities {32 {}}
+
+ :skills {:fire-breathing {:name "Fire Breathing"
+                           :requires {:abilities #{:fire-breath}}
+                           :base 0
+                           :cost 250}}
+
+ :traits {:tough-skin
+          {:name "Tough Skin"
+           :descr ""
+           :hp 120
+           :dr {:phys 24}}
+          :sword-sister
+          {:name "Sword Sister"
+           :requires {:gender :female
+                      :attributes {:str [:>= 9]}}
+           :ap 1}}
+
+ :abilities {:fire-breath
+             {:name "Fire Breath"
+              :descr ""
+              :short-descr ""
+              :effects [{:area {:type :cone
+                                :length 5}
+                         :global {:sound :fire}
+                         :cells {:animation :fire}
+                         :enemies {:damage {:fire [[:*
+                                                    [:/ 1 [:distance :origin :target]]
+                                                    [:+ 30 [:* 0.4 [:skill :fire-breathing :origin]]]]
+                                                   [:*
+                                                    [:/ 1 [:distance :origin :target]]
+                                                    [:+ 64 [:* 1.0 [:skill :fire-breathing :origin]]]]]}}
+                         :origin {:damage {:fire {:min [:+ 3 [:* 0.04 [:skill :fire-breathing :origin]]]
+                                                  :max [:+ 6 [:* 0.1 [:skill :fire-breathing :origin]]]}}}}]
+              :requires {:ap [:<= 3]}
+              :uses 1}}
+
+ :races {:human {:name "Human"
+                 :genders #{:male :female}
+                 :sprites {:heads [:head1 :head2]
+                           :male :human-male
+                           :female :human-female}
+                 :attributes {:str {:min 3
+                                    :max 10}
+                              :dex {:min 3
+                                    :max 10}
+                              :agi {:min 3
+                                    :max 10}
+                              :vit {:min 3
+                                    :max 10}
+                              :int {:min 3
+                                    :max 10}
+                              :wis {:min 3
+                                    :max 10}
+                              :cha {:min 3
+                                    :max 10}
+                              :arc {:min 3
+                                    :max 10}
+                              :fai {:min 3
+                                    :max 10}}}
+         :draconi {:name "Draconi"
+                   :genders #{:male :female}
+                   :sprites {:heads []
+                             :male :draconi-male
+                             :female :draconi-female}
+                   :attributes {:str {:min 7
+                                      :max 14}
+                                :dex {:min 3
+                                      :max 5}
+                                :agi {:min 7
+                                      :max 14}
+                                :vit {:min 7
+                                      :max 14}
+                                :int {:min 1
+                                      :max 4}
+                                :wis {:min 2
+                                      :max 7}
+                                :cha {:min 3
+                                      :max 7}
+                                :arc {:min 3
+                                      :max 5}
+                                :fai {:min 30
+                                      :max 5}}
+                   :traits #{:tough-skin}
+                   :abilities #{:fire-breath}}}
+
+ :roster {0 {:name "Fred"
+             :gender :male
+             :race :human
+             :sprites {:head :head1
+                       :body :human-male}
+             :equipment {:quiver [{:type :bullet
+                                   :sprites {:inventory :bullet
+                                             :world :bullet}
+                                   :enchantment [:minor-fire]
+                                   :quantity 60}]
+                         :armor [{:type :splint-mail
+                                  :sprites {:inventory :splint-mail
+                                            :world :splint-mail
+                                            :equipped :splint-mail-equipped}}]}
+             :inventory {0 {:type :arrow
+                            :sprites {:inventory :arrow
+                                      :world :arrow}
+                            :quantity 32}}}
+          1 {:name "Ethel"
+             :gender :female
+             :race :draconi
+             :sprites {:body :draconi-female}
+             :traits {:sword-sister}}}}
+
+(comment
+  :levels {"Limbo"
+           {:name "Limbo"
+            :infinite? true}
+           "Grass Test"
+           {:name "Grass Test"
+            :size [32 32]}})
