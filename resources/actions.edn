@@ -1,0 +1,20 @@
+{:move   [{:type   :move
+           ;; selected, fselected, focused, specific, vec
+           :things :selected
+           ;; focused, cell, rect, point, id
+           :target :focused}]
+
+ :select [{:type       :select
+           ;; focused, specific, vec
+           :things     :focused
+           :exclusive? true}]
+
+ :camera [{:type :move-camera
+           :direction [1 0]
+           :speed 1.0}
+          {:type :look-at
+           ;; focused, cell, point, id
+           :target [4 5]}]
+
+ :time [{:type :pass-time
+         :delta-ms 12312}]}

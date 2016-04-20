@@ -35,7 +35,7 @@
           time-ms (Math/floor (* 1000.0 time-seconds))
           g (pr/get-state game-process)]
       (pr/actions! game-process (input/get-actions g keyboard mouse))
-      (draw/string! @game-time 0 0 512 32))
+      (draw/string! (gdx/get-fps) 0 0 512 32))
     (catch Throwable e
       (error e)
       (Thread/sleep 5000))))
