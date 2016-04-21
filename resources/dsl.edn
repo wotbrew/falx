@@ -53,12 +53,13 @@
               ;; 1 turn == a round each of controlled, uncontrolled.
               ;; because players techinically have ai, its just that the ai doesn't make high level decisions.
               ;; in uncontrolled all other agents can move independently like normal
+              :round-done []
               :round     :controlled
               ;;delta gets added to me every frame
               :visual-ms 0
               ;;delta gets added to me if in realtime
               ;;or a certain amount every 'turn'
-              :time-ms   0}
+              :sim-ms   0}
 
  :player     {:ids        #{0, 1, 2, 3}
               :controlled #{0 1}
@@ -116,13 +117,19 @@
  :effects    [{:type  :play-sound
                :sound :bla}]
 
- ;;actions to be performed at the end of the frame
+
+ :visual-schedule  {;; can be used to cancel actions
+                    :times-of          {{:type :remove-effect
+                                         :id   3} #{3244}}
+                    ;;sorted map of actions to execute
+                    ;;at the given time
+                    :at-ms {3244 [{:type :remove-effect
+                                   :id   3}]}}
  ;; think about loops etc
- :scheduled  {;; can be used to cancel actions
-              :times-of          {{:type :remove-effect
-                                   :id   3} #{3244}}
-              ;;sorted map of actions to execute
-              ;;at the given time
-              :at-visual-time {3244 [{:type :remove-effect
-                                      :id   3}]}
-              :at-time        {1232 [{}]}}}
+ :sim-schedule  {;; can be used to cancel actions
+                 :times-of          {{:type :remove-effect
+                                      :id   3} #{3244}}
+                 ;;sorted map of actions to execute
+                 ;;at the given time
+                 :at-ms {3244 [{:type :remove-effect
+                                    :id   3}]}}}
