@@ -3,7 +3,7 @@
 (defn schedule
   []
   {:times-of {}
-   :at-ms (sorted-map {})})
+   :at-ms (sorted-map)})
 
 (defn add-action
   [schedule ms action]

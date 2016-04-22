@@ -1,93 +1,66 @@
 {
  ;; settings carry over from game to game so are different from
  ;; other game state
- :settings   {:bind    {
-                        ;;transforms are like indirection for certain keys,
-                        ;;so you can flip your mouse buttons etc, but a click can be used for binding
-                        ;;uniformally
-                        :transforms {:button.hit/left         :click
-                                     :button.hit/right        :alt-click
-                                     :key.pressed/shift-left  :modifer
-                                     :key.pressed/shift-right :modifier}
+ :bind {:game {:cam-up #{[:pressed :key :w]}
+               :cam-down #{[:pressed :key :s]}
+               :cam-left #{[:pressed :key :a]}
+               :cam-right #{[:pressed :key :d]}}}
 
-                        ;;these bindings apply anywhere
-                        :global     {:key.hit/esc :back}
+ :display {:cell-size [32 32]
+           :screen-size [1024 768]
+           :vsync? true
+           :max-fps 0}
 
-                        ;;these bindings apply if the current screen is active
-                        ;;regardless of any additional context
-                        :screen     {:game {:key.pressed/w {:modifier :cam-up-fast
-                                                            :else     :cam-up}
-                                            :key.pressed/a {:modifier :cam-left-fast
-                                                            :else     :cam-left}
-                                            :key.pressed/s {:modifier :cam-down-fast
-                                                            :else     :cam-down}
-                                            :key.pressed/d {:modifier :cam-right-fast
-                                                            :else     :cam-right}}}
+ :audio {:volume 1.0
+         :music-volume 1.0
+         :effect-volume 1.0}
 
-                        ;;these bindings apply only if the given context ;;is active
-                        :context    {:game {:click     {:modifier :toggle-select
-                                                        :else     [:select
-                                                                   :move]}
-                                            :alt-click :describe}}}
+ :world {:things {0 {:name "Fred"
+                     :gender :male
+                     :race :human}}
+         :solid-index {}
+         :opaque-index {}
+         :space {:eav {}
+                 :ave {}}}
 
-              :display {:cell-size   [32 32]
-                        :screen-size [1024 768]
-                        :vsync?      true
-                        :max-fps     0}
+ :time {;; mode == realtime | turns
+        :mode :turns
+        ;; 1 turn == a round each of controlled, uncontrolled.
+        ;; because players techinically have ai, its just that the ai doesn't make high level decisions.
+        ;; in uncontrolled all other agents can move independently like normal
+        :round-done []
+        :round :controlled
+        ;;delta gets added to me every frame
+        :visual-ms 0
+        ;;delta gets added to me if in realtime
+        ;;or a certain amount every 'turn'
+        :sim-ms 0}
 
-              :audio   {:volume        1.0
-                        :music-volume  1.0
-                        :effect-volume 1.0}}
-
- :world      {:things       {0 {:name   "Fred"
-                                :gender :male
-                                :race   :human}}
-              :solid-index  {}
-              :opaque-index {}
-              :space        {:eav {}
-                             :ave {}}}
-
- :time       {
-              ;; mode == realtime | turns
-              :mode      :turns
-              ;; 1 turn == a round each of controlled, uncontrolled.
-              ;; because players techinically have ai, its just that the ai doesn't make high level decisions.
-              ;; in uncontrolled all other agents can move independently like normal
-              :round-done []
-              :round     :controlled
-              ;;delta gets added to me every frame
-              :visual-ms 0
-              ;;delta gets added to me if in realtime
-              ;;or a certain amount every 'turn'
-              :sim-ms   0}
-
- :player     {:ids        #{0, 1, 2, 3}
-              :controlled #{0 1}
-              :sorted-ids [0 1 2 3]
-              :selected   #{0, 1}}
+ :player {:ids #{0, 1, 2, 3}
+          :controlled #{0 1}
+          :sorted-ids [0 1 2 3]
+          :selected #{0, 1}}
 
  ;;log contains a bunch of messages
  ;;can subvec to look at a portion of it
- :log        ["Fred killed the witch!"]
+ :log ["Fred killed the witch!"]
 
- ;;context can be resolved to a screen
- ;;and used to determine what input is valid
- ;;use a stack so we can have a 'back button'
- :context    '(:casting :inventory :game :menu)
+ :screen :game
+ :context :game
 
  ;;use state is a map of element id to m
- :ui         {:viewport {:camera  {:point [552 431]}
-                         ;; effects are things like transient animations etc.
-                         :effects {:creature {0 {;; visual time
-                                                 :created-at-ms 23423432
-                                                 :type          :fire}
-                                              1 {;; visual time
-                                                 :created-at-ms 32423422
-                                                 :type          :text
-                                                 :text          "Parried!"}}}}
-              :mouse    {:point [333 443]
-                         :cell  {:level
-                                 :point [3 4]}}}
+ :ui {:viewport {:camera {:point [552 431]}
+                 ;; effects are things like transient animations etc.
+                 :effects {:creature {0 {;; visual time
+                                         :created-at-ms 23423432
+                                         :type :fire}
+                                      1 {;; visual time
+                                         :created-at-ms 32423422
+                                         :type :text
+                                         :text "Parried!"}}}}
+      :mouse {:point [333 443]
+              :cell {:level
+                     :point [3 4]}}}
 
  ;;random number generator state
  ;;start with a simple one but we can add more later
@@ -101,35 +74,35 @@
  ;; activities 'tick' every 250 millis
  ;; todo how to do efficiently
  ;; activity continue -> w -> creature -> w
- :ai         {0 {:activity {:type :walking
-                            :path []
-                            :goal {}}}
-              1 {:activity {:type     :picking-lock
-                            ;;picking a lock might take longer than a turn
-                            ;; activities can allow for multiple checks
-                            ;; non determinate ap etc
-                            ;;for example depending on ap
-                            ;;all actor activity is made via activities
-                            ;;the activity can be cancelled, continued, etc until completed.
-                            :progress 23}}}
+ :ai {0 {:activity {:type :walking
+                    :path []
+                    :goal {}}}
+      1 {:activity {:type :picking-lock
+                    ;;picking a lock might take longer than a turn
+                    ;; activities can allow for multiple checks
+                    ;; non determinate ap etc
+                    ;;for example depending on ap
+                    ;;all actor activity is made via activities
+                    ;;the activity can be cancelled, continued, etc until completed.
+                    :progress 23}}}
 
  ;;effects to be performed at the end of the frame
- :effects    [{:type  :play-sound
-               :sound :bla}]
+ :effects [{:type :play-sound
+            :sound :bla}]
 
 
- :visual-schedule  {;; can be used to cancel actions
-                    :times-of          {{:type :remove-effect
-                                         :id   3} #{3244}}
-                    ;;sorted map of actions to execute
-                    ;;at the given time
-                    :at-ms {3244 [{:type :remove-effect
-                                   :id   3}]}}
+ :visual-schedule {;; can be used to cancel actions
+                   :times-of {{:type :remove-effect
+                               :id 3} #{3244}}
+                   ;;sorted map of actions to execute
+                   ;;at the given time
+                   :at-ms {3244 [{:type :remove-effect
+                                  :id 3}]}}
  ;; think about loops etc
- :sim-schedule  {;; can be used to cancel actions
-                 :times-of          {{:type :remove-effect
-                                      :id   3} #{3244}}
-                 ;;sorted map of actions to execute
-                 ;;at the given time
-                 :at-ms {3244 [{:type :remove-effect
-                                    :id   3}]}}}
+ :sim-schedule {;; can be used to cancel actions
+                :times-of {{:type :remove-effect
+                            :id 3} #{3244}}
+                ;;sorted map of actions to execute
+                ;;at the given time
+                :at-ms {3244 [{:type :remove-effect
+                               :id 3}]}}}

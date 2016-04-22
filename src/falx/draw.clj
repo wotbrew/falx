@@ -7,6 +7,7 @@
   (:import (clojure.lang IPersistentMap)))
 
 (def font
+  (gdx/font)#_
   (gdx/font (io/resource "default.fnt")))
 
 (defn sprite!

@@ -1,9 +1,17 @@
 (ns falx
   (:require [clj-gdx :as gdx]
             [clojure.tools.logging :refer [error info debug]]
-            [falx.input :as input]
             [falx.process :as pr]
-            [falx.draw :as draw]))
+            [falx.impl
+             [input]
+             [movement]
+             [selection]
+             [time]]
+            [falx.draw :as draw]
+            [falx.time :as time]
+            [falx.world :as world]
+            [falx.schedule :as sched]
+            [falx.render.world :as render-world]))
 
 (def max-fps
   60)
@@ -14,13 +22,30 @@
     :max-foreground-fps max-fps))
 
 (def default-game
-  {})
+  {:context :game
+   :screen :game
+
+   :ui {:viewport {:camera {:point [400 300]}}}
+
+   :time (time/time)
+   :visual-schedule (sched/schedule)
+   :sim-schedule (sched/schedule)
+   :world (world/world
+            {:fred {:name "Fred"
+                    :cell {:level :limbo
+                           :point [4 4]}}
+             :bob {:name "Bob"
+                   :cell {:level :limbo
+                          :point [6 6]}}})})
 
 (def game-process
   (do (when (bound? #'game-process)
         (debug "Stopping game")
         (pr/stop! game-process))
       (pr/process default-game)))
+
+(def game-state
+  (:state game-process))
 
 (def game-time
   (volatile! 0.0))
@@ -31,10 +56,15 @@
           keyboard @gdx/keyboard-state
           delta-seconds (gdx/get-delta-time)
           time-seconds (vswap! game-time + delta-seconds)
-          delta-ms (Math/floor (* 1000.0 delta-seconds))
-          time-ms (Math/floor (* 1000.0 time-seconds))
+          delta-ms (long (Math/floor (* 1000.0 delta-seconds)))
+          time-ms (long (Math/floor (* 1000.0 time-seconds)))
           g (pr/get-state game-process)]
-      (pr/actions! game-process (input/get-actions g keyboard mouse))
+      (pr/actions! game-process [{:type :handle-input
+                                  :mouse mouse
+                                  :keyboard keyboard}
+                                 {:type :pass-time
+                                  :ms delta-ms}])
+      (render-world/draw! g 0 0 1024 768)
       (draw/string! (gdx/get-fps) 0 0 512 32))
     (catch Throwable e
       (error e)
