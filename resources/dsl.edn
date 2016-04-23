@@ -45,11 +45,14 @@
  ;;can subvec to look at a portion of it
  :log ["Fred killed the witch!"]
 
- :screen :game
- :context :game
+
 
  ;;use state is a map of element id to m
- :ui {:viewport {:camera {:point [552 431]}
+ :ui {:screen :game
+      :context :game
+      :viewport {:camera {:point [552 431]
+                          :size [1024 768]}
+                 :level :limbo
                  ;; effects are things like transient animations etc.
                  :effects {:creature {0 {;; visual time
                                          :created-at-ms 23423432
@@ -59,8 +62,11 @@
                                          :type :text
                                          :text "Parried!"}}}}
       :mouse {:point [333 443]
-              :cell {:level
-                     :point [3 4]}}}
+              ;; should the translation etc be
+              ;; encapsulated in the input mechanism?
+              ;; e.g actions must be generated for 'select, attack' etc
+              ;; at mouse position
+              :world-point [3 4]}}
 
  ;;random number generator state
  ;;start with a simple one but we can add more later

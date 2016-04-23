@@ -1,45 +1,57 @@
 (ns falx.impl.input
   (:require [falx.action :as action]
-            [clojure.set :as set]))
+            [clojure.set :as set]
+            [falx.ui.mouse :as ui-mouse]))
 
 (def default-bind
   {[:game :game] {:cam-up #{[:pressed :key :w]}
                   :cam-down #{[:pressed :key :s]}
                   :cam-left #{[:pressed :key :a]}
                   :cam-right #{[:pressed :key :d]}
-                  :cam-up-fast #{[:pressed :key :w]
-                                 [:pressed :key :shift-left]}
-                  :cam-down-fast #{[:pressed :key :s]
-                                   [:pressed :key :shift-left]}
-                  :cam-left-fast #{[:pressed :key :a]
-                                   [:pressed :key :shift-left]}
-                  :cam-right-fast #{[:pressed :key :d]
-                                    [:pressed :key :shift-left]}}})
+
+                  :select #{[:hit :button :left]}}})
 
 (def action-map
-  {
-   ;; cameras
-   :cam-up {:type :move-camera
-            :direction [0 -1]}
-   :cam-left {:type :move-camera
-              :direction [-1 0]}
-   :cam-right {:type :move-camera
-               :direction [1 0]}
-   :cam-down {:type :move-camera
-              :direction [0 1]}
+  {})
 
-   :cam-up-fast {:type :move-camera
-                 :direction [0 -1]
-                 :speed 2.0}
-   :cam-left-fast {:type :move-camera
-                   :direction [-1 0]
-                   :speed 2.0}
-   :cam-right-fast {:type :move-camera
-                    :direction [1 0]
-                    :speed 2.0}
-   :cam-down-fast {:type :move-camera
-                   :direction [0 1]
-                   :speed 2.0}})
+(def get-action nil)
+
+(defmulti get-action (fn [g modified? mouse-state k] k))
+
+(defmethod get-action :default
+  [_ _ _ k]
+  (get action-map k))
+
+(defmethod get-action :cam-up
+  [_ modified? _ _]
+  {:type :move-camera
+   :direction [0 -1]
+   :speed (if modified? 2.0 1.0)})
+
+(defmethod get-action :cam-left
+  [_ modified? _ _]
+  {:type :move-camera
+   :direction [-1 0]
+   :speed (if modified? 2.0 1.0)})
+
+(defmethod get-action :cam-right
+  [_ modified? _ _]
+  {:type :move-camera
+   :direction [1 0]
+   :speed (if modified? 2.0 1.0)})
+
+(defmethod get-action :cam-down
+  [_ modified? _ _]
+  {:type :move-camera
+   :direction [0 1]
+   :speed (if modified? 2.0 1.0)})
+
+(defmethod get-action :select
+  [g modified? mouse-state _]
+  {:type :select
+   :exclusive? (not modified?)
+   :toggle? modified?
+   :target (:cell mouse-state)})
 
 (defn get-input-set
   "Gets the set of pressed/hit/keys/buttons"
@@ -56,12 +68,16 @@
         :when (set/subset? v iset)]
     k))
 
-
 (defn get-actions
   [g keyboard mouse]
   (let [iset (get-input-set keyboard mouse)
-        bindings (when (seq iset) (get-active-bindings g iset))]
-    (keep action-map bindings)))
+        bindings (when (seq iset) (get-active-bindings g iset))
+        mouse-state (ui-mouse/get-state (:display g) (:viewport (:ui g)) (:point mouse))
+        modified? (-> keyboard :pressed (contains? :shift-left))]
+    (cons
+      {:type :move-mouse
+       :point (:point mouse)}
+      (keep #(get-action g modified? mouse-state %) bindings))))
 
 (defmethod action/action :handle-input
   [g {:keys [keyboard mouse]}]

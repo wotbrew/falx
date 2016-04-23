@@ -3,7 +3,9 @@
             [clojure.tools.logging :refer [error info debug]]
             [falx.process :as pr]
             [falx.impl
+             [camera]
              [input]
+             [mouse]
              [movement]
              [selection]
              [time]]
@@ -11,7 +13,8 @@
             [falx.time :as time]
             [falx.world :as world]
             [falx.schedule :as sched]
-            [falx.render.world :as render-world]))
+            [falx.render.world :as render-world]
+            [falx.render.ui :as render-ui]))
 
 (def max-fps
   60)
@@ -25,7 +28,10 @@
   {:context :game
    :screen :game
 
-   :ui {:viewport {:camera {:point [400 300]}}}
+   :ui {:viewport {:camera {:point [0 0]
+                            :size [800 600]}
+                   :level :limbo}
+        :mouse {:point [0 0]}}
 
    :time (time/time)
    :visual-schedule (sched/schedule)
@@ -64,8 +70,9 @@
                                   :keyboard keyboard}
                                  {:type :pass-time
                                   :ms delta-ms}])
-      (render-world/draw! g 0 0 1024 768)
-      (draw/string! (gdx/get-fps) 0 0 512 32))
+      (render-ui/screen! g :game 0 0 1024 768)
+      (draw/string! (gdx/get-fps) 0 0 512 32)
+      (draw/string! (-> g :ui :mouse) 0 16 512 32))
     (catch Throwable e
       (error e)
       (Thread/sleep 5000))))
