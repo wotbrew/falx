@@ -5,6 +5,22 @@
             [falx.world :as world]
             [gdx.color :as color]))
 
+(defmulti thing!
+  (fn [g id thing x y w h] (:type thing)))
+
+(defmethod thing! :default
+  [g id thing x y w h])
+
+(defmethod thing! :creature
+  [g id thing x y w h]
+  (when (contains? (:selected (:player g)) id)
+    (draw/sprite! sprite/selection x y w h {:color color/green}))
+  (draw/sprite! sprite/human-male x y w h))
+
+(defmethod thing! :terrain
+  [g id thing x y w h]
+  (draw/sprite! sprite/castle-floor x y w h))
+
 (defn draw-slice!
   [g slice x y w h]
   (let [w (:world g)
@@ -16,12 +32,11 @@
             :when (and (some? p)
                        ;; check bounds
                        )]
-      (when (contains? (:selected (:player g)) id)
-        (draw/sprite! sprite/selection (* 32 wx) (* 32 wy) 32 32 {:color color/green}))
-      (draw/sprite! sprite/human-male (* 32 wx) (* 32 wy) 32 32))))
+      (thing! g id thing (* 32 wx) (* 32 wy) 32 32))))
 
 (def layers
-  [:creature
+  [:floor
+   :creature
    nil])
 
 (defn level!

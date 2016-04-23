@@ -13,7 +13,6 @@
             [falx.time :as time]
             [falx.world :as world]
             [falx.schedule :as sched]
-            [falx.render.world :as render-world]
             [falx.render.ui :as render-ui]))
 
 (def max-fps
@@ -31,18 +30,36 @@
    :ui {:viewport {:camera {:point [0 0]
                             :size [800 600]}
                    :level :limbo}
-        :mouse {:point [0 0]}}
+        :mouse {:point [0 0]
+                :cell {:point [0 0]
+                       :level :limbo}}}
 
    :time (time/time)
    :visual-schedule (sched/schedule)
    :sim-schedule (sched/schedule)
+
+   :player {:party [:fred :bob]
+            :selected #{}
+            :controlled #{:fred :bob}}
+
    :world (world/world
-            {:fred {:name "Fred"
-                    :cell {:level :limbo
-                           :point [4 4]}}
-             :bob {:name "Bob"
-                   :cell {:level :limbo
-                          :point [6 6]}}})})
+            (into {:fred {:name "Fred"
+                           :type :creature
+                           :layer :creature
+                           :cell {:level :limbo
+                                  :point [4 4]}}
+                    :bob {:name "Bob"
+                          :type :creature
+                          :layer :creature
+                          :cell {:level :limbo
+                                 :point [6 6]}}}
+                   (for [x (range 0 32)
+                         y (range 0 32)]
+                     [[:floor x y] {:name "Floor"
+                                    :type :terrain
+                                    :layer :floor
+                                    :cell {:level :limbo
+                                           :point [x y]}}])))})
 
 (def game-process
   (do (when (bound? #'game-process)
@@ -72,7 +89,8 @@
                                   :ms delta-ms}])
       (render-ui/screen! g :game 0 0 1024 768)
       (draw/string! (gdx/get-fps) 0 0 512 32)
-      (draw/string! (-> g :ui :mouse) 0 16 512 32))
+      (draw/string! (-> g :ui :mouse) 0 16 512 32)
+      (draw/string! (-> g :player) 0 32 512 32))
     (catch Throwable e
       (error e)
       (Thread/sleep 5000))))

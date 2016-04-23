@@ -6,22 +6,22 @@
 
 (def cell? map?)
 
-(defn can-select?
-  [thing]
-  true)
+(defn controlled?
+  [g id]
+  (contains? (:controlled (:player g)) id))
+
+(defn get-at
+  [g cell]
+  (space/get-at (:space (:world g)) cell))
 
 (defn resolve-targets
   [g x]
   (cond
-    (cell? x) (for [id (space/get-at (:space (:world g)) x)
-                    :when (can-select? (world/get-thing (:world g) id))]
+    (cell? x) (for [id (get-at g x)
+                    :when (controlled? g id)]
                 id)
     (vector? x) (mapcat #(resolve-targets g %) x)
     :else [x]))
-
-(defn selected?
-  [g id]
-  (contains? (:selected (:player g)) id))
 
 (defn toggle
   [existing new]

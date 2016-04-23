@@ -36,9 +36,8 @@
         ;;or a certain amount every 'turn'
         :sim-ms 0}
 
- :player {:ids #{0, 1, 2, 3}
+ :player {:party [0 1 2 3]
           :controlled #{0 1}
-          :sorted-ids [0 1 2 3]
           :selected #{0, 1}}
 
  ;;log contains a bunch of messages

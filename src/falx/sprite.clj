@@ -102,3 +102,14 @@
 
 (def mouse-gray-arrow
   (mouse32 1 2))
+
+;; =====
+;; Castle
+;; =====
+
+(defn castle32
+  [x y]
+  (tile32 "CastleDungeon" x y))
+
+(def castle-floor
+  (castle32 0 0))
