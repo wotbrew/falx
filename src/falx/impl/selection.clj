@@ -1,7 +1,8 @@
 (ns falx.impl.selection
   (:require [falx.action :as action]
             [falx.space :as space]
-            [falx.world :as world]))
+            [falx.world :as world]
+            [clojure.set :as set]))
 
 (def cell? map?)
 
@@ -18,44 +19,23 @@
     (vector? x) (mapcat #(resolve-targets g %) x)
     :else [x]))
 
-(defn clear
-  [g]
-  (assoc-in g [:player :selected] #{}))
-
 (defn selected?
   [g id]
   (contains? (:selected (:player g)) id))
 
-(defn only-selected?
-  [g id]
-  (= (:selected (:player g)) #{id}))
-
-(defn unselect
-  [g id]
-  (update-in g [:player :selected] disj id))
-
-(defn select
-  [g id]
-  (update-in g [:player :selected] (fnil conj #{}) id))
-
-(defn toggle-select
-  [g id]
-  (if (selected? g id)
-    (if (only-selected? g id)
-      g
-      (unselect g id))
-    (select g id)))
+(defn toggle
+  [existing new]
+  (let [diff (set/difference existing new)]
+    (cond
+      (= diff existing) (set/union existing new)
+      (and (= #{} diff) (seq existing)) #{(first existing)}
+      :else diff)))
 
 (defmethod action/action :select
   [g {:keys [target toggle? exclusive?]}]
   (if-some [targets (seq (resolve-targets g target))]
-    (let [g (if exclusive?
-              (clear g)
-              g)]
-      (->> targets
-           (reduce (fn [g target]
-                     (if toggle?
-                       (toggle-select g target)
-                       (select g target)))
-                   g)))
+    (cond
+      exclusive? (assoc-in g [:player :selected] (set targets))
+      toggle? (update-in g [:player :selected] (fnil toggle #{}) targets)
+      :else (update-in g [:player :selected] (fnil set/union #{}) targets))
     g))
