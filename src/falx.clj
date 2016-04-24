@@ -8,12 +8,14 @@
              [mouse]
              [movement]
              [selection]
-             [time]]
+             [time]
+             [viewport]]
             [falx.draw :as draw]
             [falx.time :as time]
             [falx.world :as world]
             [falx.schedule :as sched]
-            [falx.render.ui :as render-ui]))
+            [falx.render.ui :as render-ui]
+            [falx.screen :as screen]))
 
 (def max-fps
   60)
@@ -29,7 +31,8 @@
 
    :ui {:viewport {:camera {:point [0 0]
                             :size [800 600]}
-                   :level :limbo}
+                   :level :limbo
+                   :cell-size [32 32]}
         :mouse {:point [0 0]
                 :cell {:point [0 0]
                        :level :limbo}}}
@@ -46,11 +49,13 @@
             (into {:fred {:name "Fred"
                            :type :creature
                            :layer :creature
+                           :solid? true
                            :cell {:level :limbo
                                   :point [4 4]}}
                     :bob {:name "Bob"
                           :type :creature
                           :layer :creature
+                          :solid? true
                           :cell {:level :limbo
                                  :point [6 6]}}}
                    (for [x (range 0 32)
@@ -87,9 +92,9 @@
                                   :keyboard keyboard}
                                  {:type :pass-time
                                   :ms delta-ms}])
-      (render-ui/screen! g :game 0 0 1024 768)
+      (render-ui/draw! g (screen/screen (:screen g) 1024 768))
       (draw/string! (gdx/get-fps) 0 0 512 32)
-      (draw/string! (-> g :ui :mouse) 0 16 512 32)
+      (draw/string! (-> g :ai) 0 16 512 32)
       (draw/string! (-> g :player) 0 32 512 32))
     (catch Throwable e
       (error e)

@@ -6,4 +6,4 @@
   [g {:keys [point]}]
   (let [{:keys [ui display]} g
         viewport (:viewport ui)]
-    (assoc-in g [:ui :mouse] (ui-mouse/get-state display viewport point))))
+    (assoc-in g [:ui :mouse] {:point point})))

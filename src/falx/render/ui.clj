@@ -2,9 +2,14 @@
   (:require [clj-gdx :as gdx]
             [falx.render.world :as render-world]
             [falx.draw :as draw]
-            [falx.sprite :as sprite]))
+            [falx.sprite :as sprite]
+            [falx.screen :as screen]
+            [falx.ui :as ui]))
 
-(defmulti component! (fn [g k x y w h] k))
+(defmulti element! (fn [g element x y w h] (:type element)))
+
+(defmethod element! :default
+  [g element x y w h])
 
 (defn get-gdx-camera
   [camera]
@@ -14,26 +19,22 @@
         y2 (double (+ y (/ h 2)))]
     (assoc gdx/default-camera :point [x2 y2])))
 
-(defmethod component! :viewport
-  [g k x y w h]
-  (let [st (-> g :ui :viewport)
+(defmethod element! :viewport
+  [g element x y w h]
+  (let [st (ui/get-state g element)
         {:keys [camera level]} st]
     (gdx/using-camera
       (get-gdx-camera camera)
       (render-world/level! g level x y w h))))
 
-(defmethod component! :mouse
-  [g k bx by bw bh]
+(defmethod element! :mouse
+  [g element bx by bw bh]
   (let [[x y] (:point (:mouse (:ui g))
                 [0 0])]
     (draw/sprite! sprite/mouse-point x y 32 32)))
 
-(defn components!
-  [g x y w h coll]
-  (run! #(component! g % x y w h) coll))
-
-(defmulti screen! (fn [g k x y w h] k))
-
-(defmethod screen! :game
-  [g k x y w h]
-  (components! g x y w h [:viewport :mouse]))
+(defn draw!
+  [g element]
+  (when-some [[x y w h] (:rect element)]
+    (element! g element x y w h))
+  (run! #(draw! g %) (:children element)))

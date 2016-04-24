@@ -1,13 +1,13 @@
 {
  ;; settings carry over from game to game so are different from
  ;; other game state
+ ;; todo what about click zones? i.e in-game player-panel etc
  :bind {:game {:cam-up #{[:pressed :key :w]}
                :cam-down #{[:pressed :key :s]}
                :cam-left #{[:pressed :key :a]}
                :cam-right #{[:pressed :key :d]}}}
 
- :display {:cell-size [32 32]
-           :screen-size [1024 768]
+ :display {:screen-size [1024 768]
            :vsync? true
            :max-fps 0}
 
@@ -34,7 +34,9 @@
         :visual-ms 0
         ;;delta gets added to me if in realtime
         ;;or a certain amount every 'turn'
-        :sim-ms 0}
+        :sim-ms 0
+        ;; the amount of time passed last
+        :delta-ms 323}
 
  :player {:party [0 1 2 3]
           :controlled #{0 1}
@@ -51,6 +53,7 @@
       :context :game
       :viewport {:camera {:point [552 431]
                           :size [1024 768]}
+                 :cell-size [32 32]
                  :level :limbo
                  ;; effects are things like transient animations etc.
                  :effects {:creature {0 {;; visual time
@@ -79,7 +82,7 @@
  ;; activities 'tick' every 250 millis
  ;; todo how to do efficiently
  ;; activity continue -> w -> creature -> w
- :ai {0 {:activity {:type :walking
+ :ai {0 {:activity {:type :move
                     :path []
                     :goal {}}}
       1 {:activity {:type :picking-lock

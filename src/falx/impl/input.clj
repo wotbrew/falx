@@ -7,16 +7,17 @@
   {[:game :game] {:cam-up #{[:pressed :key :w]}
                   :cam-down #{[:pressed :key :s]}
                   :cam-left #{[:pressed :key :a]}
-                  :cam-right #{[:pressed :key :d]}
+                  :cam-right #{[:pressed :key :d]}}
 
-                  :select #{[:hit :button :left]}}})
+   :global {:click #{[:hit :button :left]}
+            :alt-click #{[:hit :button :right]}}})
 
 (def action-map
   {})
 
 (def get-action nil)
 
-(defmulti get-action (fn [g modified? mouse-state k] k))
+(defmulti get-action (fn [g modified? mouse k] k))
 
 (defmethod get-action :default
   [_ _ _ k]
@@ -46,12 +47,17 @@
    :direction [0 1]
    :speed (if modified? 2.0 1.0)})
 
-(defmethod get-action :select
-  [g modified? mouse-state _]
-  {:type :select
-   :exclusive? (not modified?)
-   :toggle? modified?
-   :target (:cell mouse-state)})
+(defmethod get-action :click
+  [g modified? mouse _]
+  {:type :click
+   :modified? modified?
+   :point (:point mouse)})
+
+(defmethod get-action :alt-click
+  [g modified? mouse _]
+  {:type :alt-click
+   :modified? modified?
+   :point (:point mouse)})
 
 (defn get-input-set
   "Gets the set of pressed/hit/keys/buttons"
@@ -64,7 +70,8 @@
 
 (defn get-active-bindings
   [g iset]
-  (for [[k v] (get (or (:bind g default-bind)) [(:screen g) (:context g)])
+  (for [[k v] (concat (get (:bind g default-bind) [(:screen g) (:context g)])
+                      (get (:bind g default-bind) :global))
         :when (set/subset? v iset)]
     k))
 
@@ -72,12 +79,11 @@
   [g keyboard mouse]
   (let [iset (get-input-set keyboard mouse)
         bindings (when (seq iset) (get-active-bindings g iset))
-        mouse-state (ui-mouse/get-state (:display g) (:viewport (:ui g)) (:point mouse))
         modified? (-> keyboard :pressed (contains? :shift-left))]
     (cons
       {:type :move-mouse
        :point (:point mouse)}
-      (keep #(get-action g modified? mouse-state %) bindings))))
+      (keep #(get-action g modified? mouse %) bindings))))
 
 (defmethod action/action :handle-input
   [g {:keys [keyboard mouse]}]
