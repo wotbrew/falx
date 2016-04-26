@@ -25,39 +25,35 @@
 
 (defmethod get-action :cam-up
   [_ modified? _ _]
-  {:type :move-camera
-   :direction [0 -1]
-   :speed (if modified? 2.0 1.0)})
+  (action/move-camera
+    [0 -1]
+    (if modified? 2.0 1.0)))
 
 (defmethod get-action :cam-left
   [_ modified? _ _]
-  {:type :move-camera
-   :direction [-1 0]
-   :speed (if modified? 2.0 1.0)})
+  (action/move-camera
+    [-1 0]
+    (if modified? 2.0 1.0)))
 
 (defmethod get-action :cam-right
   [_ modified? _ _]
-  {:type :move-camera
-   :direction [1 0]
-   :speed (if modified? 2.0 1.0)})
+  (action/move-camera
+    [1 0]
+    (if modified? 2.0 1.0)))
 
 (defmethod get-action :cam-down
   [_ modified? _ _]
-  {:type :move-camera
-   :direction [0 1]
-   :speed (if modified? 2.0 1.0)})
+  (action/move-camera
+    [0 1]
+    (if modified? 2.0 1.0)))
 
 (defmethod get-action :click
   [g modified? mouse _]
-  {:type :click
-   :modified? modified?
-   :point (:point mouse)})
+  (action/click (:point mouse) modified?))
 
 (defmethod get-action :alt-click
   [g modified? mouse _]
-  {:type :alt-click
-   :modified? modified?
-   :point (:point mouse)})
+  (action/alt-click (:point mouse) modified?))
 
 (defn get-input-set
   "Gets the set of pressed/hit/keys/buttons"

@@ -17,7 +17,8 @@
   [g {:keys [target dest]}]
   (let [ids (resolve-targets g target)
         cell (resolve-dest g dest)]
-    (update g :ai (partial merge-with merge) (->> (for [id ids]
+    g
+    #_(update g :ai (partial merge-with merge) (->> (for [id ids]
                                                     [id {:activity {:type :move
                                                                     :goal cell}}])
                                                   (into {})))))

@@ -3,7 +3,7 @@
             [clojure.tools.logging :refer [error info debug]]
             [falx.process :as pr]
             [falx.impl
-             [camera]
+             [click]
              [input]
              [mouse]
              [movement]
@@ -15,7 +15,8 @@
             [falx.world :as world]
             [falx.schedule :as sched]
             [falx.render.ui :as render-ui]
-            [falx.screen :as screen]))
+            [falx.screen :as screen]
+            [falx.action :as action]))
 
 (def max-fps
   60)
@@ -87,11 +88,9 @@
           delta-ms (long (Math/floor (* 1000.0 delta-seconds)))
           time-ms (long (Math/floor (* 1000.0 time-seconds)))
           g (pr/get-state game-process)]
-      (pr/actions! game-process [{:type :handle-input
-                                  :mouse mouse
-                                  :keyboard keyboard}
-                                 {:type :pass-time
-                                  :ms delta-ms}])
+      (pr/actions! game-process [(action/handle-input keyboard mouse)
+                                 (action/move-mouse (:point mouse))
+                                 (action/pass-time delta-ms)])
       (render-ui/draw! g (screen/screen (:screen g) 1024 768))
       (draw/string! (gdx/get-fps) 0 0 512 32)
       (draw/string! (-> g :ai) 0 16 512 32)

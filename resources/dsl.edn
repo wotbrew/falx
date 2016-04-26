@@ -1,7 +1,6 @@
 {
  ;; settings carry over from game to game so are different from
  ;; other game state
- ;; todo what about click zones? i.e in-game player-panel etc
  :bind {:game {:cam-up #{[:pressed :key :w]}
                :cam-down #{[:pressed :key :s]}
                :cam-left #{[:pressed :key :a]}
@@ -40,13 +39,13 @@
 
  :player {:party [0 1 2 3]
           :controlled #{0 1}
-          :selected #{0, 1}}
+          :selected #{0, 1}
+          :visibility {:limbo #{[3 4] [5 6]}}
+          :explored {:limbo #{[3 4] [5 6]}}}
 
  ;;log contains a bunch of messages
  ;;can subvec to look at a portion of it
  :log ["Fred killed the witch!"]
-
-
 
  ;;use state is a map of element id to m
  :ui {:screen :game
@@ -82,17 +81,22 @@
  ;; activities 'tick' every 250 millis
  ;; todo how to do efficiently
  ;; activity continue -> w -> creature -> w
- :ai {0 {:activity {:type :move
-                    :path []
-                    :goal {}}}
-      1 {:activity {:type :picking-lock
-                    ;;picking a lock might take longer than a turn
-                    ;; activities can allow for multiple checks
-                    ;; non determinate ap etc
-                    ;;for example depending on ap
-                    ;;all actor activity is made via activities
-                    ;;the activity can be cancelled, continued, etc until completed.
-                    :progress 23}}}
+ :activities {0 {:type :walk
+                 :running {:last-ms 1233
+                           :ms 1334}
+                 :target {:level :limbo
+                          :point [6 3]}
+                 :path [[6 3] [4 5]]}
+              1 {:type :picking-lock
+                 :last-ms 1233
+                 :ms 1334
+                 ;;picking a lock might take longer than a turn
+                 ;; activities can allow for multiple checks
+                 ;; non determinate ap etc
+                 ;;for example depending on ap
+                 ;;all actor activity is made via activities
+                 ;;the activity can be cancelled, continued, etc until completed.
+                 }}
 
  ;;effects to be performed at the end of the frame
  :effects [{:type :play-sound

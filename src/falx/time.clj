@@ -39,14 +39,16 @@
   "Passes `ms` worth of time. If the game is :turns mode,
   the sim time will not progress."
   [time ms]
-  (if (turns? time)
-    (update :visual-ms + ms)
-    (let [{:keys [visual-ms sim-ms]
-           :or {visual-ms 0
-                sim-ms 0}} time]
+  (let [{:keys [visual-ms sim-ms]
+         :or {visual-ms 0
+              sim-ms 0}} time]
+    (if (turns? time)
+      (assoc time :visual-ms (+ visual-ms ms)
+                  :visual-delta-ms ms)
       (assoc time :sim-ms (+ sim-ms ms)
+                  :sim-delta-ms ms
                   :visual-ms (+ visual-ms ms)
-                  :delta-ms ms))))
+                  :visual-delta-ms ms))))
 
 (def sim-speed
   "The number of sim-ms to add to the time when a turn is completed."
@@ -67,7 +69,8 @@
                     :round-done [round])
         (assoc time :round next-round
                     :round-done []
-                    :sim-ms (+ (:sim-ms time 0) sim-speed))))))
+                    :sim-ms (+ (:sim-ms time 0) sim-speed)
+                    :sim-delta-ms sim-speed)))))
 
 (defn enter-turns
   "Changes the time into :turns mode."
