@@ -52,6 +52,17 @@
   (human32 1 0))
 
 ;; =====
+;; Creatures - Goblins
+;; =====
+
+(defn goblin32
+  [x y]
+  (tile32 "Goblins" x y))
+
+(def goblin-worker
+  (goblin32 0 0))
+
+;; =====
 ;; Gui
 ;; =====
 
@@ -113,3 +124,6 @@
 
 (def castle-floor
   (castle32 0 0))
+
+(def castle-wall
+  (castle32 0 1))
