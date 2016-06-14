@@ -1,136 +1,81 @@
 (ns falx.db
-  "An implementation of an entity database, useful for indexing arbitrary attributes
-  and querying them."
-  (:require [clojure.set :as set]))
-
-(defn- disjoc
-  [m k v]
-  (let [s (get m k)]
-    (if-some [new (not-empty (disj s v))]
-      (assoc m k new)
-      (dissoc m k))))
-
-(defn- disjoc-in
-  [m [k & ks] v]
-  (if (seq ks)
-    (if-some [m2 (not-empty (disjoc-in (get m k) ks v))]
-      (assoc m k m2)
-      (dissoc m k))
-    (disjoc m k v)))
-
-(defn- dissoc-in
-  [m [k & ks]]
-  (if (seq ks)
-    (if-some [m2 (not-empty (dissoc-in (get m k) ks))]
-      (assoc m k m2)
-      (dissoc m k))
-    (dissoc m k)))
-
-(def ^:private set-conj
-  (fnil conj #{}))
-
-(defn get-entity
-  "Returns the entity given by the `id`."
-  [db id]
-  (-> db :eav (get id)))
+  "Contains a low-level value indexed eav database."
+  (:require [falx.db.impl :as impl])
+  (:refer-clojure :exclude [replace assert]))
 
 (defn exists?
   "Returns true if the entity exists."
   [db id]
-  (contains? (:eav db) id))
+  (-> db ::eav (contains? id)))
 
-(defn iquery
-  "Returns all the entity ids having the attribute `k` with the value `v`.
-  If multiple pairs (or a map) is supplied, intersects all entity ids that meet each kv pair."
-  ([db]
-   (keys (:eav db)))
-  ([db m]
-   (reduce-kv #(set/intersection %1 (iquery db %2 %3)) #{} m))
-  ([db k v]
-   (-> db :ave (get k) (get v #{})))
-  ([db k v & kvs]
-   (iquery db (into {k v} (partition 2 kvs)))))
+(defn assert
+  "Adds (or sets) the value of `k` for the entity to `v`."
+  [db id k v]
+  (if-not (exists? db id)
+    (-> (impl/assert db id ::id id)
+        (recur id k v))
+    (impl/assert db id k v)))
 
-(defn query
-  "Returns all entities having the attribute `k` with the value `v`.
-  If multiple pairs (or a map) is supplied, intersects all entity ids that meet each kv pair."
-  ([db]
-   (vals (:eav db)))
-  ([db m]
-   (map #(get-entity db %) (iquery db m)))
-  ([db k v]
-   (map #(get-entity db %) (iquery db k v)))
-  ([db k v & kvs]
-   (query db (into {k v} (partition 2 kvs)))))
+(defn entity
+  "Returns a map describing the state of the entity."
+  [db id]
+  (-> db ::eav (get id)))
 
-(defn query-fn
-  "Returns a function that given a db and val will return all entities where k = v."
-  [k]
-  (fn [db val]
-    (query db k val)))
+(defn- retract*
+  [db id k v]
+  (-> db
+      (impl/disjoc-in [::ave k v] id)
+      (impl/dissoc-in [::eav id k])))
 
-(defn iquery-fn
-  "Returns a function that given a db and val will return all entity ids where k = v."
-  [k]
-  (fn [db val]
-    (iquery db k val)))
-
-(defn- incr-id
-  [db]
-  (update db :id (fnil inc -1)))
-
-(defn add
-  "Adds or replaces an entity in the database.
-  Returns the new db."
-  ([db entity]
-   (let [id (:id entity)
-         db (if id db (incr-id db))
-         id (or id (:id db 0))
-         entity (assoc entity :id id)
-         existing (get-entity db id)
-         ave (as-> (:ave db) ave
-                   (reduce-kv (fn [ave k v]
-                                (if (= v (get entity k ::not-found))
-                                  ave
-                                  (disjoc-in ave [k v] id)))
-                              ave existing)
-                   (reduce-kv (fn [ave k v]
-                                (if (= v (get existing k ::not-found))
-                                  ave
-                                  (update-in ave [k v] set-conj id)))
-                              ave entity))]
-     (-> (assoc-in db [:eav id] entity)
-         (assoc :ave ave))))
-  ([db entity & more]
-   (reduce add (add db entity) more)))
+(defn retract
+  "Removes the value against `k` from the db for `id`.
+  If removing the last attribute of an entity, will not remove the entity.
+  Does not allow you to remove the :falx.db/id attribute."
+  [db id k]
+  (if (identical? k ::id)
+    db
+    (retract* db id k (get (entity db id) k))))
 
 (defn delete
-  "Removes the entity from the db. Returns the new db."
-  ([db id]
-   (if-some [existing (get-entity db id)]
-     (let [ave (reduce-kv (fn [ave k v]
-                            (disjoc-in ave [k v] id))
-                          (:ave db)
-                          existing)]
-       (-> (dissoc-in db [:eav id])
-           (assoc :ave ave)))))
-  ([db id & more]
-   (reduce delete (delete db id) more)))
+  "Completely removes the entity from the db."
+  [db id]
+  (let [ks (keys (entity db id))]
+    (reduce delete db ks)))
 
-(defn change
-  "Apples `f` and any `args` to the entity given by `id`.
-  Returns the new db."
-  ([db id f]
-   (if-some [existing (get-entity db id)]
-     (add db (f existing))
-     db))
-  ([db id f & args]
-   (change db id #(apply f % args))))
+(defn add
+  "Adds or merges the m to the db using the key :falx.db/id to determine entity identity."
+  [db m]
+  (let [id (::id m ::not-found)]
+    (if (identical? id ::not-found)
+      db
+      (reduce-kv #(assert %1 id %2 %3) db m))))
+
+(defn replace
+  "Replaces all attributes of the entity with those in `m`. Requires the :falx.db/id key to be present."
+  [db m]
+  (as-> db db
+        (delete db (::id m))
+        (add db m)))
 
 (defn db
-  "Creates a new db, optionally initializing with the given entity collection `ecoll`."
+  "Creates a new db"
   ([]
-   {:eav {}
-    :ave {}})
+   (db []))
   ([ecoll]
-   (reduce add (db) ecoll)))
+   (reduce add {} ecoll)))
+
+(defn entity?
+  "Returns whether `x` is an entity."
+  [x]
+  (and (map? x)
+       (some? (::id x))))
+
+(defn iquery
+  "Queries for entity ids where `k` == `v`."
+  [db k v]
+  (-> db ::ave (get k) (get v) (or #{})))
+
+(defn query
+  "Queries for entities where `k` == `v`."
+  [db k v]
+  (map #(entity db %) (iquery db k v)))
