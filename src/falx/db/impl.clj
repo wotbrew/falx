@@ -44,3 +44,11 @@
       db
       (assoc db :falx.db/eav (index-eav eav id k v)
                 :falx.db/ave (index-ave ave id k v ev)))))
+
+(defn retract
+  ([db id k]
+   (retract db id k (-> db :falx.db/eav (get id) (get k))))
+  ([db id k v]
+   (-> db
+       (disjoc-in [:falx.db/ave k v] id)
+       (dissoc-in [:falx.db/eav id k]))))
