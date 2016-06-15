@@ -51,6 +51,10 @@
           :id ::db/id)
   :ret (s/nilable ::db/entity))
 
+(s/fdef db/ids
+  :args (s/tuple ::db/db)
+  :ret (s/* ::db/id))
+
 (s/fdef db/retract
   :args (s/cat
           :db ::db/db
