@@ -2,40 +2,116 @@
   (:require [falx.geom :as g]
             [falx.geom.spec]
             [clojure.test :refer :all]
-            [clojure.spec.test :as st]))
+            [clojure.spec.test :as st]
+            [clojure.test.check.clojure-test :refer [defspec]]
+            [clojure.test.check.properties :as prop]
+            [clojure.spec :as s]))
 
-(defmacro is-spec?
-  [v]
-  `(is (-> (st/check-var ~v)
-           :result
-           true?)))
+(deftest specs-pass?
+  (let [r (st/run-tests 'falx.geom)]
+    (= (:test r)
+       (:pass r))))
 
-(deftest x-spec-passed?
-  (is-spec? #'g/x))
+(defspec x-same-as-kw
+  (prop/for-all
+    [g (s/gen ::g/geom)]
+    (= (::g/x g)
+       (g/x g))))
 
-(deftest y-spec-passed?
-  (is-spec? #'g/y))
+(defspec y-same-as-kw
+  (prop/for-all
+    [g (s/gen ::g/geom)]
+    (= (::g/y g)
+       (g/y g))))
 
-(deftest w-spec-passed?
-  (is-spec? #'g/w))
+(defspec w-same-as-kw
+  (prop/for-all
+    [g (s/gen ::g/geom)]
+    (= (::g/w g)
+       (g/w g))))
 
-(deftest h-spec-passed?
-  (is-spec? #'g/h))
+(defspec h-same-as-kw
+  (prop/for-all
+    [g (s/gen ::g/geom)]
+    (= (::g/h g)
+       (g/h g))))
 
-(deftest point-spec-passed?
-  (is-spec? #'g/point))
+(defspec point-on-point-is-identity
+  (prop/for-all
+    [x (s/gen ::g/point)]
+    (= x (g/point x))))
 
-(deftest size-spec-passed?
-  (is-spec? #'g/size))
+(defspec point-on-rect-selects-xy
+  (prop/for-all
+    [x (s/gen ::g/rect)]
+    (= (select-keys x [::g/x ::g/y]) (g/point x))))
 
-(deftest rect-spec-passed?
-  (is-spec? #'g/rect))
+(defspec point-on-size-returns-nil
+  (prop/for-all
+    [x (s/gen ::g/size)]
+    (nil? (g/point x))))
 
-(deftest add-spec-passed?
-  (is-spec? #'g/add))
+(defspec point-on-ints-returns-xy
+  (prop/for-all
+    [x (s/gen ::g/x)
+     y (s/gen ::g/y)]
+    (= (g/point x y)
+       {::g/x x ::g/y y})))
 
-(deftest mult-spec-passed?
-  (is-spec? #'g/mult))
+(defspec size-on-size-is-identity
+  (prop/for-all
+    [x (s/gen ::g/size)]
+    (= x (g/size x))))
 
-(deftest sub-spec-passed?
-  (is-spec? #'g/sub))
+(defspec size-on-rect-selects-wh
+  (prop/for-all
+    [x (s/gen ::g/rect)]
+    (= (select-keys x [::g/w ::g/h]) (g/size x))))
+
+(defspec size-on-point-returns-nil
+  (prop/for-all
+    [x (s/gen ::g/point)]
+    (nil? (g/size x))))
+
+(defspec size-on-ints-returns-wh
+  (prop/for-all
+    [w (s/gen ::g/w)
+     h (s/gen ::g/h)]
+    (= (g/size w h)
+       {::g/w w ::g/h h})))
+
+(defspec rect-on-rect-is-identity
+  (prop/for-all
+    [x (s/gen ::g/rect)]
+    (= x (g/rect x))))
+
+(defspec rect-on-point-returns-nil
+  (prop/for-all
+    [x (s/gen ::g/point)]
+    (nil? (g/rect x))))
+
+(defspec rect-on-size-returns-nil
+  (prop/for-all
+    [x (s/gen ::g/size)]
+    (nil? (g/rect x))))
+
+(defspec add-will-add-vals-together
+  (prop/for-all
+    [g1 (s/gen ::g/geom)
+     g2 (s/gen ::g/geom)]
+    (= (merge-with +' g1 g2)
+       (g/add g1 g2))))
+
+(defspec mult-will-mult-vals-together
+  (prop/for-all
+    [g1 (s/gen ::g/geom)
+     g2 (s/gen ::g/geom)]
+    (= (merge-with *' g1 g2)
+       (g/mult g1 g2))))
+
+(defspec sub-will-sub-vals-from-one-another
+  (prop/for-all
+    [g1 (s/gen ::g/geom)
+     g2 (s/gen ::g/geom)]
+    (= (merge-with -' g1 g2)
+       (g/sub g1 g2))))

@@ -7,14 +7,10 @@
             [clojure.spec.test :as st]
             [clojure.spec :as s]))
 
-(defmacro is-spec?
-  [v]
-  `(is (-> (st/check-var ~v)
-           :result
-           true?)))
-
-(deftest entity?-spec-passed?
-  (is-spec? #'db/entity?))
+(deftest specs-pass?
+  (let [r (st/run-tests 'falx.db)]
+    (= (:test r)
+       (:pass r))))
 
 (deftest entity?-example
   (is (db/entity? {::db/id 0}))
@@ -22,9 +18,6 @@
   (is (not (db/entity? {:foo :bar})))
   (is (not (db/entity? nil)))
   (is (not (db/entity? "foo"))))
-
-(deftest assert-spec-passed?
-  (is-spec? #'db/assert))
 
 (deftest assert-example
   (is (= (db/assert {} 0 :foo :bar)
@@ -36,7 +29,7 @@
     [db (s/gen ::db/db)
      id (s/gen ::db/id)
      k (s/gen ::db/key)
-     v (s/gen ::s/any)]
+     v (s/gen ::db/value)]
     (-> (db/assert db id k v)
         (db/entity id)
         (get k)
@@ -50,7 +43,7 @@
     [db (s/gen ::db/db)
      id (s/gen ::db/id)
      k (s/gen ::db/key)
-     v (s/gen ::s/any)]
+     v (s/gen ::db/value)]
     (-> (db/assert db id k v)
         (db/assert id k v)
         (= (db/assert db id k v)))))
@@ -63,7 +56,7 @@
     [db (s/gen ::db/db)
      id (s/gen ::db/id)
      k (s/gen ::db/key)
-     v (s/gen ::s/any)]
+     v (s/gen ::db/value)]
     (-> (db/delete db id)
         (db/assert id k v)
         (db/entity id)
@@ -72,9 +65,6 @@
 
 (comment
   (assert-creates-entity-if-not-existing))
-
-(deftest delete-spec-passed?
-  (is-spec? #'db/delete))
 
 (defspec deleted-entities-no-longer-exist
   (prop/for-all
@@ -98,9 +88,6 @@
 (comment
   (assert-is-idempotent))
 
-(deftest exists?-spec-passed?
-  (is-spec? #'db/exists?))
-
 (defspec entities-exist
   (prop/for-all
     [db (s/gen ::db/db)
@@ -112,18 +99,6 @@
 (comment
   (entities-exist))
 
-(deftest replace-spec-passed?
-  (is-spec? #'db/replace))
-
-(deftest add-spec-passed?
-  (is-spec? #'db/add))
-
-(deftest entity-spec-passed?
-  (is-spec? #'db/entity))
-
-(deftest ids-spec-passed?
-  (is-spec? #'db/ids))
-
 (defspec all-ids-exist
   (prop/for-all
     [db (s/gen ::db/db)]
@@ -131,15 +106,3 @@
 
 (comment
   (all-ids-exist))
-
-(deftest retract-spec-passed?
-  (is-spec? #'db/retract))
-
-(deftest db-spec-passed?
-  (is-spec? #'db/db))
-
-(deftest iquery-spec-passed
-  (is-spec? #'db/iquery))
-
-(deftest query-spec-passed
-  (is-spec? #'db/query))

@@ -2,10 +2,18 @@
   (:require [falx.geom :as g]
             [clojure.spec :as s]))
 
-(s/def ::g/x number?)
-(s/def ::g/y number?)
-(s/def ::g/w number?)
-(s/def ::g/h number?)
+(s/def ::valid-number
+  (s/and number?
+         #(cond (double? %) (not (or (.isNaN ^Double %)
+                                     (.isInfinite ^Double %)))
+                (float? %) (not (or (.isNaN ^Float %)
+                                    (.isInfinite ^Float %)))
+                :else true)))
+
+(s/def ::g/x ::valid-number)
+(s/def ::g/y ::valid-number)
+(s/def ::g/w ::valid-number)
+(s/def ::g/h ::valid-number)
 
 (s/def ::g/point
   (s/keys :req [::g/x ::g/y]))

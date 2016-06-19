@@ -4,8 +4,14 @@
             [clojure.test.check.generators :as gen]))
 
 (s/def ::db/id integer?)
-(s/def ::db/key ::s/any)
-(s/def ::db/value ::s/any)
+(s/def ::db/key keyword?)
+(s/def ::db/value
+  (s/and ::s/any
+         #(cond (double? %) (not (or (.isNaN ^Double %)
+                                     (.isInfinite ^Double %)))
+                (float? %) (not (or (.isNaN ^Float %)
+                                  (.isInfinite ^Float %)))
+              :else true)))
 
 (s/def ::db/entity
   (s/keys :req [::db/id]))
@@ -38,12 +44,7 @@
           :id ::db/id
           :key ::db/key
           :value ::db/value)
-  :ret ::db/db
-  :fn
-  (s/and
-    ;;idempotency
-    (fn [{ret :ret {:keys [db id key value]} :args}]
-      (= ret (db/assert db id key value)))))
+  :ret ::db/db)
 
 (s/fdef db/entity
   :args (s/cat
