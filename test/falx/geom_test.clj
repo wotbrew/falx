@@ -12,30 +12,6 @@
     (= (:test r)
        (:pass r))))
 
-(defspec x-same-as-kw
-  (prop/for-all
-    [g (s/gen ::g/geom)]
-    (= (::g/x g)
-       (g/x g))))
-
-(defspec y-same-as-kw
-  (prop/for-all
-    [g (s/gen ::g/geom)]
-    (= (::g/y g)
-       (g/y g))))
-
-(defspec w-same-as-kw
-  (prop/for-all
-    [g (s/gen ::g/geom)]
-    (= (::g/w g)
-       (g/w g))))
-
-(defspec h-same-as-kw
-  (prop/for-all
-    [g (s/gen ::g/geom)]
-    (= (::g/h g)
-       (g/h g))))
-
 (defspec point-on-point-is-identity
   (prop/for-all
     [x (s/gen ::g/point)]

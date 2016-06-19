@@ -27,22 +27,6 @@
         :size ::g/size
         :rect ::g/rect))
 
-(s/fdef g/x
-  :args (s/tuple ::g/geom)
-  :ret (s/nilable ::g/x))
-
-(s/fdef g/y
-  :args (s/tuple ::g/geom)
-  :ret (s/nilable ::g/y))
-
-(s/fdef g/w
-  :args (s/tuple ::g/geom)
-  :ret (s/nilable ::g/w))
-
-(s/fdef g/h
-  :args (s/tuple ::g/geom)
-  :ret (s/nilable ::g/h))
-
 (s/fdef g/point
   :args (s/or :arity0 empty?
               :arity1 (s/tuple ::g/geom)

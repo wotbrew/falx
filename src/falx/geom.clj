@@ -1,10 +1,5 @@
 (ns falx.geom)
 
-(def x ::x)
-(def y ::y)
-(def w ::w)
-(def h ::h)
-
 (def ^:private point-id {::x 0 ::y 0})
 (def ^:private size-id {::w 0 ::h 0})
 (def ^:private rect-id {::x 0 ::y 0 ::w 0 ::h 0})
