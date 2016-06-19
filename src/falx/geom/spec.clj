@@ -3,12 +3,17 @@
             [clojure.spec :as s]))
 
 (s/def ::valid-number
-  (s/and number?
-         #(cond (double? %) (not (or (.isNaN ^Double %)
-                                     (.isInfinite ^Double %)))
-                (float? %) (not (or (.isNaN ^Float %)
-                                    (.isInfinite ^Float %)))
-                :else true)))
+  (-> (s/and number?
+             #(cond (double? %) (not (or (.isNaN ^Double %)
+                                         (.isInfinite ^Double %)))
+                    (float? %) (not (or (.isNaN ^Float %)
+                                        (.isInfinite ^Float %)))
+                    :else true))
+      (s/with-gen
+        #(s/gen (s/or :long (s/long-in -10 10)
+                      :double (s/double-in :min -10 :max 10
+                                           :infinite? false
+                                           :NaN? false))))))
 
 (s/def ::g/x ::valid-number)
 (s/def ::g/y ::valid-number)
@@ -72,3 +77,7 @@
   :args (s/or :arity2 (s/tuple ::g/geom ::g/geom)
               :arity3 (s/tuple ::g/geom ::g/w ::g/h))
   :ret ::g/geom)
+
+(s/fdef g/points
+  :args (s/or :arity0 (s/tuple ::g/geom))
+  :ret (s/* ::g/point))

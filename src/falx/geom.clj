@@ -64,3 +64,15 @@
    (merge g1 (size g2)))
   ([g w h]
    (assoc g ::w w ::h h)))
+
+(defn points
+  [g]
+  (let [x (::x g 0)
+        y (::y g 0)
+        w (::w g 1)
+        h (::h g 1)
+        xw (+ x w)
+        yh (+ y h)]
+    (for [x (range x xw)
+          y (range y yh)]
+      (point x y))))
