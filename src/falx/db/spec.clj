@@ -25,7 +25,7 @@
 
 (s/def ::db/ave
   (s/with-gen
-    (s/map-of ::db/key (s/map-of ::db/value (s/coll-of ::db/id #{})))
+    (s/map-of ::db/key (s/map-of ::db/value (s/coll-of ::db/id :into #{})))
     #(gen/fmap ::db/ave (s/gen ::db/db))))
 
 (s/def ::db/eav
@@ -82,7 +82,7 @@
   :ret ::db/db)
 
 (s/fdef db/db
-  :args (s/cat :ecoll (s/coll-of ::db/entity []))
+  :args (s/cat :ecoll (s/coll-of ::db/entity :into []))
   :ret ::db/db)
 
 (s/fdef db/entity?
@@ -97,8 +97,8 @@
 
 (s/fdef db/iquery
   :args (s/tuple ::db/db ::db/key ::db/value)
-  :ret (s/coll-of ::db/id #{}))
+  :ret (s/coll-of ::db/id :into #{}))
 
 (s/fdef db/query
   :args (s/tuple ::db/db ::db/key ::db/value)
-  :ret (s/coll-of ::db/entity #{}))
+  :ret (s/coll-of ::db/entity :into #{}))

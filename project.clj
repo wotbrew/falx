@@ -3,9 +3,9 @@
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[org.clojure/clojure "1.9.0-alpha5"]
+  :dependencies [[org.clojure/clojure "1.9.0-alpha9"]
                  [org.clojure/tools.logging "0.3.1"]
-                 [org.clojure/core.async "0.2.374"]
+                 [org.clojure/core.async "0.2.385"]
                  [org.clojure/test.check "0.9.0"]
                  [com.stuartsierra/component "0.3.1"]
                  [com.badlogicgames.gdx/gdx "1.5.0"]

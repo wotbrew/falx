@@ -10,7 +10,7 @@
                                         (.isInfinite ^Float %)))
                     :else true))
       (s/with-gen
-        #(s/gen (s/or :long (s/long-in -10 10)
+        #(s/gen (s/or :long (s/int-in -10 10)
                       :double (s/double-in :min -10 :max 10
                                            :infinite? false
                                            :NaN? false))))))
@@ -81,3 +81,33 @@
 (s/fdef g/points
   :args (s/or :arity0 (s/tuple ::g/geom))
   :ret (s/* ::g/point))
+
+(s/def ::g/point-tuple (s/tuple ::g/x ::g/y))
+
+(s/def ::g/rect-tuple (s/tuple ::g/x ::g/y ::g/w ::g/h))
+
+(s/def ::g/size-tuple (s/tuple ::g/w ::g/h))
+
+(s/fdef g/->point-tuple
+  :args (s/or :arity1 (s/tuple ::g/geom))
+  :ret ::g/point-tuple)
+
+(s/fdef g/->rect-tuple
+  :args (s/or :arity1 (s/tuple ::g/geom))
+  :ret ::g/rect-tuple)
+
+(s/fdef g/->size-tuple
+  :args (s/or :arity1 (s/tuple ::g/geom))
+  :ret ::g/size-tuple)
+
+(s/fdef g/point-tuple->geom
+  :args (s/or :arity1 (s/tuple ::g/point-tuple))
+  :ret ::g/point)
+
+(s/fdef g/rect-tuple->geom
+  :args (s/or :arity1 (s/tuple ::g/rect-tuple))
+  :ret ::g/rect)
+
+(s/fdef g/size-tuple->geom
+  :args (s/or :arity1 (s/tuple ::g/size-tuple))
+  :ret ::g/size)

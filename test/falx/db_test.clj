@@ -4,13 +4,13 @@
             [clojure.test :refer :all]
             [clojure.test.check.clojure-test :refer [defspec]]
             [clojure.test.check.properties :as prop]
-            [clojure.spec.test :as st]
-            [clojure.spec :as s]))
+            [clojure.spec :as s]
+            [clojure.spec.test :as st]))
 
 (deftest specs-pass?
-  (let [r (st/run-tests 'falx.db)]
-    (= (:test r)
-       (:pass r))))
+  (is (every? (complement :failure)
+              (st/check (st/enumerate-namespace 'falx.db)
+                        {:clojure.spec.test.check/opts {:num-tests 100}}))))
 
 (deftest entity?-example
   (is (db/entity? {::db/id 0}))

@@ -76,3 +76,56 @@
     (for [x (range x xw)
           y (range y yh)]
       (point x y))))
+
+(defn ->rect-tuple
+  [g]
+  [(::x g 0) (::y g 0) (::w g 0) (::h g 0)])
+
+(defn rect-tuple->geom
+  [[x y w h]]
+  {::x (or x 0)
+   ::y (or y 0)
+   ::w (or w 0)
+   ::h (or h 0)})
+
+(defn ->size-tuple
+  [g]
+  [(::w g 0) (::h g 0)])
+
+(defn size-tuple->geom
+  [[w h]]
+  {::w (or w 0)
+   ::h (or h 0)})
+
+(defn ->point-tuple
+  [g]
+  [(::x g 0) (::y g 0)])
+
+(defn point-tuple->geom
+  [[x y]]
+  {::x (or x 0)
+   ::y (or y 0)})
+
+(def north
+  (point 0 -1))
+
+(def north-east
+  (point 1 -1))
+
+(def east
+  (point 1 0))
+
+(def south-east
+  (point 1 1))
+
+(def south
+  (point 0 1))
+
+(def south-west
+  (point -1 1))
+
+(def west
+  (point -1 0))
+
+(def north-west
+  (point -1 -1))

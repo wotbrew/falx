@@ -8,9 +8,9 @@
             [clojure.spec :as s]))
 
 (deftest specs-pass?
-  (let [r (st/run-tests 'falx.geom)]
-    (= (:test r)
-       (:pass r))))
+  (is (every? (complement :failure)
+              (st/check (st/enumerate-namespace 'falx.geom)
+                        {:clojure.spec.test.check/opts {:num-tests 100}}))))
 
 (defspec point-on-point-is-identity
   (prop/for-all
