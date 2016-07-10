@@ -1,9 +1,8 @@
 (ns falx.draw
   (:require [falx.geom :as g]
             [gdx.color :as color]
-            [clj-gdx :as gdx]
-            [falx.sprite :as sprite])
-  (:import (clojure.lang Sequential IRef)))
+            [clj-gdx :as gdx])
+  (:import (clojure.lang Sequential)))
 
 (defprotocol IDraw
   (-drawfn [this geom context]))
