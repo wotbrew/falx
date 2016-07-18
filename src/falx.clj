@@ -4,7 +4,10 @@
             [clojure.core.async :as async]
             [falx.geom :as g]
             [falx.draw :as draw]
-            [falx.sprite :as sprite]))
+            [falx.sprite :as sprite]
+            [falx.mouse :as mouse]
+            [falx.game :as game]
+            [falx.menu]))
 
 (def max-fps
   60)
@@ -16,26 +19,28 @@
      :max-foreground-fps max-fps}))
 
 (def game
-  (atom {}))
-
-(def in
-  (async/chan))
+  (atom game/defaults))
 
 (defn render!
   [game]
   (draw/draw!
-    [(draw/vspacing 16 [(gdx/get-fps) @gdx/mouse-state])
+    [(draw/vspacing 16 [(::game/fps game)
+                        (::mouse/point (::game/mouse game))
+                        (:falx.button/mouse.left (::mouse/buttons (::game/mouse game)))
+                        (:falx.button/mouse.right (::mouse/buttons (::game/mouse game)))])
      (draw/at (draw/img sprite/mouse-point)
-              (g/point-tuple->geom (:point @gdx/mouse-state)))]))
+              (::mouse/point (::game/mouse game)))
+     (falx.menu/drawable (falx.menu/view game))]))
 
 (gdx/defrender
-  (let [g @game]
-    (try
-      (render! g)
-      (catch Throwable e
-        (error e)
-        (Thread/sleep 5000)))))
+  (try
+    (let [g (swap! game game/next)]
+      (render! g))
+    (catch Throwable e
+      (error e)
+      (Thread/sleep 5000))))
 
 (defn -main
   [& args]
-  (gdx/start-app! app))
+  (gdx/start-app! app)
+  (reset! game game/defaults))

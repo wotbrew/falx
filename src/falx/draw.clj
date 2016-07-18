@@ -1,7 +1,8 @@
 (ns falx.draw
   (:require [falx.geom :as g]
             [gdx.color :as color]
-            [clj-gdx :as gdx])
+            [clj-gdx :as gdx]
+            [falx.sprite :as sprite])
   (:import (clojure.lang Sequential)))
 
 (defprotocol IDraw
@@ -63,17 +64,6 @@
   [drawable color]
   (->Tint drawable color))
 
-(defrecord Image [sprite]
-  IDraw
-  (-drawfn [this geom context]
-    (let [{::g/keys [x y w h] :or {x 0 y 0 w 32 h 32}} geom]
-      (fn []
-        (gdx/draw-sprite! sprite x y w h context)))))
-
-(defn img
-  [sprite]
-  (->Image sprite))
-
 (defrecord At [drawable point]
   IDraw
   (-drawfn [this geom context]
@@ -87,12 +77,44 @@
 (defrecord Relative [drawable point]
   IDraw
   (-drawfn [this geom context]
-    (let [geom' (g/add geom point)]
+    (let [geom' (g/add geom (g/point point))]
       (drawfn drawable geom' context))))
 
 (defn relative
   [drawable point]
   (->Relative drawable point))
+
+(defn fit
+  [drawable rect]
+  (-> drawable
+      (relative rect)
+      (size rect)))
+
+(defrecord Image [sprite]
+  IDraw
+  (-drawfn [this geom context]
+    (let [{::g/keys [x y w h] :or {x 0 y 0 w 32 h 32}} geom]
+      (fn []
+        (gdx/draw-sprite! sprite x y w h context)))))
+
+(defn img
+  [sprite]
+  (->Image sprite))
+
+(defrecord Box []
+  IDraw
+  (-drawfn [this geom context]
+    (let [{::g/keys [x y w h] :or {x 0 y 0 w 32 h 32}} geom
+          thickness (:thickness context 1)
+          x+w (+ x w (- thickness))
+          y+h (+ y h (- thickness))]
+      (fn []
+        (gdx/draw-sprite! sprite/pixel x y w thickness context)
+        (gdx/draw-sprite! sprite/pixel x+w y thickness h context)
+        (gdx/draw-sprite! sprite/pixel x y thickness h context)
+        (gdx/draw-sprite! sprite/pixel x y+h w thickness context)))))
+
+(def box (->Box))
 
 (defn hspacing
   [x coll]
