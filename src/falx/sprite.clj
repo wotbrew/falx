@@ -6,6 +6,12 @@
   [file x y w h]
   (gdx/sprite file [x y w h]))
 
+(defn draw!
+  ([sprite x y w h]
+   (gdx/draw-sprite! sprite x y w h))
+  ([sprite x y w h context]
+   (gdx/draw-sprite! sprite x y w h contextl)))
+
 (defn tile
   [file x y w h]
   (sprite (io/resource (format "tiles/%s.png" file)) x y w h))
