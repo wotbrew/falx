@@ -13,13 +13,6 @@
   (-drawfn [this x y w h opts]
     "Returns a 0-arg fn that will draw the drawable to the screen."))
 
-(defprotocol ISized
-  (-size [this]))
-
-(defn size
-  [drawable]
-  (-size drawable))
-
 (defn drawfn
   "Returns a 0-arg fn that will draw the drawable to the screen."
   ([drawable rect]
@@ -64,17 +57,6 @@
   (-drawfn [this x y w h opts]
     (fn []
       (-draw! this x y w h opts))))
-
-(extend-protocol ISized
-  nil
-  (-size [this]
-    nil)
-  Object
-  (-size [this]
-    (let [w (:w this)
-          h (:h this)]
-      (when (and w h)
-        [w h]))))
 
 ;; ====
 ;; Combinators
@@ -160,6 +142,21 @@
   ([drawables]
    (->Rows drawables)))
 
+(defrecord FixedRows [h drawables]
+  IDraw
+  (-drawfn [this x y w h2 opts]
+    (let [n (count drawables)
+          rows (long (/ h2 h))
+          fs (into []
+                   (map-indexed (fn [i d]
+                                  (-drawfn d x (+ y (* h i)) w h opts)))
+                   drawables)]
+      (fn [] (run! invoke fs)))))
+
+(defn frows
+  ([h drawables]
+   (->FixedRows h drawables)))
+
 (defrecord Cols [drawables]
   IDraw
   (-drawfn [this x y w h opts]
@@ -174,6 +171,19 @@
 (defn cols
   ([drawables]
    (->Cols drawables)))
+
+(defrecord FixedCols [w drawables]
+  IDraw
+  (-drawfn [this x y w2 h opts]
+    (let [fs (into []
+                   (map-indexed (fn [i d]
+                                  (-drawfn d (+ x (* w i)) y w h opts)))
+                   drawables)]
+      (fn [] (run! invoke fs)))))
+
+(defn fcols
+  ([w drawables]
+   (->FixedCols w drawables)))
 
 (defrecord Items [w h drawables]
   IDraw
