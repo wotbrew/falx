@@ -1,6 +1,7 @@
 (ns falx.draw
   (:require [clj-gdx :as gdx]
-            [clojure.java.io :as io]))
+            [clojure.java.io :as io]
+            [gdx.color :as color]))
 
 (defprotocol IDraw
   (-draw! [this x y w h opts]))
@@ -47,6 +48,16 @@
    (->Text s font {}))
   ([s font opts]
    (->Text s font opts)))
+
+(defn text-padding
+  [text w h]
+  (let [[w1 h1] (gdx/get-string-bounds (:s text) (:font text))]
+    [(float (/ (- w w1) 2))
+     (float (/ (- h h1) 2))]))
+
+(defn text?
+  [x]
+  (instance? Text x))
 
 ;; =====
 ;; Sprites
@@ -157,7 +168,17 @@
 ;; Boxes
 ;; ====
 
-(defrecord Box [thickness opts])
+(defrecord Box [thickness opts]
+  IDraw
+  (-draw! [this x y w h opts2]
+    (let [opts (fast-merge opts opts2)
+          t thickness
+          r-t (+ x (- w t))
+          b-t (+ y (- h t))]
+      (draw! pixel x y w t opts)
+      (draw! pixel r-t y 1 h opts)
+      (draw! pixel x b-t w 1 opts)
+      (draw! pixel x y t h opts))))
 
 (def default-box
   (->Box 1 {}))
@@ -169,3 +190,47 @@
    (->Box thickness {}))
   ([thickness opts]
    (->Box thickness opts)))
+
+;; ====
+;; Colors
+;; ====
+
+(def color-selected color/green)
+(def color-selected2 color/yellow)
+(def color-disabled color/gray)
+
+(def color-default (color/scale color/white 0.95))
+(def color-highlight color/white)
+
+;; ====
+;; Button
+;; ====
+
+(defn button-box-opts
+  [state]
+  {:color
+   (case state
+     :ui.button/state.focused color-highlight
+     :ui.button/state.disabled color-disabled
+     color-default)})
+
+(defn button-text-opts
+  [state]
+  {:color
+   (case state
+     :ui.button/state.focused color-highlight
+     :ui.button/state.disabled color-disabled
+     color-default)})
+
+(defrecord Button [text state]
+  IDraw
+  (-draw! [this x y w h opts]
+    (let [[xp yp] (text-padding text w h)]
+      (draw! default-box x y w h (button-box-opts state))
+      (draw! text (+ x xp) (+ y yp) w h (button-text-opts state)))))
+
+(defn button
+  ([text]
+   (button text nil))
+  ([text state]
+   (->Button (if (text? text) text (falx.draw/text text)) state)))
