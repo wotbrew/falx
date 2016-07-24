@@ -3,7 +3,12 @@
   (:require [clj-gdx :as gdx]
             [clojure.java.io :as io]
             [gdx.color :as color]
-            [falx.size :as size]))
+            [falx.size :as size])
+  (:import (clojure.lang Sequential)))
+
+(defn- invoke
+  [f]
+  (f))
 
 (defprotocol IDrawImmediate
   (-draw! [this x y w h opts]
@@ -42,7 +47,10 @@
     ((-drawfn this x y w h opts)))
   falx.draw.IDraw
   (-draw! [this x y w h opts]
-    ((-drawfn this x y w h opts))))
+    ((-drawfn this x y w h opts)))
+  Sequential
+  (-draw! [this x y w h opts]
+    (run! #(-draw! % x y w h opts) this)))
 
 (extend-protocol IDraw
   nil
@@ -56,159 +64,11 @@
   falx.draw.IDrawImmediate
   (-drawfn [this x y w h opts]
     (fn []
-      (-draw! this x y w h opts))))
-
-;; ====
-;; Combinators
-;; ====
-
-(defn- invoke
-  [f]
-  (f))
-
-(defrecord Stack [drawables]
-  IDraw
+      (-draw! this x y w h opts)))
+  Sequential
   (-drawfn [this x y w h opts]
-    (let [fs (mapv #(-drawfn % x y w h opts) drawables)]
-      (fn []
-        (run! invoke fs))))
-  IDrawImmediate
-  (-draw! [this x y w h opts]
-    (run! (fn [d] (draw! d x y w h opts)) drawables)))
-
-(defn stack
-  "Returns a drawable that will draw the inner drawables back-to-front."
-  [drawables]
-  (->Stack drawables))
-
-(defrecord At [drawable x y]
-  IDraw
-  (-drawfn [this x2 y2 w h opts]
-    (-drawfn drawable (+ x x2) (+ y y2) w h opts))
-  IDrawImmediate
-  (-draw! [this x2 y2 w h opts]
-    (-draw! drawable (+ x x2) (+ y y2) w h opts)))
-
-(defn at
-  "Returns a drawable offset by `x` and `y`."
-  ([drawable pt]
-   (let [[x y] pt]
-     (->At drawable x y)))
-  ([drawable x y]
-   (->At drawable x y)))
-
-(defrecord Center [drawable w h]
-  IDraw
-  (-drawfn [this x y w2 h2 opts]
-    (let [[x y w h] (size/center w h x y w2 h2)]
-      (-drawfn drawable x y w h opts))))
-
-(defn center
-  "Centers the drawable according to the given size."
-  ([drawable size]
-   (let [[w h] size]
-     (center drawable w h)))
-  ([drawable w h]
-   (->Center drawable w h)))
-
-(defrecord Fit [drawable w h]
-  IDraw
-  (-drawfn [this x y w2 h2 opts]
-    (-drawfn drawable x y (min w w2) (min h h2) opts))
-  IDrawImmediate
-  (-draw! [this x y w2 h2 opts]
-    (-draw! drawable x y (min w w2) (min h h2) opts)))
-
-(defn fit
-  "Fits the drawable to the size (if the requested size is larger)"
-  ([drawable size]
-   (let [[w h] size]
-     (->Fit drawable w h)))
-  ([drawable w h]
-   (->Fit drawable w h)))
-
-(defrecord Rows [drawables]
-  IDraw
-  (-drawfn [this x y w h opts]
-    (let [n (count drawables)
-          ih (long (/ h n))
-          fs (into []
-                   (map-indexed (fn [i d]
-                                  (-drawfn d x (+ y (* ih i)) w ih opts)))
-                   drawables)]
+    (let [fs (mapv #(-drawfn % x y w h opts) this)]
       (fn [] (run! invoke fs)))))
-
-(defn rows
-  ([drawables]
-   (->Rows drawables)))
-
-(defrecord FixedRows [h drawables]
-  IDraw
-  (-drawfn [this x y w h2 opts]
-    (let [n (count drawables)
-          rows (long (/ h2 h))
-          fs (into []
-                   (map-indexed (fn [i d]
-                                  (-drawfn d x (+ y (* h i)) w h opts)))
-                   drawables)]
-      (fn [] (run! invoke fs)))))
-
-(defn frows
-  ([h drawables]
-   (->FixedRows h drawables)))
-
-(defrecord Cols [drawables]
-  IDraw
-  (-drawfn [this x y w h opts]
-    (let [n (count drawables)
-          iw (long (/ w n))
-          fs (into []
-                   (map-indexed (fn [i d]
-                                  (-drawfn d (+ x (* iw i)) y iw h opts)))
-                   drawables)]
-      (fn [] (run! invoke fs)))))
-
-(defn cols
-  ([drawables]
-   (->Cols drawables)))
-
-(defrecord FixedCols [w drawables]
-  IDraw
-  (-drawfn [this x y w2 h opts]
-    (let [fs (into []
-                   (map-indexed (fn [i d]
-                                  (-drawfn d (+ x (* w i)) y w h opts)))
-                   drawables)]
-      (fn [] (run! invoke fs)))))
-
-(defn fcols
-  ([w drawables]
-   (->FixedCols w drawables)))
-
-(defrecord Items [w h drawables]
-  IDraw
-  (-drawfn [this x y w2 h2 opts]
-    (let [cols (long (/ w2 w))
-          rows (long (/ h2 h))
-          fs  (into []
-                   (map-indexed (fn [i d]
-                                  (let [col (mod i cols)
-                                        row (mod (long (/ i cols)) rows)]
-                                    (-drawfn d
-                                             (+ x (* w col))
-                                             (+ y (* h row))
-                                             w
-                                             h
-                                             opts))))
-                   drawables)]
-      (fn [] (run! invoke fs)))))
-
-(defn items
-  ([size drawables]
-   (let [[w h] size]
-     (items w h drawables)))
-  ([w h drawables]
-   (->Items w h drawables)))
 
 ;; ====
 ;; Strings
@@ -226,12 +86,19 @@
   IDraw
   (-drawfn [this x y w h opts2]
     (let [context (fast-merge opts opts2)]
-      (fn []
-        (gdx/draw-string! s x y w context font))) )
+      (if (:centered? context)
+        (let [[tw th] (gdx/get-string-wrapped-bounds s w font)
+              [x y w] (size/center tw th x y w h)]
+          (fn []
+            (gdx/draw-string! s x y w context font)))
+        (fn []
+          (gdx/draw-string! s x y w context font)))) )
   IDrawImmediate
   (-draw! [this x y w h opts2]
     (let [context (fast-merge opts opts2)]
-      (gdx/draw-string! s x y w context font))))
+      (if (:centered? context)
+        ((-drawfn this x y w h opts2))
+        (gdx/draw-string! s x y w context font)))))
 
 (defn text?
   [x]
@@ -256,18 +123,26 @@
 ;; Sprites
 ;; =====
 
-(defrecord Sprite [texture rect flip-y?]
+(defrecord Sprite [texture rect opts flip-y?]
   IDrawImmediate
-  (-draw! [this x y w h opts]
-    (gdx/draw-sprite! this x y w h opts)))
+  (-draw! [this x y w h opts2]
+    (let [context (fast-merge opts2 opts)]
+      (gdx/draw-sprite! this x y w h context))))
+
+(defn sprite?
+  [x]
+  (instance? Sprite x))
 
 (defn sprite
-  [file x y w h]
-  (map->Sprite (gdx/sprite file [x y w h])))
+  ([spr]
+   (map->Sprite spr))
+  ([spr opts]
+   (map->Sprite (assoc spr :opts opts))))
 
 (defn tile
   [file x y w h]
-  (sprite (io/resource (format "tiles/%s.png" file)) x y w h))
+  (-> (gdx/sprite (io/resource (format "tiles/%s.png" file)) [x y w h])
+      sprite))
 
 (defn- tile32
   [file x y]
@@ -306,6 +181,12 @@
 
 (def pixel
   (misc32 0 1))
+
+(def pixel-black
+  (sprite pixel {:color color/black}))
+
+(def pixel-gray
+  (sprite pixel {:color color/gray}))
 
 ;; =====
 ;; Sprites - Races - Human
@@ -477,30 +358,30 @@
 (defn button-box
   [state]
   (case state
-    :falx.ui.button/state.focused button-box-focused
-    :falx.ui.button/state.disabled button-box-disabled
+    ::button-state.focused button-box-focused
+    ::button-state.disabled button-box-disabled
     button-box-default))
 
 (defn button-text-opts
   [state]
-  {:color
+  {:centered? true
+   :color
    (case state
-     :falx.ui.button/state.focused color-highlight
-     :falx.ui.button/state.disabled color-disabled
+     ::button-state.focused color-highlight
+     ::button-state.disabled color-disabled
      color-default)})
 
-(defrecord Button [txt state]
-  IDraw
-  (-drawfn [this x y w h opts]
-    (let [button-box (button-box state)
-          text-opts (button-text-opts state)]
-      (fn []
-        (draw! button-box x y w h)
-        (draw! txt x y w h text-opts)))))
+(def button-font
+  gdx/default-font)
+
+(defn button-text
+  [txt state]
+  (text txt button-font (button-text-opts state)))
 
 (defn button
   ([txt]
-   (button txt nil))
+   (button txt ::button-state.default))
   ([txt state]
-   (let [txt (text txt)]
-     (->Button (center txt (text-bounds txt)) state))))
+   [pixel-black
+    (button-box state)
+    (button-text txt state)]))
