@@ -10,8 +10,7 @@
 (button/define ::new
   :text "-  New  -"
   :click (fn [gs]
-           (println "new!")
-           gs))
+           (ui/goto gs :falx.ui.game/scene)))
 
 (button/define ::continue
   :text "-  Continue  -")

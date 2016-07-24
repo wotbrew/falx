@@ -25,11 +25,6 @@
   [nodes]
   (->Stack nodes))
 
-(defrecord At [node pt]
-  INode
-  (-layout [this result rect]
-    (layout result node (rect/shift rect pt))))
-
 (defrecord Pad [node left top right bottom]
   INode
   (-layout [this result rect]
@@ -42,13 +37,18 @@
 
 (defn pad
   ([node padding]
-    (pad node
-         (:left padding 0)
-         (:top padding 0)
-         (:right padding 0)
-         (:bottom padding 0)))
+   (pad node
+        (:left padding 0)
+        (:top padding 0)
+        (:right padding 0)
+        (:bottom padding 0)))
   ([node left top bottom right]
-    (->Pad node left top bottom right)))
+   (->Pad node left top bottom right)))
+
+(defrecord At [node pt]
+  INode
+  (-layout [this result rect]
+    (layout result node (rect/shift rect pt))))
 
 (defn at
   "Returns a node offset by `x` and `y`."
@@ -56,6 +56,19 @@
    (->At node pt))
   ([node x y]
    (at node [x y])))
+
+(defrecord AtRight [node pt]
+  INode
+  (-layout [this result rect]
+    (let [[x y w h] rect
+          [x2 y2] pt
+          x (- (+ x w) x2)
+          y (+ y2 y)]
+      (layout result node [x y w h]))))
+
+(defn at-right
+  [node pt]
+  (->AtRight node pt))
 
 (defrecord Center [node size]
   INode

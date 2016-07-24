@@ -75,6 +75,10 @@
   [gs]
   [0 0 800 600])
 
+(defn goto
+  [gs scene]
+  (assoc gs ::scene scene))
+
 (defn draw!
   ([gs]
    (let [scene (get-scene (::scene gs))
@@ -100,10 +104,27 @@
           rect (scene-rect gs)]
       (handle gs (scene/layout scene rect))))
   ([gs layout]
-   (let [elem @elem-registry]
+   (let [elem @elem-registry
+         scene @scene-registry]
      (->
        (fn [gs [k rect]]
          (if-some [elem (elem k)]
            ((:handler elem) gs rect)
-           gs))
+           (if-some [scene (scene k)]
+             (handle gs (scene/layout scene rect))
+             gs)))
        (reduce gs layout)))))
+
+(defn draw
+  [drawable]
+  (fn [_ rect]
+    (d/drawfn drawable rect)))
+
+(defelem ::box
+  :draw (draw d/box))
+
+(defelem ::blank
+  :draw (draw d/pixel-black))
+
+(defelem ::block
+  :draw (draw d/block))

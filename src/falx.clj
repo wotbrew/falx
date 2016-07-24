@@ -17,17 +17,17 @@
     {:max-background-fps max-fps
      :max-foreground-fps max-fps}))
 
-(def gs
+(def state
   (atom {::ui/scene ::menu/scene}))
 
 (gdx/defrender
   (try
-    (let [old-gs @gs
+    (let [old-gs @state
           frame (frame/current)
           keyboard (keyboard/current old-gs)
           mouse (mouse/current old-gs)
-          gs (swap! gs merge frame keyboard mouse)
-          gs (ui/handle gs)]
+          gs (swap! state merge frame keyboard mouse)
+          gs (swap! state ui/handle)]
       (ui/draw! gs))
     (catch Throwable e
       (error e)
