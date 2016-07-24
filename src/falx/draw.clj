@@ -104,9 +104,12 @@
   [x]
   (instance? Text x))
 
+(def text-font
+  gdx/default-font)
+
 (defn text
   ([s]
-   (text s gdx/default-font))
+   (text s text-font))
   ([s font]
    (text s font {}))
   ([s font opts]

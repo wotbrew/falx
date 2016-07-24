@@ -17,7 +17,8 @@
     {:max-background-fps max-fps
      :max-foreground-fps max-fps}))
 
-(defonce gs (atom {}))
+(def gs
+  (atom {::ui/scene ::menu/scene}))
 
 (gdx/defrender
   (try
@@ -26,9 +27,8 @@
           keyboard (keyboard/current old-gs)
           mouse (mouse/current old-gs)
           gs (swap! gs merge frame keyboard mouse)
-          layout (scene/layout menu/scene [0 0 800 600])
-          gs (ui/handle gs layout)]
-      (ui/draw! layout gs))
+          gs (ui/handle gs)]
+      (ui/draw! gs))
     (catch Throwable e
       (error e)
       (Thread/sleep 5000))))

@@ -26,9 +26,9 @@
   :view (fn [gs] (mouse/rect gs))
   :draw (fn [view _] (d/draw! d/mouse-point view)))
 
-(def scene
+(ui/defscene ::scene
   (scene/stack
-    [debug/scene
+    [::debug/scene
      (-> (scene/rows
            [::new
             ::continue
