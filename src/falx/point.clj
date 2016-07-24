@@ -7,13 +7,13 @@
 
 (defn x
   "Returns the x element of the point"
-  [p]
-  (nth p 0))
+  [pt]
+  (nth pt 0))
 
 (defn y
   "Returns the y element of the point"
-  [p]
-  (nth p 1))
+  [pt]
+  (nth pt 1))
 
 (defn point
   "Coerces the coll into a point"
@@ -24,23 +24,23 @@
 (defn add
   "Adds 2 points together"
   ([] id)
-  ([p] p)
-  ([p1 p2]
-   (add p1 (x p2) (y p2)))
-  ([p x y]
-   (add (falx.point/x p) (falx.point/y p) x y))
+  ([pt] pt)
+  ([pt1 pt2]
+   (add pt1 (x pt2) (y pt2)))
+  ([pt x y]
+   (add (falx.point/x pt) (falx.point/y pt) x y))
   ([x1 y1 x2 y2]
    [(long (+ x1 x2))
     (long (+ y1 y2))]))
 
 (defn sub
   "Subtracts one point from another"
-  ([p]
-   [(- (x p)) (- (y p))])
-  ([p1 p2]
-   (sub p1 (x p2) (y p2)))
-  ([p x y]
-   (sub (falx.point/x p) (falx.point/y p) x y))
+  ([pt]
+   [(- (x pt)) (- (y pt))])
+  ([pt1 pt2]
+   (sub pt1 (x pt2) (y pt2)))
+  ([pt x y]
+   (sub (falx.point/x pt) (falx.point/y pt) x y))
   ([x1 y1 x2 y2]
    [(long (- x1 x2))
     (long (- y1 y2))]))
@@ -48,50 +48,50 @@
 (defn mult
   "Multiplies one point by another"
   ([] id)
-  ([p] p)
-  ([p1 p2]
-   (mult p1 (falx.point/x p2) (falx.point/y p2)))
-  ([p x y]
-   (mult (falx.point/x p) (falx.point/y p) x y))
+  ([pt] pt)
+  ([pt1 pt2]
+   (mult pt1 (falx.point/x pt2) (falx.point/y pt2)))
+  ([pt x y]
+   (mult (falx.point/x pt) (falx.point/y pt) x y))
   ([x1 y1 x2 y2]
    [(long (* x1 x2))
     (long (* y1 y2))]))
 
 (defn div
   "Divides one point by another"
-  ([p1 p2]
-   (div p1 (x p2) (y p2)))
-  ([p x y]
-   (div (falx.point/x p) (falx.point/y p) x y))
+  ([pt1 pt2]
+   (div pt1 (x pt2) (y pt2)))
+  ([pt x y]
+   (div (falx.point/x pt) (falx.point/y pt) x y))
   ([x1 y1 x2 y2]
    [(long (/ x1 x2))
     (long (/ y1 y2))]))
 
 (defn shift
   "Adds `n` to each component of the point."
-  ([p n]
-   (add p n n))
+  ([pt n]
+   (add pt n n))
   ([x1 y1 n]
    (add x1 y1 n n)))
 
 (defn unshift
   "Subtracts `n` from each component of the point."
-  ([p n]
-   (sub p n n))
+  ([pt n]
+   (sub pt n n))
   ([x1 y1 n]
    (sub x1 y1 n n)))
 
 (defn scale
   "Scales the point by a factor of `n`. Coerces components to longs"
-  ([p n]
-   (mult p n n))
+  ([pt n]
+   (mult pt n n))
   ([x y n]
    (mult x y n n)))
 
 (defn shrink
   "Shrinks the point by a factor of `n`. Coerces components to longs"
-  ([p n]
-   (div p n n))
+  ([pt n]
+   (div pt n n))
   ([x y n]
    (div x y n n)))
 
@@ -129,17 +129,17 @@
 
 (defn magnitude
   "Returns the magnitude of the point as a double"
-  ([p]
-   (let [x (double (x p))
-         y (double (y p))]
+  ([pt]
+   (let [x (double (x pt))
+         y (double (y pt))]
      (Math/sqrt (+ (* x x) (* y y)))))
   ([x y]
    (Math/sqrt (+ (* x x) (* y y)))))
 
 (defn unit
-  "Defines the unit point for `p`"
-  ([p]
-   (unit (x p) (y p)))
+  "Defines the unit point for `pt`"
+  ([pt]
+   (unit (x pt) (y pt)))
   ([x y]
    (let [x (double x)
          y (double y)
@@ -148,16 +148,16 @@
       (Math/round (/ y m))])))
 
 (defn opposite
-  ([p]
-   (opposite (x p) (y p)))
+  ([pt]
+   (opposite (x pt) (y pt)))
   ([x y]
    (scale x y -1)))
 
 (defn direction
-  ([p1 p2]
-   (direction p1 (x p2) (y p2)))
-  ([p x y]
-   (direction (falx.point/x p) (falx.point/y p) x y))
+  ([pt1 pt2]
+   (direction pt1 (x pt2) (y pt2)))
+  ([pt x y]
+   (direction (falx.point/x pt) (falx.point/y pt) x y))
   ([x1 y1 x2 y2]
    (unit (sub x2 y2 x1 y1))))
 
@@ -200,8 +200,8 @@
   clockwise-cardinal-directions)
 
 (defn adj
-  ([p]
-   (adj (x p) (y p)))
+  ([pt]
+   (adj (x pt) (y pt)))
   ([x y]
    (let [arr (object-array 8)
          x (long x)
@@ -221,8 +221,8 @@
      (vec arr))))
 
 (defn adjc
-  ([p]
-   (adjc (x p) (y p)))
+  ([pt]
+   (adjc (x pt) (y pt)))
   ([x y]
    (let [arr (object-array 4)
          x (long x)
