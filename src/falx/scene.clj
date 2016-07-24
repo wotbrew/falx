@@ -30,6 +30,26 @@
   (-layout [this result rect]
     (layout result node (rect/shift rect pt))))
 
+(defrecord Pad [node left top right bottom]
+  INode
+  (-layout [this result rect]
+    (let [[x y w h] rect]
+      (layout result node
+              [(+ x left)
+               (+ y top)
+               (- w left right)
+               (- h top bottom)]))))
+
+(defn pad
+  ([node padding]
+    (pad node
+         (:left padding 0)
+         (:top padding 0)
+         (:right padding 0)
+         (:bottom padding 0)))
+  ([node left top bottom right]
+    (->Pad node left top bottom right)))
+
 (defn at
   "Returns a node offset by `x` and `y`."
   ([node pt]
