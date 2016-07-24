@@ -143,3 +143,27 @@
    (->HItems size (vec nodes))))
 
 (def items hitems)
+
+(defrecord VItems [size nodes]
+  INode
+  (-layout [this scene rect]
+    (let [[w h] size
+          [x y w2 h2] rect
+          cols (long (/ w2 w))
+          rows (long (/ h2 h))]
+      (reduce-kv
+        (fn [scene i node]
+          (let [row (mod i rows)
+                col (mod (long (/ i rows)) cols)]
+            (layout scene
+                    node
+                    [(+ x (* w col))
+                     (+ y (* h row))
+                     w
+                     h])))
+        scene
+        nodes))))
+
+(defn vitems
+  ([size nodes]
+   (->VItems size (vec nodes))))
