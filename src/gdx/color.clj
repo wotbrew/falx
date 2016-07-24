@@ -38,6 +38,15 @@
   (compile
     (merge-with * a b)))
 
+(defn scale
+  [a n]
+  (compile
+    (reduce-kv
+      (fn [m k v]
+        (assoc m k (* v n)))
+      {}
+      a)))
+
 (defn with-alpha
   [color n]
   (compile
