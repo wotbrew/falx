@@ -236,3 +236,14 @@
      (aset arr 2 [x y+1])
      (aset arr 3 [x-1 y])
      (vec arr))))
+
+(defn in?
+  ([pt rect]
+    (let [[x y w h] rect]
+      (in? pt x y w h)))
+  ([pt x2 y2 w2 h2]
+    (in? (x pt) (y pt) x2 y2 w2 h2))
+  ([x y x2 y2 w2 h2]
+   (and
+     (<= x2 x (+ x2 w2))
+     (<= y2 y (+ y2 h2)))))

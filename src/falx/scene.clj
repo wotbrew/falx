@@ -3,23 +3,23 @@
             [falx.size :as size]))
 
 (defprotocol INode
-  (-layout [this scene rect]))
+  (-layout [this result rect]))
 
 (defn layout
-  ([node rect]
-   (layout {} node rect))
-  ([scene node rect]
-   (-layout node scene rect)))
+  ([scene rect]
+   (layout [] scene rect))
+  ([result scene rect]
+   (-layout scene result rect)))
 
 (extend-protocol INode
   Object
-  (-layout [this scene rect]
-    (assoc scene this rect)))
+  (-layout [this result rect]
+    (conj result [this rect])))
 
 (defrecord Stack [nodes]
   INode
-  (-layout [this scene rect]
-    (reduce #(layout %1 %2 rect) scene nodes)))
+  (-layout [this result rect]
+    (reduce #(layout %1 %2 rect) result nodes)))
 
 (defn stack
   [nodes]
@@ -27,8 +27,8 @@
 
 (defrecord At [node pt]
   INode
-  (-layout [this scene rect]
-    (layout scene node (rect/shift rect pt))))
+  (-layout [this result rect]
+    (layout result node (rect/shift rect pt))))
 
 (defn at
   "Returns a node offset by `x` and `y`."
@@ -39,9 +39,9 @@
 
 (defrecord Center [node size]
   INode
-  (-layout [this scene rect]
+  (-layout [this result rect]
     (let [rect (size/center size rect)]
-      (layout scene node rect))))
+      (layout result node rect))))
 
 (defn center
   "Centers the node according to the given size."
@@ -52,8 +52,8 @@
 
 (defrecord Fit [node size]
   INode
-  (-layout [this scene rect]
-    (layout scene node (rect/fit rect size))))
+  (-layout [this result rect]
+    (layout result node (rect/fit rect size))))
 
 (defn fit
   "Fits the node to the size (if the requested size is larger)"
@@ -64,14 +64,14 @@
 
 (defrecord Rows [nodes]
   INode
-  (-layout [this scene rect]
+  (-layout [this result rect]
     (let [n (count nodes)
           [x y w h] rect
           ih (long (/ h n)) ]
       (reduce-kv
-        (fn [scene i node]
-          (layout scene node [x (+ y (* ih i)) w ih]))
-        scene nodes))))
+        (fn [result i node]
+          (layout result node [x (+ y (* ih i)) w ih]))
+        result nodes))))
 
 (defn rows
   ([nodes]
@@ -79,12 +79,12 @@
 
 (defrecord FixedRows [h nodes]
   INode
-  (-layout [this scene rect]
+  (-layout [this result rect]
     (let [[x y w] rect]
       (reduce-kv
-        (fn [scene i node]
-          (layout scene node [x (+ y (* h i)) w h]))
-        scene nodes))))
+        (fn [result i node]
+          (layout result node [x (+ y (* h i)) w h]))
+        result nodes))))
 
 (defn frows
   ([h nodes]
@@ -92,14 +92,14 @@
 
 (defrecord Cols [nodes]
   INode
-  (-layout [this scene rect]
+  (-layout [this result rect]
     (let [n (count nodes)
           [x y w h] rect
           iw (long (/ w n)) ]
       (reduce-kv
-        (fn [scene i node]
-          (layout scene node [(+ x (* iw i)) y w h]))
-        scene nodes))))
+        (fn [result i node]
+          (layout result node [(+ x (* iw i)) y w h]))
+        result nodes))))
 
 (defn cols
   ([nodes]
@@ -107,12 +107,12 @@
 
 (defrecord FixedCols [w nodes]
   INode
-  (-layout [this scene rect]
+  (-layout [this result rect]
     (let [[x y _ h] rect]
       (reduce-kv
-        (fn [scene i node]
-          (layout scene node [(+ x (* i w)) y w h]))
-        scene nodes))))
+        (fn [result i node]
+          (layout result node [(+ x (* i w)) y w h]))
+        result nodes))))
 
 (defn fcols
   ([w nodes]
@@ -120,22 +120,22 @@
 
 (defrecord HItems [size nodes]
   INode
-  (-layout [this scene rect]
+  (-layout [this result rect]
     (let [[w h] size
           [x y w2 h2] rect
           cols (long (/ w2 w))
           rows (long (/ h2 h))]
       (reduce-kv
-        (fn [scene i node]
+        (fn [result i node]
           (let [col (mod i cols)
                 row (mod (long (/ i cols)) rows)]
-            (layout scene
+            (layout result
                     node
                     [(+ x (* w col))
                      (+ y (* h row))
                      w
                      h])))
-        scene
+        result
         nodes))))
 
 (defn hitems
@@ -146,22 +146,22 @@
 
 (defrecord VItems [size nodes]
   INode
-  (-layout [this scene rect]
+  (-layout [this result rect]
     (let [[w h] size
           [x y w2 h2] rect
           cols (long (/ w2 w))
           rows (long (/ h2 h))]
       (reduce-kv
-        (fn [scene i node]
+        (fn [result i node]
           (let [row (mod i rows)
                 col (mod (long (/ i rows)) cols)]
-            (layout scene
+            (layout result
                     node
                     [(+ x (* w col))
                      (+ y (* h row))
                      w
                      h])))
-        scene
+        result
         nodes))))
 
 (defn vitems

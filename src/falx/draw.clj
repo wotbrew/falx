@@ -349,6 +349,9 @@
 (def button-box-focused
   (shaded-box 1 color-highlight))
 
+(def button-box-selected
+  (shaded-box 1 color-selected))
+
 (def button-box-default
   (shaded-box 1 color-default))
 
@@ -359,6 +362,7 @@
   [state]
   (case state
     ::button-state.focused button-box-focused
+    ::button-state.selected button-box-selected
     ::button-state.disabled button-box-disabled
     button-box-default))
 
@@ -367,7 +371,8 @@
   {:centered? true
    :color
    (case state
-     ::button-state.focused color-highlight
+     ::button-state.focused color-selected
+     ::button-state.selected color-highlight
      ::button-state.disabled color-disabled
      color-default)})
 
