@@ -1,7 +1,7 @@
 (ns falx
   (:require [clj-gdx :as gdx]
             [clojure.tools.logging :refer [error info debug]]
-            [falx.menu]))
+            [falx.draw :as d]))
 
 (def max-fps
   60)
@@ -14,6 +14,7 @@
 
 (gdx/defrender
   (try
+    (d/draw! "foo" 0 0 33 3)
     (catch Throwable e
       (error e)
       (Thread/sleep 5000))))
