@@ -1,7 +1,8 @@
 (ns falx
   (:require [clj-gdx :as gdx]
             [clojure.tools.logging :refer [error info debug]]
-            [falx.draw :as d]))
+            [falx.draw :as d]
+            [gdx.color :as color]))
 
 (def max-fps
   60)
@@ -14,7 +15,11 @@
 
 (gdx/defrender
   (try
-    (d/draw! "foo" 0 0 33 3)
+    (d/draw! (d/button "foobar") 32 32 96 30)
+    (d/draw! (d/button "foobar" :ui.button/state.focused) 32 64 96 30)
+    (d/draw! (d/button "foobar" :ui.button/state.disabled) 32 96 96 30)
+
+    (d/draw! d/torch 128 128 32 32)
     (catch Throwable e
       (error e)
       (Thread/sleep 5000))))

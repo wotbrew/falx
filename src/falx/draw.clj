@@ -165,6 +165,26 @@
   (mouse32 1 2))
 
 ;; ====
+;; Sprites - Decor
+;; ====
+
+(defn- decor32
+  [x y]
+  (tile32 "Decorations1" x y))
+
+(def torch1
+  (decor32 0 0))
+
+(def torch2
+  (decor32 1 0))
+
+(def torch3
+  (decor32 2 0))
+
+(def torch4
+  (decor32 3 0))
+
+;; ====
 ;; Boxes
 ;; ====
 
@@ -191,28 +211,63 @@
   ([thickness opts]
    (->Box thickness opts)))
 
+(defrecord CustomBox [thickness lopts topts ropts bopts]
+  IDraw
+  (-draw! [this x y w h _]
+    (let [t thickness
+          r-t (+ x (- w t))
+          b-t (+ y (- h t))]
+      (draw! pixel x y w t topts)
+      (draw! pixel r-t y 1 h ropts)
+      (draw! pixel x b-t w 1 bopts)
+      (draw! pixel x y t h lopts))))
+
 ;; ====
 ;; Colors
 ;; ====
+
+(defn- dim
+  [color]
+  (color/scale color 0.5))
 
 (def color-selected color/green)
 (def color-selected2 color/yellow)
 (def color-disabled color/gray)
 
-(def color-default (color/scale color/white 0.95))
+(def color-default (color/scale color/white 0.9))
 (def color-highlight color/white)
 
 ;; ====
 ;; Button
 ;; ====
 
-(defn button-box-opts
+(def button-box-focused
+  (->CustomBox 1
+               {:color color-highlight}
+               {:color color-highlight}
+               {:color (dim color-highlight)}
+               {:color (dim color-highlight)}))
+
+(def button-box-default
+  (->CustomBox 1
+               {:color color-default}
+               {:color color-default}
+               {:color (dim color-default)}
+               {:color (dim color-default)}))
+
+(def button-box-disabled
+  (->CustomBox 1
+               {:color color-disabled}
+               {:color color-disabled}
+               {:color (dim color-disabled)}
+               {:color (dim color-disabled)}))
+
+(defn button-box
   [state]
-  {:color
-   (case state
-     :ui.button/state.focused color-highlight
-     :ui.button/state.disabled color-disabled
-     color-default)})
+  (case state
+    :ui.button/state.focused button-box-focused
+    :ui.button/state.disabled button-box-disabled
+    button-box-default))
 
 (defn button-text-opts
   [state]
@@ -226,7 +281,7 @@
   IDraw
   (-draw! [this x y w h opts]
     (let [[xp yp] (text-padding text w h)]
-      (draw! default-box x y w h (button-box-opts state))
+      (draw! (button-box state) x y w h)
       (draw! text (+ x xp) (+ y yp) w h (button-text-opts state)))))
 
 (defn button
@@ -234,3 +289,27 @@
    (button text nil))
   ([text state]
    (->Button (if (text? text) text (falx.draw/text text)) state)))
+
+;; ===
+;; Anims
+;; ===
+
+(defrecord ModCycleAnim [sprites rate]
+  IDraw
+  (-draw! [this x y w h opts]
+    (when (seq sprites)
+      (let [time (System/currentTimeMillis)
+            i (mod (/ time rate) (dec (count sprites)))]
+        (-draw! (nth sprites i nil) x y w h opts)))))
+
+;; ====
+;; Anims - Decor
+;; ====
+
+(def torch
+  (->ModCycleAnim
+    [torch1
+     torch2
+     torch3
+     torch4]
+    200))
