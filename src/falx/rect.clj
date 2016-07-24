@@ -4,18 +4,17 @@
   [0 0 0 0])
 
 (defn x
-  [r]
-  (nth r 0))
+  [rect]
+  (nth rect 0))
 
 (defn y
-  [r]
-  (nth r 1))
+  [rect]
+  (nth rect 1))
 
 (defn w
-  [r]
-  (nth r 2))
+  [rect]
+  (nth rect 2))
 
 (defn h
-  [r]
-  (nth r 3))
-
+  [rect]
+  (nth rect 3))
