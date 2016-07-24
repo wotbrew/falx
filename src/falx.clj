@@ -26,7 +26,8 @@
           keyboard (keyboard/current old-gs)
           mouse (mouse/current old-gs)
           gs (swap! gs merge frame keyboard mouse)
-          layout (scene/layout menu/scene [0 0 800 600])]
+          layout (scene/layout menu/scene [0 0 800 600])
+          gs (ui/handle gs layout)]
       (ui/draw! layout gs))
     (catch Throwable e
       (error e)

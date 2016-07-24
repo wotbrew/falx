@@ -8,7 +8,6 @@
   [x]
   (if (fn? x) x (constantly x)))
 
-
 (defn- statefn
   [view rect]
   (case (::state view)
@@ -18,6 +17,24 @@
     (if (mouse/in? view rect)
       ::d/button-state.focused
       ::d/button-state.default)))
+
+(defn handler
+  [{:keys [click
+           alt-click]}]
+  (let [fs
+        (->> [(when click
+                (fn [gs rect]
+                  (if (mouse/clicked-in? gs rect)
+                    (click gs)
+                    gs)))
+              (when alt-click
+                (fn [gs rect]
+                  (if (mouse/alt-clicked-in? gs rect)
+                    (alt-click gs)
+                    gs)))]
+             (filterv some?))]
+    (fn [gs rect]
+      (reduce #(%2 %1 rect) gs fs))))
 
 (defn drawfn
   ([{:keys [text state]
@@ -37,5 +54,6 @@
   (ui/add-elem!
     k
     (merge
-      {:drawfn (drawfn kvs)}
+      {:draw (drawfn kvs)
+       :handler (handler kvs)}
       kvs)))

@@ -17,20 +17,24 @@
   ([gs k f & args]
    (alter-state gs k #(apply f % args))))
 
-(def ^:private registry
+(defonce ^:private registry
   (atom {}))
 
-(defrecord Elem [view drawfn])
+(defrecord Elem [view
+                 drawfn
+                 handler])
 
 (def noop
   (constantly nil))
 
+(def defaults
+  {:view identity
+   :draw (constantly noop)
+   :handler (fn [gs rect] gs)})
+
 (defn elem
   [m]
-  (map->Elem (merge
-               {:view identity
-                :drawfn (constantly noop)}
-               m)))
+  (map->Elem (merge defaults m)))
 
 (defn add-elem!
   [k m]
@@ -49,6 +53,16 @@
         (when-some [elem (elem k)]
           (let [vfn (:view elem)
                 view (vfn gs)
-                ddraw! ((:drawfn elem) view rect)]
+                ddraw! ((:draw elem) view rect)]
             (when ddraw! (ddraw!)))))
       (run! layout))))
+
+(defn handle
+  [gs layout]
+  (let [elem @registry]
+    (->
+      (fn [gs [k rect]]
+        (if-some [elem (elem k)]
+          ((:handler elem) gs rect)
+          gs))
+      (reduce gs layout))))

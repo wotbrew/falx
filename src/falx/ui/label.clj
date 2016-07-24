@@ -16,5 +16,5 @@
   (ui/add-elem!
     k
     (merge
-      {:drawfn (drawfn (:text kvs identity))}
+      {:draw (drawfn (:text kvs identity))}
       kvs)))
