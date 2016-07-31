@@ -4,7 +4,9 @@
             [falx.ui :as ui]
             [clojure.tools.logging :refer [error info debug]]
             [falx.scene :as scene]
-            [falx.gdx.mouse :as mouse]))
+            [falx.gdx.mouse :as mouse]
+            [falx.menu :as menu]
+            [falx.state :as state]))
 
 (def max-fps
   60)
@@ -16,31 +18,11 @@
   (delay
     (gdx/bitmap-font)))
 
-(def scene
-  (scene/rows
-    (d/center (gdx/signal
-                (str "fps: " gdx/fps)))
-    (d/center mouse/point)
-    (scene/cols (d/box)
-                (d/box)
-                (d/box))
-    (scene/rows
-      (scene/cols
-        (d/center "foo")
-        (d/center "hello"))
-      (d/in-box (d/center "bar")))
-    (d/center "foo")))
-
-(def ui
-  (ui/scene
-    scene
-    {:cache-layout? false
-     :cache-draw? false
-     :cache-handle? false}))
-
 (gdx/defrender
   (try
-    (ui/draw! ui {} [0 0 800 600])
+    (let [frame @state/frame
+          gs (swap! state merge frame)]
+      (ui/draw! #'menu/scene gs [0 0 800 600]))
     (catch Throwable e
       (error e)
       (Thread/sleep 5000))))

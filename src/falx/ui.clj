@@ -12,7 +12,8 @@
   (:require [falx.scene :as scene]
             [falx.ui.protocols :as proto]
             [falx.draw.protocols :as dproto]
-            [falx.draw :as d]))
+            [falx.draw :as d])
+  (:import (clojure.lang Keyword Var)))
 
 (defn drawfn
   "Returns a 1-ary fn that draws the element given a view."
@@ -47,13 +48,39 @@
 (def ^:private noop
   (constantly nil))
 
+(defmulti kw-handle (fn [k gs rect] k))
+(defmethod kw-handle :default
+  [_ gs _]
+  gs)
+
+(defmulti kw-handlefn (fn [k rect] k))
+(defmethod kw-handlefn :default
+  [k rect]
+  #(kw-handle k % rect))
+
+(defmulti kw-draw! (fn [k view rect] k))
+(defmethod kw-draw! :default
+  [k view rect]
+  (draw! (str k) view rect))
+
+(defmulti kw-drawfn (fn [k rect] k))
+(defmethod kw-drawfn :default
+  [k rect]
+  #(kw-draw! k % rect))
+
 (extend-protocol proto/IHandle
   nil
   (-handle [this gs rect]
     gs)
   Object
   (-handle [this gs rect]
-    gs))
+    gs)
+  Var
+  (-handle [this gs rect]
+    (handle (var-get this) gs rect))
+  Keyword
+  (-handle [this gs rect]
+    (kw-handle this gs rect)))
 
 (extend-protocol proto/IDraw
   nil
@@ -61,7 +88,13 @@
     (d/draw! this rect))
   Object
   (-draw! [this view rect]
-    (d/draw! this rect)))
+    (d/draw! this rect))
+  Var
+  (-draw! [this view rect]
+    (draw! (var-get this) view rect))
+  Keyword
+  (-draw! [this view rect]
+    (kw-draw! this view rect)))
 
 (extend-protocol proto/IDrawLater
   nil
@@ -72,6 +105,12 @@
   (-drawfn [this rect]
     (fn [view]
       (proto/-draw! this view rect)))
+  Var
+  (-drawfn [this rect]
+    (drawfn (var-get this) rect))
+  Keyword
+  (-drawfn [this rect]
+    (kw-drawfn this rect))
   falx.draw.protocols.IDrawLater
   (-drawfn [this rect]
     (let [f (d/drawfn this rect)]
@@ -85,7 +124,13 @@
   Object
   (-handlefn [this rect]
     (fn [gs]
-      (proto/-handle this gs rect))))
+      (proto/-handle this gs rect)))
+  Var
+  (-handlefn [this rect]
+    (handlefn (var-get this) rect))
+  Keyword
+  (-handlefn [this rect]
+    (kw-handlefn this rect)))
 
 (defn scene
   "Returns an element for an entire scene.
@@ -144,7 +189,7 @@
       :cache-handle? false
       :cache-draw? false})))
 
-(extend-type falx.scene.INode
+(extend-type falx.scene.protocols.INode
   proto/IDraw
   (-draw! [this view rect]
     (draw! (transient-scene this) view rect))
@@ -175,3 +220,15 @@
   The body should return an element."
   [& body]
   `(env-call (fn [] ~@body)))
+
+(defn bind
+  "Returns an element that applies `f` to the view/gs before operating on the result.
+  e.g if handle is called handle is called as (handle (f gs) gs rect)"
+  ([f]
+    (reify
+      proto/IDraw
+      (-draw! [this view rect]
+        (proto/-draw! (f view) view rect))
+      proto/IHandle
+      (-handle [this gs rect]
+        (proto/-handle (f gs) gs rect)))))

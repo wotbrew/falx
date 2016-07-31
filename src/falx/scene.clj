@@ -1,9 +1,8 @@
 (ns falx.scene
   (:require [falx.rect :as rect]
-            [falx.size :as size]))
-
-(defprotocol INode
-  (-layout [this result rect]))
+            [falx.size :as size]
+            [falx.scene.protocols :refer [INode -layout]])
+  (:import (clojure.lang Var)))
 
 (defn layout
   ([scene rect]
@@ -14,7 +13,10 @@
 (extend-protocol INode
   Object
   (-layout [this result rect]
-    (conj result [this rect])))
+    (conj result [this rect]))
+  Var
+  (-layout [this result rect]
+    (-layout (var-get this) result rect)))
 
 (defrecord Stack [nodes]
   INode
@@ -102,13 +104,15 @@
 (defrecord Rows [nodes]
   INode
   (-layout [this result rect]
-    (let [n (count nodes)
-          [x y w h] rect
-          ih (long (/ h n)) ]
-      (reduce-kv
-        (fn [result i node]
-          (layout result node [x (+ y (* ih i)) w ih]))
-        result nodes))))
+    (if (empty? nodes)
+      result
+      (let [n (count nodes)
+            [x y w h] rect
+            ih (long (/ h n))]
+        (reduce-kv
+          (fn [result i node]
+            (layout result node [x (+ y (* ih i)) w ih]))
+          result nodes)))))
 
 (defn coll->rows
   ([nodes]
@@ -138,13 +142,15 @@
 (defrecord Cols [nodes]
   INode
   (-layout [this result rect]
-    (let [n (count nodes)
-          [x y w h] rect
-          iw (long (/ w n)) ]
-      (reduce-kv
-        (fn [result i node]
-          (layout result node [(+ x (* iw i)) y iw h]))
-        result nodes))))
+    (if (empty? nodes)
+      result
+      (let [n (count nodes)
+            [x y w h] rect
+            iw (long (/ w n))]
+        (reduce-kv
+          (fn [result i node]
+            (layout result node [(+ x (* iw i)) y iw h]))
+          result nodes)))))
 
 (defn coll->cols
   ([nodes]
@@ -230,3 +236,27 @@
 (defn hitems
   [size & nodes]
   (coll->hitems size nodes))
+
+(defn table
+  [head & rows]
+  (apply falx.scene/rows
+    (coll->cols head)
+    (map coll->cols rows)))
+
+(defn htable
+  [head & rows]
+  (apply falx.scene/cols
+         (coll->rows head)
+         (map coll->rows rows)))
+
+(defn maptable
+  [m]
+  (falx.scene/cols
+    (coll->rows (keys m))
+    (coll->rows (vals m))))
+
+(defn vmaptable
+  [m]
+  (falx.scene/rows
+    (coll->cols (keys m))
+    (coll->cols (vals m))))
