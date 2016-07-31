@@ -21,9 +21,13 @@
   (-layout [this result rect]
     (reduce #(layout %1 %2 rect) result nodes)))
 
-(defn stack
+(defn coll->stack
   [nodes]
-  (->Stack nodes))
+  (->Stack (vec nodes)))
+
+(defn stack
+  ([& nodes]
+   (coll->stack nodes)))
 
 (defrecord Pad [node left top right bottom]
   INode
@@ -106,9 +110,13 @@
           (layout result node [x (+ y (* ih i)) w ih]))
         result nodes))))
 
-(defn rows
+(defn coll->rows
   ([nodes]
    (->Rows (vec nodes))))
+
+(defn rows
+  [& nodes]
+  (coll->rows nodes))
 
 (defrecord FixedRows [h nodes]
   INode
@@ -119,9 +127,13 @@
           (layout result node [x (+ y (* h i)) w h]))
         result nodes))))
 
-(defn frows
+(defn coll->frows
   ([h nodes]
    (->FixedRows h (vec nodes))))
+
+(defn frows
+  [h & nodes]
+  (coll->frows h nodes))
 
 (defrecord Cols [nodes]
   INode
@@ -131,12 +143,17 @@
           iw (long (/ w n)) ]
       (reduce-kv
         (fn [result i node]
-          (layout result node [(+ x (* iw i)) y w h]))
+
+          (layout result node [(+ x (* iw i)) y iw h]))
         result nodes))))
 
-(defn cols
+(defn coll->cols
   ([nodes]
    (->Cols (vec nodes))))
+
+(defn cols
+  [& nodes]
+  (coll->cols nodes))
 
 (defrecord FixedCols [w nodes]
   INode
@@ -147,9 +164,13 @@
           (layout result node [(+ x (* i w)) y w h]))
         result nodes))))
 
-(defn fcols
+(defn coll->fcols
   ([w nodes]
    (->FixedCols w (vec nodes))))
+
+(defn fcols
+  [w & nodes]
+  (coll->fcols w nodes))
 
 (defrecord HItems [size nodes]
   INode
@@ -171,9 +192,15 @@
         result
         nodes))))
 
-(defn hitems
+(defn coll->hitems
   ([size nodes]
    (->HItems size (vec nodes))))
+
+(defn hitems
+  [size & nodes]
+  (coll->hitems size nodes))
+
+(def coll->items coll->hitems)
 
 (def items hitems)
 
@@ -197,6 +224,10 @@
         result
         nodes))))
 
-(defn vitems
+(defn coll->vitems
   ([size nodes]
    (->VItems size (vec nodes))))
+
+(defn hitems
+  [size & nodes]
+  (coll->hitems size nodes))

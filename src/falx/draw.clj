@@ -288,7 +288,6 @@
        (->Colored (->Box thickness) color)
        (->Box thickness)))))
 
-
 (defn- invoke!
   [f]
   (f))
@@ -355,3 +354,11 @@
     `(let ~binding-form
        ~@(for [d ds]
            `(draw! ~d ~sx ~sy ~sw ~sh)))))
+
+(defn in-box
+  ([d]
+   (in-box d {}))
+  ([d opts]
+    (each
+      (box opts)
+      d)))

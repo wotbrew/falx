@@ -1,8 +1,10 @@
 (ns falx
   (:require [falx.gdx :as gdx]
             [falx.draw :as d]
+            [falx.ui :as ui]
             [clojure.tools.logging :refer [error info debug]]
-            [falx.gdx.display :as display]))
+            [falx.gdx.display :as display]
+            [falx.scene :as scene]))
 
 (def max-fps
   60)
@@ -14,18 +16,29 @@
   (delay
     (gdx/bitmap-font)))
 
+(def scene
+  (scene/rows
+    (d/center (ui/env (str "fps: " (gdx/fps))))
+    (scene/cols (d/box)
+                (d/box)
+                (d/box))
+    (scene/rows
+      (scene/cols
+        (d/center "foo")
+        (d/center "hello"))
+      (d/in-box (d/center "pidge")))
+    (d/center "foo")))
+
+(def ui
+  (ui/scene
+    scene
+    {:cache-layout? false
+     :cache-draw? false
+     :cache-handle? false}))
+
 (gdx/defrender
   (try
-    (d/draw!
-      (d/each
-        (d/box)
-        (d/text "foo" {:centered? true})
-        ["frame: " (gdx/frame-id) "delta: " (gdx/delta-time)])
-      0 32 256 256)
-    (d/each!
-      [0 0 96 32]
-      (d/box {:color [1 1 1 1]})
-      (d/center (gdx/fps)))
+    (ui/draw! ui {} [0 0 800 600])
     (catch Throwable e
       (error e)
       (Thread/sleep 5000))))
