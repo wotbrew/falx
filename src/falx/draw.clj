@@ -1,5 +1,5 @@
 (ns falx.draw
-  "Drawing functions and drawable things"
+  "Functions to enable drawing things to the screen"
   (:require [falx.gdx :as gdx]
             [falx.gdx.pixmap :as pixmap]
             [falx.draw.protocols :as proto]
@@ -11,18 +11,20 @@
            (falx.draw.protocols IRegionColored)))
 
 (defn draw!
-  ([val rect]
+  "Draws the drawable `d` into the given screen rect."
+  ([d rect]
    (let [[x y w h] rect]
-     (proto/-draw! val x y w h)))
-  ([val x y w h]
-   (proto/-draw! val x y w h)))
+     (proto/-draw! d x y w h)))
+  ([d x y w h]
+   (proto/-draw! d x y w h)))
 
 (defn drawfn
-  ([drawable rect]
+  "Draws the returns a 0-ary fn that draws `d` to the screen rect."
+  ([d rect]
    (let [[x y w h] rect]
-     (proto/-drawfn drawable x y w h)))
-  ([drawable x y w h]
-   (proto/-drawfn drawable x y w h)))
+     (proto/-drawfn d x y w h)))
+  ([d x y w h]
+   (proto/-drawfn d x y w h)))
 
 (extend-protocol proto/IDrawLater
   nil
@@ -46,15 +48,12 @@
   (-font [this]
     (gdx/bitmap-font this)))
 
-(defn font
-  ([x]
-   (proto/-font x)))
-
 (defn recolor
   ([x color]
    (proto/-recolor x color)))
 
 (defn str!
+  "Draws the string into the screen rect using the default font (unless supplied)."
   ([s rect]
    (gdx/draw-str! s @default-font rect))
   ([s rect font]
@@ -65,6 +64,7 @@
    (gdx/draw-str! s (proto/-font font) x y w)))
 
 (defn region!
+  "Draws the texture region into the screen rect."
   ([region rect]
    (gdx/draw-region! region rect))
   ([region x y w h]
@@ -86,7 +86,7 @@
   (-draw! [this x y w _]
     (gdx/draw-str! s font x y w)))
 
-(declare ->ColoredText)
+(declare ->FontColored)
 
 (defrecord Text [s font]
   proto/IDraw
@@ -94,20 +94,12 @@
     (gdx/draw-str! s @font x y w))
   proto/IRecolor
   (-recolor [this color]
-    (->ColoredText s font color)))
+    (->FontColored s font color)))
 
-(defrecord ColoredText [s font color]
-  proto/IDraw
-  (-draw! [this x y w _]
-    (gdx/with-font-color @font color (gdx/draw-str! s @font x y w)))
-  proto/IRecolor
-  (-recolor [this color2]
-    (assoc this :color color2)))
-
-(defrecord FontColored [drawable font color]
+(defrecord FontColored [d font color]
   proto/IDraw
   (-draw! [this x y w h]
-    (gdx/with-font-color @font color (proto/-draw! drawable x y w h))))
+    (gdx/with-font-color @font color (proto/-draw! d x y w h))))
 
 (defrecord CenteredText [s font]
   proto/IDraw
@@ -124,6 +116,11 @@
     (->FontColored this font color)))
 
 (defn text
+  "Creates a text drawable.
+  opts:
+   `:color` an rgba color vector
+   `:font` a java.io.File (.fnt) or BitmapFont to use. (can supply a delay if necessary).
+   `:centered?` whether or not to draw the string centered within the target rectangle."
   ([s]
    (->Text (str s) default-font))
   ([s opts]
@@ -134,16 +131,16 @@
          color (:color opts)]
      (cond->
        (if (:centered? opts)
-         (->CenteredText (str s) font)
-         (->Text (str s) font))
+         (->CenteredText s font)
+         (->Text s font))
        (some? color) (recolor color)))))
 
-(defrecord Colored [drawable color]
+(defrecord Colored [d color]
   proto/IDraw
   (-draw! [this x y w h]
     (gdx/with-region-color
       color
-      (proto/-draw! drawable x y w h)))
+      (proto/-draw! d x y w h)))
   proto/IRecolor
   (-recolor [this color2]
     (assoc this :color color2)))
@@ -178,16 +175,46 @@
   (-recolor [this color]
     (->Colored this color)))
 
-(defn image
-  ([region]
-   (->FastImage region))
+(defn region->img
+  "Returns an image for the given TextureRegion. Can supply an IDeref."
+  [region]
+  (if (instance? IDeref region)
+    (->Image region)
+    (->FastImage region)))
+
+(defn- region
+  ([file]
+   (if (gdx/started?)
+     (let [t (gdx/texture file)
+           [w h] (texture/size t)]
+       (texture/region t 0 0 w h))
+     (delay
+       (let [t (gdx/texture file)
+             [w h] (texture/size t)]
+         (texture/region t 0 0 w h)))))
   ([file rect]
-   (->Image (delay (gdx/region file rect))))
-  ([file rect color]
-   (recolor (image file rect) color)))
+   (if (gdx/started?)
+     (gdx/region file rect)
+     (delay
+       (gdx/region file rect)))))
+
+(defn img
+  "Returns an image drawable. From the given file.
+  opts
+   `:rect` a subrectangle of the orignal texture file.
+   `:color` an rgba color vector. "
+  ([file]
+   (region->img (region file)))
+  ([file opts]
+   (cond->
+     (if-some [rect (:rect opts)]
+       (region->img (region file rect))
+       (img file))
+     (:color opts) (recolor (:color opts)))))
 
 (def pixel
-  (->Image
+  "A 1x1 white image."
+  (region->img
     (delay
       (-> (doto (pixmap/pixmap [1 1])
             (pixmap/fill! [1 1 1 1]))
@@ -214,6 +241,10 @@
   (->Box 1))
 
 (defn box
+  "Returns a box drawable
+  opts
+   `:thickness` the thickness of the box lines.
+   `:color` an rgba color vector."
   ([]
    default-box)
   ([opts]
@@ -221,13 +252,3 @@
      (if-some [color (:color opts)]
        (->Colored (->Box thickness) color)
        (->Box thickness)))))
-
-(defn box!
-  ([rect]
-   (draw! default-box rect))
-  ([rect opts]
-   (draw! (box opts) rect))
-  ([x y w h]
-   (draw! default-box x y w h))
-  ([x y w h opts]
-   (draw! (box opts) x y w h)))
