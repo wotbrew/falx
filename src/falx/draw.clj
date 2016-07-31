@@ -1,395 +1,233 @@
 (ns falx.draw
   "Drawing functions and drawable things"
-  (:require [clj-gdx :as gdx]
-            [clojure.java.io :as io]
-            [gdx.color :as color]
+  (:require [falx.gdx :as gdx]
+            [falx.gdx.pixmap :as pixmap]
+            [falx.draw.protocols :as proto]
+            [falx.gdx.texture :as texture]
             [falx.size :as size])
-  (:import (clojure.lang Sequential)))
-
-(defn- invoke
-  [f]
-  (f))
-
-(defprotocol IDrawImmediate
-  (-draw! [this x y w h opts]
-    "Implementations can optimise a faster path when asked to be drawn right now."))
-
-(defprotocol IDraw
-  (-drawfn [this x y w h opts]
-    "Returns a 0-arg fn that will draw the drawable to the screen."))
-
-(defn drawfn
-  "Returns a 0-arg fn that will draw the drawable to the screen."
-  ([drawable rect]
-   (let [[x y w h] rect]
-     (-drawfn drawable x y w h {})))
-  ([drawable x y w h]
-   (-drawfn drawable x y w h {}))
-  ([drawable x y w h opts]
-   (-drawfn drawable x y w h opts)))
+  (:import (com.badlogic.gdx.graphics.g2d BitmapFont TextureRegion)
+           (java.io File)
+           (clojure.lang IDeref)
+           (falx.draw.protocols IRegionColored)))
 
 (defn draw!
-  "Draws the drawable to the screen."
-  ([this rect]
+  ([val rect]
    (let [[x y w h] rect]
-     (-draw! this x y w h {})))
-  ([this x y w h]
-   (-draw! this x y w h {}))
-  ([this x y w h opts]
-   (-draw! this x y w h opts)))
+     (proto/-draw! val x y w h)))
+  ([val x y w h]
+   (proto/-draw! val x y w h)))
 
-(extend-protocol IDrawImmediate
+(defn drawfn
+  ([drawable rect]
+   (let [[x y w h] rect]
+     (proto/-drawfn drawable x y w h)))
+  ([drawable x y w h]
+   (proto/-drawfn drawable x y w h)))
+
+(extend-protocol proto/IDrawLater
   nil
-  (-draw! [this x y w h opts]
-    (gdx/draw-string! "nil" x y w h opts))
+  (-drawfn [this x y w h]
+    (fn []
+      (draw! nil x y w h)))
   Object
-  (-draw! [this x y w h opts]
-    ((-drawfn this x y w h opts)))
-  falx.draw.IDraw
-  (-draw! [this x y w h opts]
-    ((-drawfn this x y w h opts)))
-  Sequential
-  (-draw! [this x y w h opts]
-    (run! #(-draw! % x y w h opts) this)))
-
-(extend-protocol IDraw
   nil
-  (-drawfn [this x y w h opts]
+  (-drawfn [this x y w h]
     (fn []
-      (gdx/draw-string! this x y w opts)))
+      (draw! nil x y w h))))
+
+(def default-font
+  (delay
+    (gdx/bitmap-font)))
+
+(extend-protocol proto/IFont
+  BitmapFont
+  (-font [this] this)
+  File
+  (-font [this]
+    (gdx/bitmap-font this)))
+
+(defn font
+  ([x]
+   (proto/-font x)))
+
+(defn recolor
+  ([x color]
+   (proto/-recolor x color)))
+
+(defn str!
+  ([s rect]
+   (gdx/draw-str! s @default-font rect))
+  ([s rect font]
+   (gdx/draw-str! s (proto/-font font) rect))
+  ([s x y w]
+   (gdx/draw-str! s @default-font x y w))
+  ([s x y w font]
+   (gdx/draw-str! s (proto/-font font) x y w)))
+
+(defn region!
+  ([region rect]
+   (gdx/draw-region! region rect))
+  ([region x y w h]
+   (gdx/draw-region! region x y w h)))
+
+(extend-protocol proto/IDraw
+  nil
+  (-draw! [this x y w h]
+    (str! "nil" x y w))
   Object
-  (-drawfn [this x y w h opts]
-    (fn []
-      (gdx/draw-string! this x y w opts)))
-  falx.draw.IDrawImmediate
-  (-drawfn [this x y w h opts]
-    (fn []
-      (-draw! this x y w h opts)))
-  Sequential
-  (-drawfn [this x y w h opts]
-    (let [fs (mapv #(-drawfn % x y w h opts) this)]
-      (fn [] (run! invoke fs)))))
+  (-draw! [this x y w h]
+    (str! this x y w))
+  TextureRegion
+  (-draw! [this x y w h]
+    (region! this x y w h)))
 
-;; ====
-;; Strings
-;; ====
+(defrecord Text [s font]
+  proto/IDraw
+  (-draw! [this x y w _]
+    (gdx/draw-str! s font x y w)))
 
-(defn- fast-merge
-  [m1 m2]
-  (if m1
-    (if m2
-      (conj m1 m2)
-      m1)
-    m2))
+(declare ->ColoredText)
 
-(defrecord Text [s font opts]
-  IDraw
-  (-drawfn [this x y w h opts2]
-    (let [context (fast-merge opts opts2)]
-      (if (:centered? context)
-        (let [[tw th] (gdx/get-string-wrapped-bounds s w font)
-              [x y w] (size/center tw th x y w h)]
-          (fn []
-            (gdx/draw-string! s x y w context font)))
-        (fn []
-          (gdx/draw-string! s x y w context font)))) )
-  IDrawImmediate
-  (-draw! [this x y w h opts2]
-    (let [context (fast-merge opts opts2)]
-      (if (:centered? context)
-        ((-drawfn this x y w h opts2))
-        (gdx/draw-string! s x y w context font)))))
+(defrecord Text [s font]
+  proto/IDraw
+  (-draw! [this x y w _]
+    (gdx/draw-str! s @font x y w))
+  proto/IRecolor
+  (-recolor [this color]
+    (->ColoredText s font color)))
 
-(defn text?
-  [x]
-  (instance? Text x))
+(defrecord ColoredText [s font color]
+  proto/IDraw
+  (-draw! [this x y w _]
+    (gdx/with-font-color @font color (gdx/draw-str! s @font x y w)))
+  proto/IRecolor
+  (-recolor [this color2]
+    (assoc this :color color2)))
 
-(def text-font
-  gdx/default-font)
+(defrecord FontColored [drawable font color]
+  proto/IDraw
+  (-draw! [this x y w h]
+    (gdx/with-font-color @font color (proto/-draw! drawable x y w h))))
+
+(defrecord CenteredText [s font]
+  proto/IDraw
+  (-draw! [this x y w h]
+    ((proto/-drawfn this x y w h) nil))
+  proto/IDrawLater
+  (-drawfn [this x y w h]
+    (let [bounds (gdx/str-bounds s @font)
+          center (size/center bounds x y w h)]
+      (fn []
+        (gdx/draw-str! s @font center))))
+  proto/IRecolor
+  (-recolor [this color]
+    (->FontColored this font color)))
 
 (defn text
   ([s]
-   (text s text-font))
-  ([s font]
-   (text s font {}))
-  ([s font opts]
-   (if (text? s)
-     (assoc s :font font :opts opts)
-     (->Text s font opts))))
+   (->Text (str s) default-font))
+  ([s opts]
+   (let [font (:font opts default-font)
+         font (if (instance? IDeref font)
+                font
+                (delay (proto/-font font)))
+         color (:color opts)]
+     (cond->
+       (if (:centered? opts)
+         (->CenteredText (str s) font)
+         (->Text (str s) font))
+       (some? color) (recolor color)))))
 
-(defn text-bounds
-  [txt]
-  (let [txt (text txt)]
-    (gdx/get-string-bounds (:s txt) (:font txt))))
+(defrecord Colored [drawable color]
+  proto/IDraw
+  (-draw! [this x y w h]
+    (gdx/with-region-color
+      color
+      (proto/-draw! drawable x y w h)))
+  proto/IRecolor
+  (-recolor [this color2]
+    (assoc this :color color2)))
 
-;; =====
-;; Sprites
-;; =====
+(extend-protocol proto/IRecolor
+  nil
+  (-recolor [this color]
+    (text "nil" {:color color}))
+  Object
+  (-recolor [this color]
+    (text this {:color color}))
+  TextureRegion
+  (-recolor [this color]
+    (->Colored this color))
+  IRegionColored
+  (-recolor [this color]
+    (->Colored this color)))
 
-(defrecord Sprite [texture rect opts flip-y?]
-  IDrawImmediate
-  (-draw! [this x y w h opts2]
-    (let [context (fast-merge opts2 opts)]
-      (gdx/draw-sprite! this x y w h context))))
+(defrecord FastImage [region]
+  proto/IDraw
+  (-draw! [this x y w h]
+    (region! region x y w h))
+  proto/IRecolor
+  (-recolor [this color]
+    (->Colored this color)))
 
-(defn sprite?
-  [x]
-  (instance? Sprite x))
+(defrecord Image [region]
+  proto/IDraw
+  (-draw! [this x y w h]
+    (region! @region x y w h))
+  proto/IRecolor
+  (-recolor [this color]
+    (->Colored this color)))
 
-(defn sprite
-  ([spr]
-   (map->Sprite spr))
-  ([spr opts]
-   (map->Sprite (assoc spr :opts opts))))
-
-(defn tile
-  [file x y w h]
-  (-> (gdx/sprite (io/resource (format "tiles/%s.png" file)) [x y w h])
-      sprite))
-
-(defn- tile32
-  [file x y]
-  (tile file
-        (int (* x 32))
-        (int (* y 32))
-        32
-        32))
-
-;; ====
-;; Colors
-;; ====
-
-(defn- dim
-  [color]
-  (color/scale color 0.5))
-
-(def color-selected color/green)
-(def color-selected2 color/yellow)
-(def color-disabled color/gray)
-
-(def color-default (color/scale color/white 0.9))
-(def color-highlight color/white)
-
-
-;; =====
-;; Sprites - Misc
-;; =====
-
-(defn- misc32
-  [x y]
-  (tile32 "Misc" x y))
-
-(def selection
-  (misc32 0 0))
+(defn image
+  ([region]
+   (->FastImage region))
+  ([file rect]
+   (->Image (delay (gdx/region file rect))))
+  ([file rect color]
+   (recolor (image file rect) color)))
 
 (def pixel
-  (misc32 0 1))
+  (->Image
+    (delay
+      (-> (doto (pixmap/pixmap [1 1])
+            (pixmap/fill! [1 1 1 1]))
+          (texture/pixmap->texture)
+          (texture/region [0 0 1 1])))))
 
-(def pixel-black
-  (sprite pixel {:color color/black}))
-
-(def pixel-gray
-  (sprite pixel {:color color/gray}))
-
-;; =====
-;; Sprites - Races - Human
-;; =====
-
-(defn- human32
-  [x y]
-  (tile32 "Human" x y))
-
-(def human-female
-  (human32 0 0))
-
-(def human-male
-  (human32 1 0))
-
-;; =====
-;; Sprites - Gui
-;; =====
-
-(defn- gui32
-  [x y]
-  (tile32 "Gui" x y))
-
-(def block
-  (gui32 0 0))
-
-(def slot
-  (gui32 1 0))
-
-;; =====
-;; Sprites - Mouse
-;; =====
-
-(defn- mouse32
-  [x y]
-  (tile32 "Mouse" x y))
-
-(def mouse-point
-  (mouse32 0 0))
-
-(def mouse-select
-  (mouse32 1 0))
-
-(def mouse-attack
-  (mouse32 2 0))
-
-(def mouse-gray-attack
-  (mouse32 3 0))
-
-(def mouse-spell
-  (mouse32 0 1))
-
-(def mouse-gray-spell
-  (mouse32 1 1))
-
-(def mouse-left
-  (mouse32 2 1))
-
-(def mouse-right
-  (mouse32 3 1))
-
-(def mouse-arrow
-  (mouse32 0 2))
-
-(def mouse-gray-arrow
-  (mouse32 1 2))
-
-;; ====
-;; Sprites - Decor
-;; ====
-
-(defn- decor32
-  [x y]
-  (tile32 "Decorations1" x y))
-
-(def torch1
-  (decor32 0 0))
-
-(def torch2
-  (decor32 1 0))
-
-(def torch3
-  (decor32 2 0))
-
-(def torch4
-  (decor32 3 0))
-
-;; ====
-;; Boxes
-;; ====
-
-(defrecord Box [thickness opts]
-  IDraw
-  (-drawfn [this x y w h opts2]
-    (let [opts (fast-merge opts opts2)
-          t thickness
-          r-t (+ x (- w t))
-          b-t (+ y (- h t))]
+(defrecord Box [thickness]
+  proto/IRegionColored
+  proto/IDraw
+  (-draw! [this x y w h]
+    ((proto/-drawfn this x y w h)))
+  proto/IDrawLater
+  (-drawfn [this x y w h]
+    (let [-t (- thickness)
+          x+w (+ x w -t)
+          y+h (+ y h -t)]
       (fn []
-        (draw! pixel x y w t opts)
-        (draw! pixel r-t y 1 h opts)
-        (draw! pixel x b-t w 1 opts)
-        (draw! pixel x y t h opts))))
-  IDrawImmediate
-  (-draw! [this x y w h opts2]
-    (let [opts (fast-merge opts opts2)
-          t thickness
-          r-t (+ x (- w t))
-          b-t (+ y (- h t))]
-      (draw! pixel x y w t opts)
-      (draw! pixel r-t y 1 h opts)
-      (draw! pixel x b-t w 1 opts)
-      (draw! pixel x y t h opts))))
+        (draw! pixel x y w thickness)
+        (draw! pixel x+w y thickness h)
+        (draw! pixel x y+h w thickness)
+        (draw! pixel x y thickness h)))))
 
 (def default-box
-  (->Box 1 {}))
+  (->Box 1))
 
 (defn box
   ([]
    default-box)
-  ([thickness]
-   (->Box thickness {}))
-  ([thickness opts]
-   (->Box thickness opts)))
+  ([opts]
+   (let [thickness (:thickness opts 1)]
+     (if-some [color (:color opts)]
+       (->Colored (->Box thickness) color)
+       (->Box thickness)))))
 
-(defrecord CustomBox [thickness lopts topts ropts bopts]
-  IDraw
-  (-drawfn [this x y w h _]
-    (let [t thickness
-          r-t (+ x (- w t))
-          b-t (+ y (- h t))]
-      (fn []
-        (draw! pixel x y w t topts)
-        (draw! pixel r-t y 1 h ropts)
-        (draw! pixel x b-t w 1 bopts)
-        (draw! pixel x y t h lopts))))
-  IDrawImmediate
-  (-draw! [this x y w h _]
-    (let [t thickness
-          r-t (+ x (- w t))
-          b-t (+ y (- h t))]
-      (draw! pixel x y w t topts)
-      (draw! pixel r-t y 1 h ropts)
-      (draw! pixel x b-t w 1 bopts)
-      (draw! pixel x y t h lopts))))
-
-(defn shaded-box
-  [thickness color]
-  (->CustomBox
-    thickness
-    {:color color}
-    {:color color}
-    {:color (dim color)}
-    {:color (dim color)}))
-
-;; ====
-;; Button
-;; ====
-
-(def button-box-focused
-  (shaded-box 1 color-highlight))
-
-(def button-box-selected
-  (shaded-box 1 color-selected))
-
-(def button-box-default
-  (shaded-box 1 color-default))
-
-(def button-box-disabled
-  (shaded-box 1 color-disabled))
-
-(defn button-box
-  [state]
-  (case state
-    ::button-state.focused button-box-focused
-    ::button-state.selected button-box-selected
-    ::button-state.disabled button-box-disabled
-    button-box-default))
-
-(defn button-text-opts
-  [state]
-  {:centered? true
-   :color
-   (case state
-     ::button-state.focused color-selected
-     ::button-state.selected color-highlight
-     ::button-state.disabled color-disabled
-     color-default)})
-
-(def button-font
-  gdx/default-font)
-
-(defn button-text
-  [txt state]
-  (text txt button-font (button-text-opts state)))
-
-(defn button
-  ([txt]
-   (button txt ::button-state.default))
-  ([txt state]
-   [pixel-black
-    (button-box state)
-    (button-text txt state)]))
+(defn box!
+  ([rect]
+   (draw! default-box rect))
+  ([rect opts]
+   (draw! (box opts) rect))
+  ([x y w h]
+   (draw! default-box x y w h))
+  ([x y w h opts]
+   (draw! (box opts) x y w h)))

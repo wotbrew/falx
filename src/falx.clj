@@ -1,37 +1,30 @@
 (ns falx
-  (:require [clj-gdx :as gdx]
+  (:require [falx.gdx :as gdx]
+            [falx.draw :as draw]
             [clojure.tools.logging :refer [error info debug]]
-            [falx.frame :as frame]
-            [falx.ui.menu :as menu]
-            [falx.ui :as ui]
-            [falx.scene :as scene]
-            [falx.keyboard :as keyboard]
-            [falx.mouse :as mouse]))
+            [falx.gdx.display :as display]))
 
 (def max-fps
   60)
 
-(def app
-  (merge
-    gdx/default-app
-    {:max-background-fps max-fps
-     :max-foreground-fps max-fps}))
-
 (def state
-  (atom {::ui/scene ::menu/scene}))
+  (atom {}))
+
+(def font
+  (delay
+    (gdx/bitmap-font)))
 
 (gdx/defrender
   (try
-    (let [old-gs @state
-          frame (frame/current)
-          keyboard (keyboard/current old-gs)
-          mouse (mouse/current old-gs)
-          gs (swap! state merge frame keyboard mouse)
-          gs (swap! state ui/handle)]
-      (ui/draw! gs))
+    (draw/draw! (draw/box {:color [1 1 1 1]}) 0 0 96 32)
+    (draw/draw! (gdx/fps) 6 6 96 32)
     (catch Throwable e
       (error e)
       (Thread/sleep 5000))))
+
 (defn -main
   [& args]
-  (gdx/start-app! app))
+  (gdx/start-lwjgl!
+    {:max-foreground-fps 60
+     :max-background-fps 60
+     :size [800 600]}))

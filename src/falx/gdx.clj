@@ -88,6 +88,7 @@
      app/on-render-fn
      (fn []
        (try
+         (display/clear!)
          (let [cam# @cam
                batch# @batch]
            (batch/with batch#
@@ -121,11 +122,14 @@
   ([file x y w h]
    (texture/region (texture file) x y w h)))
 
+(def ^:private bitmap-font*
+  (memoize font/bitmap-font))
+
 (defn bitmap-font
   ([]
-   (font/bitmap-font))
+   (bitmap-font*))
   ([file]
-   (font/bitmap-font file)))
+   (bitmap-font* file)))
 
 (defn start-lwjgl!
   ([]
