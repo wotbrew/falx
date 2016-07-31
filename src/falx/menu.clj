@@ -10,5 +10,9 @@
   (scene/stack
     (scene/fit #'debug/table 192 72)
     (scene/center
-      (d/box)
+      (scene/rows
+        (ui/button "New")
+        (ui/button "Continue")
+        (ui/button "Options")
+        (ui/button "Exit"))
       [320 320])))

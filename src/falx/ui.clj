@@ -11,9 +11,13 @@
   - strings"
   (:require [falx.scene :as scene]
             [falx.ui.protocols :as proto]
+            [falx.mouse :as mouse]
             [falx.draw.protocols :as dproto]
-            [falx.draw :as d])
-  (:import (clojure.lang Keyword Var)))
+            [falx.draw :as d]
+            [falx.state :as state]
+            [falx.gdx :as gdx])
+  (:import (clojure.lang Keyword Var)
+           (java.util UUID)))
 
 (defn drawfn
   "Returns a 1-ary fn that draws the element given a view."
@@ -223,12 +227,69 @@
 
 (defn bind
   "Returns an element that applies `f` to the view/gs before operating on the result.
-  e.g if handle is called handle is called as (handle (f gs) gs rect)"
+  e.g (handle (f gs) gs rect)"
   ([f]
-    (reify
-      proto/IDraw
-      (-draw! [this view rect]
-        (proto/-draw! (f view) view rect))
-      proto/IHandle
-      (-handle [this gs rect]
-        (proto/-handle (f gs) gs rect)))))
+   (reify
+     proto/IDraw
+     (-draw! [this view rect]
+       (proto/-draw! (f view) view rect))
+     proto/IHandle
+     (-handle [this gs rect]
+       (proto/-handle (f gs) gs rect)))))
+
+(defrecord Switch [key m]
+  proto/IDraw
+  (-draw! [this gs rect]
+    (let [el (get m (key gs rect))]
+      (draw! el gs rect)))
+  proto/IDrawLater
+  (-drawfn [this rect]
+    (let [m2 (into {} (map (juxt first #(drawfn (val %) rect))) m)]
+      (fn [gs]
+        (when-some [f (get m2 (key gs rect))]
+          (f gs)))))
+  proto/IHandle
+  (-handle [this gs rect]
+    (let [el (get m (key gs rect))]
+      (handle el gs rect)))
+  proto/IHandleLater
+  (-handlefn [this rect]
+    (let [m2 (into {} (map (juxt first #(handlefn (val %) rect))) m)]
+      (fn [gs]
+        (if-some [f (get m2 (key gs rect))]
+          (f gs)
+          gs)))))
+
+(defn switch
+  [key m]
+  (->Switch key m))
+
+(state/defsignal
+  ::mouse
+  (state/signal ::mouse/mouse))
+
+(defn mouse-in?
+  [gs rect]
+  (mouse/in? (::mouse gs) rect))
+
+(defn if-pred
+  [pred then else]
+  (switch
+    (fn [gs rect]
+      (if (pred gs rect)
+        true
+        false))
+    {true then
+     false else}))
+
+(defn if-focus
+  [then else]
+  (if-pred mouse-in?
+    then
+    else))
+
+(defn button
+  [s]
+  (if-focus
+    (d/button s {:focused? true})
+    (d/button s)))

@@ -362,6 +362,22 @@
   ([d]
    (in-box d {}))
   ([d opts]
-    (each
-      (box opts)
-      d)))
+   (each
+     (box opts)
+     d)))
+
+(defn button
+  ([s]
+   (button s nil))
+  ([s opts]
+   (if (:focused? opts)
+     (each
+       (recolor pixel [0 0 0 1])
+       (box {:color [0 1 0 1]})
+       (text (str "- " s " -") {:centered? true
+                                :color [0 1 0 1]}))
+     (each
+       (recolor pixel [0 0 0 1])
+       (box {:color [1 1 1 1]})
+       (text s {:centered? true
+                :color [1 1 1 1]})))))

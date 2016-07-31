@@ -25,7 +25,7 @@
       (ui/draw! #'menu/scene gs [0 0 800 600]))
     (catch Throwable e
       (error e)
-      (Thread/sleep 5000))))
+      (Thread/sleep 10000))))
 
 (defn -main
   [& args]

@@ -237,26 +237,37 @@
   [size & nodes]
   (coll->hitems size nodes))
 
-(defn table
+(defn table*
   [head & rows]
   (apply falx.scene/rows
          (coll->cols head)
          (map coll->cols rows)))
 
-(defn htable
+(defn htable*
   [head & rows]
   (apply falx.scene/cols
          (coll->rows head)
          (map coll->rows rows)))
 
 (defn maptable
-  ([m]
-   (maptable m {}))
-  ([m opts]
-   (if (:vertical? opts)
-     (falx.scene/rows
-       (coll->cols (keys m))
-       (coll->cols (vals m)))
-     (falx.scene/cols
-       (coll->rows (keys m))
-       (coll->rows (vals m))))))
+  ([kvs]
+   (maptable kvs {}))
+  ([kvs opts]
+    ;;remember to support ordered (kv) colls too!
+   (let [keys (map first kvs)
+         vals (map second kvs)]
+     (if (:vertical? opts)
+       (falx.scene/rows
+         (coll->cols keys)
+         (coll->cols vals))
+       (falx.scene/cols
+         (coll->rows keys)
+         (coll->rows vals))))))
+
+(defn table
+  [& kvs]
+  (maptable (partition 2 kvs) {:vertical? true}))
+
+(defn htable
+  [& kvs]
+  (maptable (partition 2 kvs) {:vertical? false}))
