@@ -101,7 +101,7 @@
 
 (defn str-bounds*
   ([s font width]
-   (font/str-bounds font (str s) width)))
+   (font/str-bounds* font (str s) width)))
 
 (defn str-bounds
   ([s font]
