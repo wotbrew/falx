@@ -86,6 +86,9 @@
   Object
   (-draw! [this x y w h]
     (str! this x y w))
+  IDeref
+  (-draw! [this x y w h]
+    (proto/-draw! @this x y w h))
   TextureRegion
   (-draw! [this x y w h]
     (region! this x y w h)))
