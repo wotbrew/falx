@@ -13,3 +13,11 @@
   (-drawfn [this x y w h]))
 
 (defprotocol IRegionColored)
+
+(defprotocol ISized
+  (-size [this w h]))
+
+(defprotocol IWrap
+  (-child [this]))
+
+(defprotocol IImage)

@@ -1,14 +1,14 @@
 (ns falx.draw
   "Functions to enable drawing things to the screen"
-  (:require [falx.gdx :as gdx]
+  (:require [falx.draw.protocols :as proto]
+            [falx.gdx :as gdx]
             [falx.gdx.pixmap :as pixmap]
-            [falx.draw.protocols :as proto]
             [falx.gdx.texture :as texture]
             [falx.size :as size])
   (:import (com.badlogic.gdx.graphics.g2d BitmapFont TextureRegion)
            (java.io File)
            (clojure.lang IDeref)
-           (falx.draw.protocols IRegionColored)))
+           (falx.draw.protocols IRegionColored IWrap IImage IDraw)))
 
 (defn draw!
   "Draws the drawable `d` into the given screen rect."
@@ -26,16 +26,24 @@
   ([d x y w h]
    (proto/-drawfn d x y w h)))
 
+(defn size
+  "Returns the size of the drawable if drawn into the given outer size.
+  This is because some drawables may wrap themselves, or fit themselves to the requested size"
+  ([d size]
+   (let [[w h] size]
+     (proto/-size d w h)))
+  ([d w h]
+   (proto/-size d w h)))
+
 (extend-protocol proto/IDrawLater
   nil
   (-drawfn [this x y w h]
     (fn []
       (draw! nil x y w h)))
   Object
-  nil
   (-drawfn [this x y w h]
     (fn []
-      (draw! nil x y w h))))
+      (draw! this x y w h))))
 
 (def default-font
   (delay
@@ -49,8 +57,9 @@
     (gdx/bitmap-font this)))
 
 (defn recolor
-  ([x color]
-   (proto/-recolor x color)))
+  "Recolors the drawable with the given color"
+  ([d color]
+   (proto/-recolor d color)))
 
 (defn str!
   "Draws the string into the screen rect using the default font (unless supplied)."
@@ -81,10 +90,43 @@
   (-draw! [this x y w h]
     (region! this x y w h)))
 
-(defrecord Text [s font]
+(extend-protocol proto/ISized
+  nil
+  (-size [this w h]
+    (proto/-size "nil" w h))
+  Object
+  (-size [this w h]
+    (proto/-size (str this) w h))
+  String
+  (-size [this w h]
+    (gdx/str-bounds* this @default-font w))
+  IWrap
+  (-size [this w h]
+    (proto/-size (proto/-child this) w h))
+  IImage
+  (-size [this w h]
+    [w h]))
+
+(defrecord Centered [d]
   proto/IDraw
-  (-draw! [this x y w _]
-    (gdx/draw-str! s font x y w)))
+  (-draw! [this x y w h]
+    ((proto/-drawfn this x y w h)))
+  proto/IDrawLater
+  (-drawfn [this x y w h]
+    (let [size (proto/-size d w h)
+          rect (size/center size x y w h)]
+      (drawfn d rect)))
+  proto/IRecolor
+  (-recolor [this color]
+    (update this :d proto/-recolor color))
+  proto/IWrap
+  (-child [this]
+    d))
+
+(defn center
+  "Returns a drawable that will center its child within the rect drawn to."
+  ([d]
+   (->Centered d)))
 
 (declare ->FontColored)
 
@@ -94,26 +136,18 @@
     (gdx/draw-str! s @font x y w))
   proto/IRecolor
   (-recolor [this color]
-    (->FontColored s font color)))
+    (->FontColored s font color))
+  proto/ISized
+  (-size [this w h]
+    (gdx/str-bounds* s @font w)))
 
 (defrecord FontColored [d font color]
   proto/IDraw
   (-draw! [this x y w h]
-    (gdx/with-font-color @font color (proto/-draw! d x y w h))))
-
-(defrecord CenteredText [s font]
-  proto/IDraw
-  (-draw! [this x y w h]
-    ((proto/-drawfn this x y w h) nil))
-  proto/IDrawLater
-  (-drawfn [this x y w h]
-    (let [bounds (gdx/str-bounds s @font)
-          center (size/center bounds x y w h)]
-      (fn []
-        (gdx/draw-str! s @font center))))
-  proto/IRecolor
-  (-recolor [this color]
-    (->FontColored this font color)))
+    (gdx/with-font-color @font color (proto/-draw! d x y w h)))
+  proto/IWrap
+  (-child [this]
+    d))
 
 (defn text
   "Creates a text drawable.
@@ -130,9 +164,8 @@
                 (delay (proto/-font font)))
          color (:color opts)]
      (cond->
-       (if (:centered? opts)
-         (->CenteredText s font)
-         (->Text s font))
+       (->Text (str s) font)
+       (:centered? opts) (center)
        (some? color) (recolor color)))))
 
 (defrecord Colored [d color]
@@ -143,7 +176,10 @@
       (proto/-draw! d x y w h)))
   proto/IRecolor
   (-recolor [this color2]
-    (assoc this :color color2)))
+    (assoc this :color color2))
+  proto/IWrap
+  (-child [this]
+    d))
 
 (extend-protocol proto/IRecolor
   nil
@@ -160,20 +196,18 @@
     (->Colored this color)))
 
 (defrecord FastImage [region]
+  proto/IImage
+  proto/IRegionColored
   proto/IDraw
   (-draw! [this x y w h]
-    (region! region x y w h))
-  proto/IRecolor
-  (-recolor [this color]
-    (->Colored this color)))
+    (region! region x y w h)))
 
 (defrecord Image [region]
+  proto/IImage
+  proto/IRegionColored
   proto/IDraw
   (-draw! [this x y w h]
-    (region! @region x y w h))
-  proto/IRecolor
-  (-recolor [this color]
-    (->Colored this color)))
+    (region! @region x y w h)))
 
 (defn region->img
   "Returns an image for the given TextureRegion. Can supply an IDeref."
@@ -222,6 +256,7 @@
           (texture/region [0 0 1 1])))))
 
 (defrecord Box [thickness]
+  proto/IImage
   proto/IRegionColored
   proto/IDraw
   (-draw! [this x y w h]
@@ -252,3 +287,71 @@
      (if-some [color (:color opts)]
        (->Colored (->Box thickness) color)
        (->Box thickness)))))
+
+
+(defn- invoke!
+  [f]
+  (f))
+
+(defrecord Coll [ds]
+  proto/IDraw
+  (-draw! [this x y w h]
+    (run! #(proto/-draw! % x y w h) ds))
+  proto/IDrawLater
+  (-drawfn [this x y w h]
+    (let [fs (mapv #(proto/-drawfn % x y w h) ds)]
+      (fn []
+        (run! invoke! fs))))
+  proto/ISized
+  (-size [this w h]
+    (let [id [-1 -1]
+          maxw (reduce size/maxw id ds)
+          maxh (reduce size/maxh id ds)]
+      [(if (pos? maxw) maxw w)
+       (if (pos? maxh) maxh h)]))
+  proto/IRecolor
+  (-recolor [this color]
+    (->Coll (mapv #(proto/-recolor % color) ds))))
+
+(defn coll
+  "Returns a drawable that will draw each drawable in sequential order."
+  [ds]
+  (->Coll ds))
+
+(defn coll!
+  "Immediately draws the given collection of drawables to the screen rect in sequential order."
+  ([ds rect]
+   (draw! (->Coll ds) rect))
+  ([ds x y w h]
+   (draw! (->Coll ds) x y w h)))
+
+(defn each
+  "Returns a drawable the will draw each drawable in sequential order."
+  ([d1]
+   d1)
+  ([d1 d2]
+   (coll [d1 d2]))
+  ([d1 d2 d3]
+   (coll [d1 d2 d3]))
+  ([d1 d2 d3 d4]
+   (coll [d1 d2 d3 d4]))
+  ([d1 d2 d3 d4 d5]
+   (coll [d1 d2 d3 d4 d5]))
+  ([d1 d2 d3 d4 d5 & ds]
+   (coll (into [d1 d2 d3 d4 d5] ds))))
+
+(defmacro each!
+  "Draws the drawables each with the given rect.
+  More efficient than `coll!` if you know the rectangle/drawables ahead of time."
+  [rect & ds]
+  (let [[sx sy sw sh] (repeatedly gensym)
+        binding-form (if (vector? rect)
+                       (let [[x y w h] rect]
+                         `[~sx ~x
+                           ~sy ~y
+                           ~sw ~w
+                           ~sh ~h])
+                       `[[~sx ~sy ~sw ~sh] ~rect])]
+    `(let ~binding-form
+       ~@(for [d ds]
+           `(draw! ~d ~sx ~sy ~sw ~sh)))))

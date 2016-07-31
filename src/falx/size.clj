@@ -1,5 +1,8 @@
 (ns falx.size)
 
+(def id
+  [0 0])
+
 (defn w
   [size]
   (nth size 0))
@@ -24,3 +27,11 @@
       (long (+ y2 (/ hdiff 2)))
       nw
       nh])))
+
+(defn maxw
+  ([size1 size2]
+   (max-key w size1 size2)))
+
+(defn maxh
+  ([size1 size2]
+   (max-key h size1 size2)))
