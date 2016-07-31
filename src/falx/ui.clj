@@ -124,7 +124,7 @@
        (-handlefn [this rect]
          (handlefn rect))))))
 
-(defn transient-scene
+(defn- transient-scene
   ([scene]
    (falx.ui/scene
      scene
@@ -147,6 +147,8 @@
     (handlefn (transient-scene this) rect)))
 
 (defn env-call
+  "Returns an element that evaluates the fn every time it is drawn.
+  The fn should return an element."
   [f]
   (reify
     proto/IDraw
@@ -157,5 +159,8 @@
       (dproto/-size (f) w h))))
 
 (defmacro env
+  "Returns an element that evaluates the body every time it is drawn.
+  The body should return an element."
   [& body]
   `(env-call (fn [] ~@body)))
+
