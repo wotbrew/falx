@@ -240,8 +240,8 @@
 (defn table
   [head & rows]
   (apply falx.scene/rows
-    (coll->cols head)
-    (map coll->cols rows)))
+         (coll->cols head)
+         (map coll->cols rows)))
 
 (defn htable
   [head & rows]
@@ -250,13 +250,13 @@
          (map coll->rows rows)))
 
 (defn maptable
-  [m]
-  (falx.scene/cols
-    (coll->rows (keys m))
-    (coll->rows (vals m))))
-
-(defn vmaptable
-  [m]
-  (falx.scene/rows
-    (coll->cols (keys m))
-    (coll->cols (vals m))))
+  ([m]
+   (maptable m {}))
+  ([m opts]
+   (if (:vertical? opts)
+     (falx.scene/rows
+       (coll->cols (keys m))
+       (coll->cols (vals m)))
+     (falx.scene/cols
+       (coll->rows (keys m))
+       (coll->rows (vals m))))))
