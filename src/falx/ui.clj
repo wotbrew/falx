@@ -1,4 +1,14 @@
 (ns falx.ui
+  "Contains functions on ui elements.
+
+  Elements support 2 potential behaviours, drawing, and input handling.
+
+  Valid ui elements include:
+
+  - scenes of elements (either as an falx.scene/INode or via the `scene` fn)
+  - any drawable thing implementing falx.draw.protocols/IDraw
+  - any drawable thing implementing falx.draw.protocols/IDrawLater
+  - strings"
   (:require [falx.scene :as scene]
             [falx.ui.protocols :as proto]
             [falx.draw.protocols :as dproto]
@@ -79,6 +89,8 @@
 
 (defn scene
   "Returns an element for an entire scene.
+  Using this function will cache what it can, making it potentially faster
+  than using the scene as an element directly.
   opts
    `:cache-layout?` whether or not to cache the layout results (true).
    `:cache-handle?` whether or not to cache the handle fn (true).
