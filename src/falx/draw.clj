@@ -278,18 +278,41 @@
 (def default-box
   (->Box 1))
 
+(defrecord ShadedBox [thickness color]
+  proto/IImage
+  proto/IRegionColored
+  proto/IDraw
+  (-draw! [this x y w h]
+    ((proto/-drawfn this x y w h)))
+  proto/IDrawLater
+  (-drawfn [this x y w h]
+    (let [-t (- thickness)
+          x+w (+ x w -t)
+          y+h (+ y h -t)
+          pixel (recolor pixel color)
+          [r g b] color
+          spixel (recolor pixel [(* 0.3 r) (* 0.3 g) (* 0.3 b) 1])]
+      (fn []
+        (draw! pixel x y w thickness)
+        (draw! pixel x+w y thickness h)
+        (draw! spixel x y+h w thickness)
+        (draw! spixel x y thickness h)))))
+
 (defn box
   "Returns a box drawable
   opts
    `:thickness` the thickness of the box lines.
-   `:color` an rgba color vector."
+   `:color` an rgba color vector.
+   `:shaded?` whether or not the box ought to be shaded"
   ([]
    default-box)
   ([opts]
    (let [thickness (:thickness opts 1)]
-     (if-some [color (:color opts)]
-       (->Colored (->Box thickness) color)
-       (->Box thickness)))))
+     (if (:shaded? opts)
+       (->ShadedBox thickness (:color opts [1 1 1 1]))
+       (if-some [color (:color opts)]
+         (->Colored (->Box thickness) color)
+         (->Box thickness))))))
 
 (defn- invoke!
   [f]
@@ -373,11 +396,15 @@
    (if (:focused? opts)
      (each
        (recolor pixel [0 0 0 1])
-       (box {:color [0 1 0 1]})
+       (box {:color [0 1 0 1]
+             :shaded? true
+             :thickness 2})
        (text (str "- " s " -") {:centered? true
                                 :color [0 1 0 1]}))
      (each
        (recolor pixel [0 0 0 1])
-       (box {:color [1 1 1 1]})
+       (box {:color [0.7 0.7 0.7 0.7]
+             :shaded? true
+             :thickness 2})
        (text s {:centered? true
                 :color [1 1 1 1]})))))
