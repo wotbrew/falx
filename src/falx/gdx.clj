@@ -7,27 +7,56 @@
             [falx.gdx.font :as font]
             [falx.gdx.texture :as texture])
   (:import (com.badlogic.gdx Gdx Graphics)
-           (com.badlogic.gdx.graphics.g2d SpriteBatch)))
+           (com.badlogic.gdx.graphics.g2d SpriteBatch)
+           (clojure.lang IDeref IFn)))
 
 (defn- ^Graphics graphics
   []
   (when Gdx/app
     (.getGraphics Gdx/app)))
 
-(defn fps
-  []
-  (when-some [gfx (graphics)]
-    (.getFramesPerSecond gfx)))
-
-(defn delta-time
-  []
-  (when-some [gfx (graphics)]
-    (.getDeltaTime gfx)))
-
-(defn frame-id
+(defn frame-id*
   []
   (when-some [gfx (graphics)]
     (.getFrameId gfx)))
+
+(defmacro signal
+  "A signal represents a value that is sampled every frame.
+   A signal is both deref'able and invokable."
+  ([& body]
+   `(let [f# (fn [] ~@body)
+          cache# (volatile! {:frame-id nil
+                            :value nil})]
+      (reify
+        IDeref
+        (deref [this#]
+          (let [fid# (frame-id*)
+                m# @cache#]
+            (if (= (:frame-id m#) fid#)
+              (:val m#)
+              (-> (vreset! cache# {:frame-id fid#
+                                  :val (f#)})
+                  :val))))
+        IFn
+        (invoke [this#]
+          @this#)
+        Object
+        (toString [this#]
+          (str @this#))))))
+
+(def frame-id
+  (signal
+    (frame-id*)))
+
+(def fps
+  (signal
+    (when-some [gfx (graphics)]
+      (.getFramesPerSecond gfx))))
+
+(def delta-time
+  (signal
+    (when-some [gfx (graphics)]
+      (.getDeltaTime gfx))))
 
 (defn started?
   []

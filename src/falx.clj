@@ -18,7 +18,7 @@
 
 (def scene
   (scene/rows
-    (ui/env (d/center (str "fps: " (gdx/fps))))
+    (ui/env (d/center (str "fps: " gdx/fps)))
     (scene/cols (d/box)
                 (d/box)
                 (d/box))
