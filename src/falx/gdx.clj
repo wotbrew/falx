@@ -1,52 +1,30 @@
 (ns falx.gdx
   (:require [falx.gdx.impl.dispatch :as dispatch]
             [falx.gdx.impl.app :as app]
+            [falx.gdx.impl.signal :as signal]
             [falx.gdx.batch :as batch]
             [falx.gdx.camera :as cam]
             [falx.gdx.display :as display]
             [falx.gdx.font :as font]
             [falx.gdx.texture :as texture])
   (:import (com.badlogic.gdx Gdx Graphics)
-           (com.badlogic.gdx.graphics.g2d SpriteBatch)
-           (clojure.lang IDeref IFn)))
+           (com.badlogic.gdx.graphics.g2d SpriteBatch)))
+
+(defmacro signal
+  "A signal represents a value that is sampled every frame.
+   A signal is both deref'able and invokable."
+  [& body]
+  `(signal/signal ~@body))
 
 (defn- ^Graphics graphics
   []
   (when Gdx/app
     (.getGraphics Gdx/app)))
 
-(defn frame-id*
-  []
-  (when-some [gfx (graphics)]
-    (.getFrameId gfx)))
-
-(defmacro signal
-  "A signal represents a value that is sampled every frame.
-   A signal is both deref'able and invokable."
-  ([& body]
-   `(let [f# (fn [] ~@body)
-          cache# (volatile! {:frame-id nil
-                            :value nil})]
-      (reify
-        IDeref
-        (deref [this#]
-          (let [fid# (frame-id*)
-                m# @cache#]
-            (if (= (:frame-id m#) fid#)
-              (:val m#)
-              (-> (vreset! cache# {:frame-id fid#
-                                  :val (f#)})
-                  :val))))
-        IFn
-        (invoke [this#]
-          @this#)
-        Object
-        (toString [this#]
-          (str @this#))))))
-
 (def frame-id
   (signal
-    (frame-id*)))
+    (when-some [gfx (graphics)]
+      (.getFrameId gfx))))
 
 (def fps
   (signal

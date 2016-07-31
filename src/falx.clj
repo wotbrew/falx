@@ -3,8 +3,8 @@
             [falx.draw :as d]
             [falx.ui :as ui]
             [clojure.tools.logging :refer [error info debug]]
-            [falx.gdx.display :as display]
-            [falx.scene :as scene]))
+            [falx.scene :as scene]
+            [falx.gdx.mouse :as mouse]))
 
 (def max-fps
   60)
@@ -18,7 +18,9 @@
 
 (def scene
   (scene/rows
-    (ui/env (d/center (str "fps: " gdx/fps)))
+    (d/center (gdx/signal
+                (str "fps: " gdx/fps)))
+    (d/center mouse/point)
     (scene/cols (d/box)
                 (d/box)
                 (d/box))
