@@ -124,6 +124,27 @@
        (-handlefn [this rect]
          (handlefn rect))))))
 
+(defn transient-scene
+  ([scene]
+   (falx.ui/scene
+     scene
+     {:cache-layout? false
+      :cache-handle? false
+      :cache-draw? false})))
+
+(extend-type falx.scene.INode
+  proto/IDraw
+  (-draw! [this view rect]
+    (draw! (transient-scene this) view rect))
+  proto/IDrawLater
+  (-drawfn [this rect]
+    (drawfn (transient-scene this) rect))
+  proto/IHandle
+  (-handle [this gs rect]
+    (handle (transient-scene this) gs rect))
+  proto/IHandleLater
+  (-draw! [this rect]
+    (handlefn (transient-scene this) rect)))
 
 (defn env-call
   [f]

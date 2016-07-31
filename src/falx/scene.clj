@@ -143,7 +143,6 @@
           iw (long (/ w n)) ]
       (reduce-kv
         (fn [result i node]
-
           (layout result node [(+ x (* iw i)) y iw h]))
         result nodes))))
 
