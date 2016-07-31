@@ -149,12 +149,9 @@
 (defn env-call
   [f]
   (reify
-    dproto/IDraw
-    (-draw! [this x y w h]
-      (d/draw! (f) x y w h))
     proto/IDraw
     (-draw! [this view rect]
-      (d/draw! (f) rect))
+      (draw! (f) view rect))
     dproto/ISized
     (-size [this w h]
       (dproto/-size (f) w h))))

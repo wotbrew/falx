@@ -26,7 +26,7 @@
       (scene/cols
         (d/center "foo")
         (d/center "hello"))
-      (d/in-box (d/center "pidge")))
+      (d/in-box (d/center "bar")))
     (d/center "foo")))
 
 (def ui
