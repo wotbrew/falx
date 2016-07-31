@@ -261,18 +261,21 @@
           gs)))))
 
 (defn switch
+  "Forms a switch between several elements.
+  `(key view rect)` is evaluated on draw/handle
+  The result of which is used to lookup an element in `m`."
   [key m]
   (->Switch key m))
 
-(state/defsignal
-  ::mouse
-  (state/signal ::mouse/mouse))
-
 (defn mouse-in?
+  "Is the mouse in the given rect?"
   [gs rect]
-  (mouse/in? (::mouse gs) rect))
+  (mouse/in? (::mouse/mouse gs) rect))
 
 (defn if-pred
+  "Forms a conditional element.
+  `(pred view rect)` is evaluated, the result of which is used
+  to pick either the `then` or `else` element."
   [pred then else]
   (switch
     (fn [gs rect]
@@ -283,13 +286,21 @@
      false else}))
 
 (defn if-focus
+  "If the rect has focus, `then` is picked, otherwise `else` is picked."
   [then else]
   (if-pred mouse-in?
-    then
-    else))
+           then
+           else))
 
 (defn button
-  [s]
-  (if-focus
-    (d/button s {:focused? true})
-    (d/button s)))
+  "Returns a button element.
+  opts
+   - `:disable-pred` a predicate function of gs, rect that can return whether or not the button should be disabled"
+  ([s]
+   (button s nil))
+  ([s opts]
+   (if-pred (:disable-pred opts (constantly false))
+     (d/button s {:disabled? true})
+     (if-focus
+       (d/button s {:focused? true})
+       (d/button s)))))

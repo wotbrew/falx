@@ -390,10 +390,24 @@
      d)))
 
 (defn button
+  "Returns a button drawable for the given text.
+  opts
+  `:disabled?` is the button disabled?
+  `:focused?` is the button focused?"
   ([s]
    (button s nil))
   ([s opts]
-   (if (:focused? opts)
+   (cond
+     (:disabled? opts)
+     (each
+       (recolor pixel [0 0 0 1])
+       (box {:color [0.3 0.3 0.3 1]
+             :shaded? true
+             :thickness 2})
+       (text s {:centered? true
+                :color [0.3 0.3 0.3 1]}))
+
+     (:focused? opts)
      (each
        (recolor pixel [0 0 0 1])
        (box {:color [0 1 0 1]
@@ -401,10 +415,12 @@
              :thickness 2})
        (text (str "- " s " -") {:centered? true
                                 :color [0 1 0 1]}))
+
+     :else
      (each
        (recolor pixel [0 0 0 1])
-       (box {:color [0.7 0.7 0.7 0.7]
+       (box {:color [0.7 0.7 0.7 1]
              :shaded? true
              :thickness 2})
        (text s {:centered? true
-                :color [1 1 1 1]})))))
+                :color [0.7 0.7 0.7 1]})))))
