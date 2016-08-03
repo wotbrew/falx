@@ -13,25 +13,22 @@
             [falx.ui.protocols :as proto]
             [falx.mouse :as mouse]
             [falx.draw.protocols :as dproto]
-            [falx.draw :as d]
-            [falx.state :as state]
-            [falx.gdx :as gdx])
-  (:import (clojure.lang Keyword Var)
-           (java.util UUID)))
+            [falx.draw :as d])
+  (:import (clojure.lang Keyword Var)))
 
 (defn drawfn
-  "Returns a 1-ary fn that draws the element given a view."
+  "Returns a 1-ary fn that draws the element given a gs."
   ([el rect]
    (proto/-drawfn el rect))
   ([el x y w h]
    (drawfn el [x y w h])))
 
 (defn draw!
-  "Draws the element given a view."
-  ([el view rect]
-   (proto/-draw! el view rect))
-  ([el view x y w h]
-   (draw! el view [x y w h])))
+  "Draws the element given a gs."
+  ([el gs rect]
+   (proto/-draw! el gs rect))
+  ([el gs x y w h]
+   (draw! el gs [x y w h])))
 
 (defn handlefn
   "Returns a 1-ary fn that handles input for the element given a game state.
@@ -62,10 +59,10 @@
   [k rect]
   #(kw-handle k % rect))
 
-(defmulti kw-draw! (fn [k view rect] k))
+(defmulti kw-draw! (fn [k gs rect] k))
 (defmethod kw-draw! :default
-  [k view rect]
-  (draw! (str k) view rect))
+  [k gs rect]
+  (draw! (str k) gs rect))
 
 (defmulti kw-drawfn (fn [k rect] k))
 (defmethod kw-drawfn :default
@@ -88,27 +85,27 @@
 
 (extend-protocol proto/IDraw
   nil
-  (-draw! [this view rect]
+  (-draw! [this gs rect]
     (d/draw! this rect))
   Object
-  (-draw! [this view rect]
+  (-draw! [this gs rect]
     (d/draw! this rect))
   Var
-  (-draw! [this view rect]
-    (draw! (var-get this) view rect))
+  (-draw! [this gs rect]
+    (draw! (var-get this) gs rect))
   Keyword
-  (-draw! [this view rect]
-    (kw-draw! this view rect)))
+  (-draw! [this gs rect]
+    (kw-draw! this gs rect)))
 
 (extend-protocol proto/IDrawLater
   nil
   (-drawfn [this rect]
-    (fn [view]
-      (proto/-draw! this view rect)))
+    (fn [gs]
+      (proto/-draw! this gs rect)))
   Object
   (-drawfn [this rect]
-    (fn [view]
-      (proto/-draw! this view rect)))
+    (fn [gs]
+      (proto/-draw! this gs rect)))
   Var
   (-drawfn [this rect]
     (drawfn (var-get this) rect))
@@ -168,13 +165,13 @@
                                 fs (mapv (fn [[el rect]]
                                            (proto/-drawfn el rect))
                                          layout)]
-                            (fn [view]
-                              (run! #(% view) fs))))
+                            (fn [gs]
+                              (run! #(% gs) fs))))
                         cache-draw? memoize)]
      (reify
        proto/IDraw
-       (-draw! [this view rect]
-         ((drawfn rect) view))
+       (-draw! [this gs rect]
+         ((drawfn rect) gs))
        proto/IDrawLater
        (-drawfn [this rect]
          (drawfn rect))
@@ -195,8 +192,8 @@
 
 (extend-type falx.scene.protocols.INode
   proto/IDraw
-  (-draw! [this view rect]
-    (draw! (transient-scene this) view rect))
+  (-draw! [this gs rect]
+    (draw! (transient-scene this) gs rect))
   proto/IDrawLater
   (-drawfn [this rect]
     (drawfn (transient-scene this) rect))
@@ -213,8 +210,8 @@
   [f]
   (reify
     proto/IDraw
-    (-draw! [this view rect]
-      (draw! (f) view rect))
+    (-draw! [this gs rect]
+      (draw! (f) gs rect))
     dproto/ISized
     (-size [this w h]
       (dproto/-size (f) w h))))
@@ -226,8 +223,8 @@
   `(env-call (fn [] ~@body)))
 
 (defn bind
-  "Returns an element that applies `f` to the view/gs before operating on the result.
-  e.g (handle (f gs) gs rect)"
+  "Returns an element that applies `f` to the gs before operating on the result.
+  e.g (draw (f gs) gs rect)"
   ([f]
    (reify
      proto/IDraw
@@ -262,7 +259,7 @@
 
 (defn switch
   "Forms a switch between several elements.
-  `(key view rect)` is evaluated on draw/handle
+  `(key gs rect)` is evaluated on draw/handle
   The result of which is used to lookup an element in `m`."
   [key m]
   (->Switch key m))
@@ -272,9 +269,21 @@
   [gs rect]
   (mouse/in? (::mouse/mouse gs) rect))
 
+(defn mouse-click?
+  ([gs]
+   (mouse/left-click? (::mouse/mouse gs)))
+  ([gs rect]
+    (mouse/left-click? (::mouse/mouse gs) rect)))
+
+(defn mouse-alt-click?
+  ([gs]
+   (mouse/right-click? (::mouse/mouse gs)))
+  ([gs rect]
+   (mouse/right-click? (::mouse/mouse gs) rect)))
+
 (defn if-pred
   "Forms a conditional element.
-  `(pred view rect)` is evaluated, the result of which is used
+  `(pred gs rect)` is evaluated, the result of which is used
   to pick either the `then` or `else` element."
   [pred then else]
   (switch
@@ -292,6 +301,45 @@
            then
            else))
 
+(defrecord Behaviour [el fs]
+  proto/IDraw
+  (-draw! [this gs rect]
+    (draw! el gs rect))
+  proto/IDrawLater
+  (-drawfn [this rect]
+    (drawfn el rect))
+  proto/IHandle
+  (-handle [this gs rect]
+    (as-> gs gs
+          (reduce #(%2 %1 rect) gs fs)
+          (handle el gs rect)))
+  proto/IHandleLater
+  (-handlefn [this rect]
+    (let [elf (handlefn el rect)]
+      (fn [gs]
+        (-> (reduce #(%2 %1 rect) gs fs)
+            (elf))))))
+
+(defn behaviour
+  ([el & fs]
+    (->Behaviour el (vec fs))))
+
+(defn if-click
+  [then else]
+  (if-pred mouse-click? then else))
+
+(defn if-alt-click
+  [then else]
+  (if-pred mouse-alt-click? then else))
+
+(defn click
+  [el f]
+  (if-click (behaviour el f) el))
+
+(defn alt-click
+  [el f]
+  (if-alt-click (behaviour el f) el))
+
 (defn button
   "Returns a button element.
   opts
@@ -302,5 +350,7 @@
    (if-pred (:disable-pred opts (constantly false))
      (d/button s {:disabled? true})
      (if-focus
-       (d/button s {:focused? true})
+       (cond-> (d/button s {:focused? true})
+               (:click opts) (click (:click opts))
+               (:alt-click opts) (alt-click (:alt-click opts)))
        (d/button s)))))

@@ -31,3 +31,7 @@
   (if-some [input (input)]
     (.isButtonPressed input (buttons button))
     false))
+
+(defn pressed
+  []
+  (into #{} (filter pressed?) (keys buttons)))

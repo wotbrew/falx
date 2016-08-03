@@ -36,3 +36,20 @@
      (fit x y w h w2 h2)))
   ([x y w h w2 h2]
     [x y (min w w2) (min h h2)]))
+
+(defn fitw
+  ([rect w2]
+   (fitw (x rect) (y rect) (w rect) (h rect) w2))
+  ([x y w h w2]
+   [x y (min w w2) h]))
+
+(defn fith
+  ([rect h2]
+   (fith (x rect) (y rect) (w rect) (h rect) h2))
+  ([x y w h h2]
+   [x y w (min h h2)]))
+
+(defn size
+  ([rect]
+    (let [[_ _ w h] rect]
+      [w h])))

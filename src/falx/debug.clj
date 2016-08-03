@@ -1,11 +1,15 @@
 (ns falx.debug
   (:require [falx.gdx :as gdx]
-            [falx.gdx.mouse :as mouse]
-            [falx.scene :as scene]))
+            [falx.scene :as scene]
+            [falx.ui :as ui]
+            [falx.draw :as d]))
 
 (def table
   (scene/htable
-    "fps" gdx/fps
+    (scene/fitw "fps" 64) gdx/fps
     "delta" gdx/delta-time
-    "frame-id" gdx/frame-id
-    "mouse" mouse/point))
+    "frameid" gdx/frame-id
+    "mouse" (ui/bind (comp (juxt :falx.mouse/point
+                                 :falx.mouse/pressed
+                                 :falx.mouse/hit)
+                           :falx.mouse/mouse))))

@@ -1,7 +1,7 @@
 (ns falx.ui.protocols)
 
 (defprotocol IDraw
-  (-draw! [this view rect]))
+  (-draw! [this gs rect]))
 
 (defprotocol IDrawLater
   (-drawfn [this rect]))

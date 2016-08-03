@@ -1,14 +1,28 @@
 (ns falx.scene
   (:require [falx.rect :as rect]
             [falx.size :as size]
-            [falx.scene.protocols :refer [INode -layout]])
-  (:import (clojure.lang Var)))
+            [falx.scene.protocols :refer [INode ISized -size -layout] :as proto])
+  (:import (clojure.lang Var)
+           (falx.scene.protocols IWrapMany)))
 
 (defn layout
   ([scene rect]
    (layout [] scene rect))
   ([result scene rect]
    (-layout scene result rect)))
+
+(defn size*
+  ([node rect]
+   (if (satisfies? ISized node)
+     (-size node rect))))
+
+(defn size
+  ([node rect]
+   (if (satisfies? ISized node)
+     (-size node rect)
+     (rect/size rect)))
+  ([node x y w h]
+   (size node [x y w h])))
 
 (extend-protocol INode
   Object
@@ -18,10 +32,45 @@
   (-layout [this result rect]
     (-layout (var-get this) result rect)))
 
+(defn maxw
+  [rect nodes]
+  (let [r (transduce (comp
+                       (keep #(size* % rect))
+                       (map size/w))
+                     (completing max)
+                     -1 nodes)]
+    (if (neg? r)
+      (rect/w rect)
+      r)))
+
+
+(defn maxh
+  [rect nodes]
+  (let [r (transduce (comp
+                       (keep #(size* % rect))
+                       (map size/h))
+                     (completing max)
+                     -1 nodes)]
+    (if (neg? r)
+      (rect/h rect)
+      r)))
+
+(extend-protocol ISized
+  falx.scene.protocols.IWrap
+  (-size [this rect]
+    (size (proto/-child this) rect))
+  falx.scene.protocols.IWrapMany
+  (-size [this rect]
+    [(maxw rect (proto/-children this))
+     (maxh rect (proto/-children this))]))
+
 (defrecord Stack [nodes]
-  INode
+  proto/INode
   (-layout [this result rect]
-    (reduce #(layout %1 %2 rect) result nodes)))
+    (reduce #(layout %1 %2 rect) result nodes))
+  proto/IWrapMany
+  (-children [this]
+    nodes))
 
 (defn coll->stack
   [nodes]
@@ -32,14 +81,17 @@
    (coll->stack nodes)))
 
 (defrecord Pad [node left top right bottom]
-  INode
+  proto/INode
   (-layout [this result rect]
     (let [[x y w h] rect]
       (layout result node
               [(+ x left)
                (+ y top)
                (- w left right)
-               (- h top bottom)]))))
+               (- h top bottom)])))
+  proto/IWrap
+  (-child [this]
+    node))
 
 (defn pad
   ([node padding]
@@ -52,9 +104,12 @@
    (->Pad node left top bottom right)))
 
 (defrecord At [node pt]
-  INode
+  proto/INode
   (-layout [this result rect]
-    (layout result node (rect/shift rect pt))))
+    (layout result node (rect/shift rect pt)))
+  proto/IWrap
+  (-child [this]
+    this))
 
 (defn at
   "Returns a node offset by `x` and `y`."
@@ -70,7 +125,10 @@
           [x2 y2] pt
           x (- (+ x w) x2)
           y (+ y2 y)]
-      (layout result node [x y w h]))))
+      (layout result node [x y w h])))
+  proto/IWrap
+  (-child [this]
+    node))
 
 (defn at-right
   [node pt]
@@ -80,7 +138,10 @@
   INode
   (-layout [this result rect]
     (let [rect (size/center size rect)]
-      (layout result node rect))))
+      (layout result node rect)))
+  proto/IWrap
+  (-child [this]
+    node))
 
 (defn center
   "Centers the node according to the given size."
@@ -92,27 +153,79 @@
 (defrecord Fit [node size]
   INode
   (-layout [this result rect]
-    (layout result node (rect/fit rect size))))
+    (layout result node (rect/fit rect (proto/-size this rect))))
+  proto/IWrap
+  (-child [this]
+    this)
+  proto/ISized
+  (-size [this rect]
+    (or size (falx.scene/size node rect))))
 
 (defn fit
-  "Fits the node to the size (if the requested size is larger)"
+  "Fits the node to the size (if the requested size is larger).
+  If size isn't supplied, the size of the children is used"
+  ([node]
+   (->Fit node nil))
   ([node size]
    (->Fit node size))
   ([node w h]
    (fit node [w h])))
+
+(defrecord FitWidth [node w]
+  INode
+  (-layout [this result rect]
+    (layout result node (rect/fitw rect w)))
+  proto/IWrap
+  (-child [this]
+    node)
+  proto/ISized
+  (-size [this [x y _ h]]
+    [w h]))
+
+(defn fitw
+  "Fits the node to the size (if the requested size is larger)"
+  ([node w]
+   (->FitWidth node w)))
+
+(defrecord FitHeight [node h]
+  INode
+  (-layout [this result rect]
+    (layout result node (rect/fith rect h)))
+  proto/IWrap
+  (-child [this]
+    node)
+  proto/ISized
+  (-size [this [x y w _]]
+    [w h]))
+
+(defn fith
+  "Fits the node to the size (if the requested size is larger)"
+  ([node h]
+   (->FitHeight node h)))
 
 (defrecord Rows [nodes]
   INode
   (-layout [this result rect]
     (if (empty? nodes)
       result
-      (let [n (count nodes)
-            [x y w h] rect
-            ih (long (/ h n))]
+      (let [[x y rw rh] rect
+            n (count nodes)
+            ih (long (/ rh n))
+            ctr (volatile! 0)]
         (reduce-kv
           (fn [result i node]
-            (layout result node [x (+ y (* ih i)) w ih]))
-          result nodes)))))
+            (let [[w h] (size node rect)
+                  h (min h ih)
+                  y (+ y @ctr)
+                  offset (vswap! ctr + h)]
+              (if (= i (dec n))
+                (layout result node [x y w (max h (- rh (- offset h)))])
+                (layout result node [x y w h]))))
+          result nodes))))
+
+  proto/IWrapMany
+  (-children [this]
+    nodes))
 
 (defn coll->rows
   ([nodes]
@@ -129,7 +242,10 @@
       (reduce-kv
         (fn [result i node]
           (layout result node [x (+ y (* h i)) w h]))
-        result nodes))))
+        result nodes)))
+  proto/IWrapMany
+  (-children [this]
+    nodes))
 
 (defn coll->frows
   ([h nodes]
@@ -144,13 +260,23 @@
   (-layout [this result rect]
     (if (empty? nodes)
       result
-      (let [n (count nodes)
-            [x y w h] rect
-            iw (long (/ w n))]
+      (let [[x y rw h] rect
+            n (count nodes)
+            iw (long (/ rw n))
+            ctr (volatile! 0)]
         (reduce-kv
           (fn [result i node]
-            (layout result node [(+ x (* iw i)) y iw h]))
-          result nodes)))))
+            (let [[w h] (size node rect)
+                  w (min w iw)
+                  x (+ x @ctr)
+                  offset (vswap! ctr + w)]
+              (if (= i (dec n))
+                (layout result node [x y (max w (- rw (- offset w))) h])
+                (layout result node [x y w h]))))
+          result nodes))))
+  proto/IWrapMany
+  (-children [this]
+    nodes))
 
 (defn coll->cols
   ([nodes]
@@ -167,7 +293,10 @@
       (reduce-kv
         (fn [result i node]
           (layout result node [(+ x (* i w)) y w h]))
-        result nodes))))
+        result nodes)))
+  proto/IWrapMany
+  (-children [this]
+    nodes))
 
 (defn coll->fcols
   ([w nodes]
@@ -195,7 +324,10 @@
                      w
                      h])))
         result
-        nodes))))
+        nodes)))
+  proto/IWrapMany
+  (-children [this]
+    nodes))
 
 (defn coll->hitems
   ([size nodes]
@@ -227,7 +359,10 @@
                      w
                      h])))
         result
-        nodes))))
+        nodes)))
+  proto/IWrapMany
+  (-children [this]
+    nodes))
 
 (defn coll->vitems
   ([size nodes]

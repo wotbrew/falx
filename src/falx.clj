@@ -21,8 +21,11 @@
 (gdx/defrender
   (try
     (let [frame @state/frame
-          gs (swap! state merge frame)]
-      (ui/draw! #'menu/scene gs [0 0 800 600]))
+          _ (swap! state state/splice frame)
+          scene #'menu/scene
+          scene-rect  [0 0 800 600]
+          gs (swap! state (partial ui/handle scene) scene-rect)]
+      (ui/draw! scene gs scene-rect))
     (catch Throwable e
       (error e)
       (Thread/sleep 10000))))

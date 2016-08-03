@@ -8,10 +8,10 @@
 
 (def scene
   (scene/stack
-    (scene/fit #'debug/table 192 72)
+    (scene/fit #'debug/table 400 72)
     (scene/center
       (scene/rows
-        (ui/button "New")
+        (ui/button "New" {:click (fn [gs _] (println "new") gs)})
         (ui/button "Continue")
         (ui/button "Options")
         (ui/button "Exit"))
