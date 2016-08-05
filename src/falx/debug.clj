@@ -12,4 +12,7 @@
     "mouse" (ui/bind (comp (juxt :falx.mouse/point
                                  :falx.mouse/pressed
                                  :falx.mouse/hit)
-                           :falx.mouse/mouse))))
+                           :falx.mouse/mouse))
+    "keyboard" (ui/bind (comp (juxt :falx.keyboard/pressed
+                                    :falx.keyboard/hit)
+                              :falx.keyboard/keyboard))))

@@ -9,6 +9,10 @@
   {::button.left ::gdx-mouse/button.left
    ::button.right ::gdx-mouse/button.right})
 
+(defn button?
+  [x]
+  (contains? buttons x))
+
 (def rbuttons
   (into {} (map (juxt val key)) buttons))
 
@@ -32,6 +36,10 @@
 (defn hit?
   ([mouse button]
    (contains? (::hit mouse) button)))
+
+(defn pressed?
+  ([mouse button]
+   (contains? (::pressed mouse) button)))
 
 (defn left-click?
   ([mouse]

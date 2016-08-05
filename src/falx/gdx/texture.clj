@@ -46,10 +46,11 @@
      (region texture x y w h)))
   ([texture x y w h]
    (dispatch/dispatch
-     (TextureRegion.
-       ^Texture texture
-       (int x)
-       (int y)
-       (int w)
-       ;;auto flip to fit our chosen co-ordinate system
-       (- (int h))))))
+     (doto
+       (TextureRegion.
+         ^Texture texture
+         (int x)
+         (int y)
+         (int w)
+         (int h))
+       (.flip false true)))))

@@ -354,3 +354,14 @@
                (:click opts) (click (:click opts))
                (:alt-click opts) (alt-click (:alt-click opts)))
        (d/button s)))))
+
+(defn at-mouse
+  ([el size]
+   (let [[w h] size]
+     (at-mouse el w h)))
+  ([el w h]
+    (reify proto/IDraw
+      (-draw! [this gs rect]
+        (let [mouse (::mouse/mouse gs)
+              [x y] (::mouse/point mouse [0 0])]
+          (draw! el gs [x y w h]))))))
