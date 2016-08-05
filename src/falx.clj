@@ -1,11 +1,9 @@
 (ns falx
   (:require [falx.gdx :as gdx]
-            [falx.draw :as d]
             [falx.ui :as ui]
             [clojure.tools.logging :refer [error info debug]]
-            [falx.scene :as scene]
-            [falx.gdx.mouse :as mouse]
             [falx.menu :as menu]
+            [falx.main :as main]
             [falx.state :as state]))
 
 (def max-fps
@@ -18,11 +16,15 @@
   (delay
     (gdx/bitmap-font)))
 
+(def screens
+  {:falx.screen/menu #'menu/scene
+   :falx.screen/main #'main/scene})
+
 (gdx/defrender
   (try
     (let [frame @state/frame
-          _ (swap! state state/splice frame)
-          scene #'menu/scene
+          gs (swap! state state/splice frame)
+          scene (screens (:falx/screen gs :falx.screen/menu))
           scene-rect  [0 0 800 600]
           gs (swap! state (partial ui/handle scene) scene-rect)]
       (ui/draw! scene gs scene-rect))

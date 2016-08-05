@@ -1,9 +1,6 @@
 (ns falx.menu
   (:require [falx.ui :as ui]
-            [falx.draw :as d]
             [falx.scene :as scene]
-            [falx.gdx.mouse :as mouse]
-            [falx.gdx :as gdx]
             [falx.debug :as debug]))
 
 (def scene
@@ -11,8 +8,8 @@
     (scene/fit #'debug/table 400 72)
     (scene/center
       (scene/rows
-        (ui/button "New" {:click (fn [gs _] (println "new") gs)})
-        (ui/button "Continue")
-        (ui/button "Options")
-        (ui/button "Exit"))
+        (ui/button "New" {:click (fn [gs _] (assoc gs :falx/screen :falx.screen/main))})
+        (ui/button "Continue"{:click (fn [gs _] (println "continue") gs)})
+        (ui/button "Options"{:click (fn [gs _] (println "options") gs)})
+        (ui/button "Exit"{:click (fn [gs _] (println "exit") gs)}))
       [320 320])))
