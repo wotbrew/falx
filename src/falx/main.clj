@@ -10,22 +10,38 @@
             [falx.gdx.camera :as cam]
             [falx.draw :as d]
             [falx.point :as pt]
-            [falx.time :as time]))
+            [falx.time :as time]
+            [falx.state :as state]
+            [falx.gdx.mouse :as gdx-mouse]))
+
+(def cam
+  (delay (gdx/camera [800 600])))
+
+(state/defsignal
+  ::mouse.point
+  (gdx/signal
+    (let [pt @gdx-mouse/point]
+      (cam/world-pt @cam pt))))
+
+(state/defsignal
+  ::mouse.cell
+  (gdx/signal
+    (let [pt @gdx-mouse/point]
+      (pt/div (cam/world-pt @cam pt) 32 32))))
 
 (def game
-  (let [cam (delay (gdx/camera [800 600]))]
-    (reify uiproto/IDraw
-      (-draw! [this gs rect]
-        (let [[x y w h] rect
-              hw (int (/ w 2))
-              hh (int (/ h 2))
-              [cx cy] (::camera.point gs [0 0])
-              cam @cam]
-          (cam/set-size! cam w h)
-          (cam/set-pos! cam (+ cx hw) (+ cy hh))
-          (gdx/with-cam
-            cam
-            (d/str! "foo" [x y w h])))))))
+  (reify uiproto/IDraw
+    (-draw! [this gs rect]
+      (let [[x y w h] rect
+            hw (int (/ w 2))
+            hh (int (/ h 2))
+            [cx cy] (::camera.point gs [0 0])
+            cam @cam]
+        (cam/set-size! cam w h)
+        (cam/set-pos! cam (+ cx hw) (+ cy hh))
+        (gdx/with-cam
+          cam
+          (d/str! "foo" [x y w h]))))))
 
 (def mouse
   (ui/at-mouse sprite/mouse-point 32 32))

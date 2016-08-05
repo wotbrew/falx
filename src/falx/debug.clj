@@ -15,4 +15,5 @@
                            :falx.mouse/mouse))
     "keyboard" (ui/bind (comp (juxt :falx.keyboard/pressed
                                     :falx.keyboard/hit)
-                              :falx.keyboard/keyboard))))
+                              :falx.keyboard/keyboard))
+    "cell" (ui/bind :falx.main/mouse.cell)))
