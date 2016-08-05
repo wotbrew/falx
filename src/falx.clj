@@ -4,7 +4,8 @@
             [clojure.tools.logging :refer [error info debug]]
             [falx.menu :as menu]
             [falx.main :as main]
-            [falx.state :as state]))
+            [falx.state :as state]
+            [falx.config :as config]))
 
 (def max-fps
   60)
@@ -16,9 +17,14 @@
   (delay
     (gdx/bitmap-font)))
 
-(def screens
+(def screens*
   {:falx.screen/menu #'menu/scene
    :falx.screen/main #'main/scene})
+
+(def screens
+  (if config/optimise?
+    (into {} (map (juxt key (comp ui/scene var-get val))) screens*)
+    screens*))
 
 (gdx/defrender
   (try

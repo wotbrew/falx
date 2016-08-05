@@ -35,7 +35,9 @@
    ::key.r Input$Keys/R,
    ::key.j Input$Keys/J
 
-   ::key.esc Input$Keys/ESCAPE})
+   ::key.esc Input$Keys/ESCAPE
+   ::key.shift-left Input$Keys/SHIFT_LEFT
+   ::key.shift-right Input$Keys/SHIFT_RIGHT})
 
 (defn pressed?
   [key]

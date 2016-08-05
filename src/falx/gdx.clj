@@ -89,6 +89,11 @@
   (delay
     (camera [800 600])))
 
+(defmacro with-cam
+  [cam & body]
+  `(cam/with @batch ~cam
+    ~@body))
+
 (defmacro defrender
   [& body]
   `(reset!

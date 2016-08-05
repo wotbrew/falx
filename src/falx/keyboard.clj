@@ -33,7 +33,9 @@
    ::key.s ::gdx-keyboard/key.s,
    ::key.h ::gdx-keyboard/key.h
 
-   ::key.esc ::gdx-keyboard/key.esc})
+   ::key.esc ::gdx-keyboard/key.esc
+   ::key.shift-left ::gdx-keyboard/key.shift-left
+   ::key.shift-right ::gdx-keyboard/key.shift-right})
 
 (def rkeys
   (into {} (map (juxt val key)) keys))
