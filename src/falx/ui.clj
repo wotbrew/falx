@@ -201,7 +201,7 @@
   (-handle [this gs rect]
     (handle (transient-scene this) gs rect))
   proto/IHandleLater
-  (-draw! [this rect]
+  (-handlefn [this rect]
     (handlefn (transient-scene this) rect)))
 
 (defn env-call
