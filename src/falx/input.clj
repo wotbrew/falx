@@ -45,3 +45,7 @@
 (defn check
   [gs input]
   ((checkfn input) gs))
+
+(defn mod?
+  [gs]
+  (keyboard/pressed? (::keyboard/keyboard gs) ::keyboard/key.shift-left))

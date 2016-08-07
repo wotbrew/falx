@@ -5,13 +5,24 @@
             [falx.menu :as menu]
             [falx.main :as main]
             [falx.state :as state]
-            [falx.config :as config]))
+            [falx.config :as config]
+            [falx.db :as db]
+            [falx.creature :as creature]
+            [falx.party :as party]
+            [falx.entity :as entity]))
 
 (def max-fps
   60)
 
 (def state
-  (atom {}))
+  (atom
+    (db/db
+      [(-> (creature/creature
+             0
+             ::creature/player? true)
+           (entity/put
+             :testlevel
+             [3 4]))])))
 
 (def font
   (delay

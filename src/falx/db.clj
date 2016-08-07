@@ -2,7 +2,7 @@
   "Contains a low-level value indexed eav database."
   (:require [falx.db.impl :as impl]
             [clojure.set :as set])
-  (:refer-clojure :exclude [replace assert]))
+  (:refer-clojure :exclude [replace assert alter]))
 
 (defn exists?
   "Returns true if the entity exists."
@@ -116,3 +116,11 @@
            (query db (first kvs) (second kvs) (nnext kvs)))
          (throw (IllegalArgumentException. "query expects even number of arguments after db, found odd number")))
        x))))
+
+(defn alter
+  ([db id f]
+    (if-some [e (entity db id)]
+      (replace db (f e))
+      (add db (f nil))))
+  ([db id f & args]
+    (alter db id #(apply f % args))))
