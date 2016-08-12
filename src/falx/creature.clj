@@ -11,10 +11,8 @@
    ::entity/solid? true})
 
 (defn creature
-  [id & {:as kvs}]
-  (merge base
-         kvs
-         {:falx.db/id id}))
+  [& {:as kvs}]
+  (merge base kvs))
 
 (defn players
   [gs]

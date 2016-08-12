@@ -31,30 +31,28 @@
    ::slice.layer layer})
 
 (defn pos
-  ([slice pt]
-    (pos (::slice.level slice) (::slice.layer slice) pt))
-  ([level layer pt]
+  ([level pt]
    {::pos.level level
-    ::pos.layer layer
     ::pos.point pt}))
 
 (defn put
   ([e pos]
    (assoc e
      ::pos pos
-     ::slice (slice (::pos.level pos) (::pos.layer pos))
+     ::slice (slice (::pos.level pos) (::layer e))
      ::level (::pos.level pos)
-     ::layer (::pos.layer pos)
      ::point (::pos.point pos)))
   ([e level pt]
-   (put e {::pos.level level
-           ::pos.layer (get e ::layer)
-           ::pos.point pt}))
-  ([e level layer pt]
-   (put e {::pos.level level
-           ::pos.layer layer
-           ::pos.point pt})))
+   (put e (pos level pt)))
+  ([e level x y]
+   (put e level [x y])))
 
 (defn unput
   [e]
-  (dissoc e ::pos ::slice ::map ::point))
+  (dissoc e ::pos ::slice ::level ::point))
+
+(defn step
+  ([e pt]
+   (put e (::level e :falx.level/limbo) pt))
+  ([e x y]
+   (step e [x y])))

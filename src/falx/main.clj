@@ -35,8 +35,8 @@
 
 (defn mouse-pos
   [gs]
-  (let [slice (party/slice gs)]
-    (entity/pos slice (::mouse.cell gs [0 0]))))
+  (let [level (party/level gs)]
+    (entity/pos level (::mouse.cell gs [0 0]))))
 
 (defn at-mouse-pos
   [gs]
@@ -54,7 +54,7 @@
         (cam/set-pos! cam (+ cx hw x) (+ cy hh y))
         (gdx/with-cam
           cam
-          (doseq [e (db/query gs ::entity/level :testlevel)
+          (doseq [e (db/query gs ::entity/level (party/level gs))
                   :let [pt (::entity/point e)]
                   :when pt
                   :let [[x y] pt]]

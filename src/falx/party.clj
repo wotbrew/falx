@@ -4,7 +4,7 @@
             [falx.creature :as creature]))
 
 
-(defn slice
+(defn level
   [db]
-  (or (some ::entity/slice (creature/selected db))
-      (some ::entity/slice (creature/players db))))
+  (or (some ::entity/level (creature/selected db))
+      (some ::entity/level (creature/players db))))

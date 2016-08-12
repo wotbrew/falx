@@ -16,6 +16,6 @@
                  [org.clojure/data.priority-map "0.0.7"]]
   :repositories [["sonatype"
                   "https://oss.sonatype.org/content/repositories/releases/"]]
-  :main ^:skip-aot falx
+  :main ^:skip-aot falx.core
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all}})
