@@ -1,4 +1,4 @@
-(ns falx.ui
+(ns falx.engine.ui
   "Contains functions on ui elements.
 
   Elements support 2 potential behaviours, drawing, and input handling.
@@ -9,60 +9,62 @@
   - any drawable thing implementing falx.draw.protocols/IDraw
   - any drawable thing implementing falx.draw.protocols/IDrawLater
   - strings"
-  (:require [falx.scene :as scene]
-            [falx.ui.protocols :as proto]
-            [falx.mouse :as mouse]
-            [falx.draw.protocols :as dproto]
-            [falx.draw :as d])
+  (:require [falx.engine.scene :as scene]
+            [falx.engine.ui.protocols :as proto]
+            [falx.engine.draw.protocols :as dproto]
+            [falx.engine.draw :as d]
+            [falx.engine.rect :as rect]
+            [falx.engine.input :as input]
+            [falx.engine.mouse :as mouse])
   (:import (clojure.lang Keyword Var)))
 
 (defn drawfn
-  "Returns a 1-ary fn that draws the element given a gs."
+  "Returns a 1-ary fn that draws the element given a model."
   ([el rect]
    (proto/-drawfn el rect))
   ([el x y w h]
    (drawfn el [x y w h])))
 
 (defn draw!
-  "Draws the element given a gs."
-  ([el gs rect]
-   (proto/-draw! el gs rect))
-  ([el gs x y w h]
-   (draw! el gs [x y w h])))
+  "Draws the element given a model."
+  ([el model input rect]
+   (proto/-draw! el model input rect))
+  ([el model input x y w h]
+   (draw! el model input [x y w h])))
 
 (defn handlefn
-  "Returns a 1-ary fn that handles input for the element given a game state.
-  The handlefn returns a new game state."
+  "Returns a 1-ary fn that handles input for the element given a model and input.
+  The handlefn returns a seq of events."
   ([el rect]
    (proto/-handlefn el rect))
   ([el x y w h]
    (handlefn el [x y w h])))
 
 (defn handle
-  "Handles input for the element given a game state.
-  Returns a new game state."
-  ([el gs rect]
-   (proto/-handle el gs rect))
-  ([el gs x y w h]
-   (handle el gs [x y w h])))
+  "Handles input for the element given a model and input.
+   Returns a seq of events."
+  ([el model input rect]
+   (proto/-handle el model input rect))
+  ([el model input x y w h]
+   (handle el model input [x y w h])))
 
 (def ^:private noop
   (constantly nil))
 
-(defmulti kw-handle (fn [k gs rect] k))
+(defmulti kw-handle (fn [k model input rect] k))
 (defmethod kw-handle :default
-  [_ gs _]
-  gs)
+  [_ model _]
+  model)
 
 (defmulti kw-handlefn (fn [k rect] k))
 (defmethod kw-handlefn :default
   [k rect]
-  #(kw-handle k % rect))
+  #(kw-handle k %1 %2 rect))
 
-(defmulti kw-draw! (fn [k gs rect] k))
+(defmulti kw-draw! (fn [k model input rect] k))
 (defmethod kw-draw! :default
-  [k gs rect]
-  (draw! (str k) gs rect))
+  [k model input rect]
+  (draw! (str k) model input rect))
 
 (defmulti kw-drawfn (fn [k rect] k))
 (defmethod kw-drawfn :default
@@ -71,61 +73,61 @@
 
 (extend-protocol proto/IHandle
   nil
-  (-handle [this gs rect]
-    gs)
+  (-handle [this model input rect]
+    nil)
   Object
-  (-handle [this gs rect]
-    gs)
+  (-handle [this model input rect]
+    nil)
   Var
-  (-handle [this gs rect]
-    (handle (var-get this) gs rect))
+  (-handle [this model input rect]
+    (handle (var-get this) model input rect))
   Keyword
-  (-handle [this gs rect]
-    (kw-handle this gs rect)))
+  (-handle [this model input rect]
+    (kw-handle this model input rect)))
 
 (extend-protocol proto/IDraw
   nil
-  (-draw! [this gs rect]
+  (-draw! [this model input rect]
     (d/draw! this rect))
   Object
-  (-draw! [this gs rect]
+  (-draw! [this model input rect]
     (d/draw! this rect))
   Var
-  (-draw! [this gs rect]
-    (draw! (var-get this) gs rect))
+  (-draw! [this model input rect]
+    (draw! (var-get this) model input rect))
   Keyword
-  (-draw! [this gs rect]
-    (kw-draw! this gs rect)))
+  (-draw! [this model input rect]
+    (kw-draw! this model input rect)))
 
 (extend-protocol proto/IDrawLater
   nil
   (-drawfn [this rect]
-    (fn [gs]
-      (proto/-draw! this gs rect)))
+    (fn [model input]
+      (proto/-draw! this model input rect)))
   Object
   (-drawfn [this rect]
-    (fn [gs]
-      (proto/-draw! this gs rect)))
+    (fn [model input]
+      (proto/-draw! this model input rect)))
   Var
   (-drawfn [this rect]
     (drawfn (var-get this) rect))
   Keyword
   (-drawfn [this rect]
     (kw-drawfn this rect))
-  falx.draw.protocols.IDrawLater
+  falx.engine.draw.protocols.IDrawLater
   (-drawfn [this rect]
     (let [f (d/drawfn this rect)]
-      (fn [_]
+      (fn [_ _]
         (f)))))
 
 (extend-protocol proto/IHandleLater
   nil
   (-handlefn [this rect]
-    identity)
+    noop)
   Object
   (-handlefn [this rect]
-    (fn [gs]
-      (proto/-handle this gs rect)))
+    (fn [model input]
+      (proto/-handle this model input rect)))
   Var
   (-handlefn [this rect]
     (handlefn (var-get this) rect))
@@ -142,7 +144,7 @@
    `:cache-handle?` whether or not to cache the handle fn (true).
    `:cache-draw?` whether or not to cache the draw fn (true)."
   ([scene]
-   (falx.ui/scene scene nil))
+   (falx.engine.ui/scene scene nil))
   ([scene opts]
    (let [{:keys [cache-layout?
                  cache-handle?
@@ -157,49 +159,49 @@
                                   fs (mapv (fn [[el rect]]
                                              (proto/-handlefn el rect))
                                            layout)]
-                              (fn [gs]
-                                (reduce #(%2 %1) gs fs))))
+                              (fn [model input]
+                                (into [] (mapcat #(%1 model input)) fs))))
                           cache-handle? memoize)
          drawfn (cond-> (fn [rect]
                           (let [layout (layoutfn rect)
                                 fs (mapv (fn [[el rect]]
                                            (proto/-drawfn el rect))
                                          layout)]
-                            (fn [gs]
-                              (run! #(% gs) fs))))
+                            (fn [model input]
+                              (run! #(% model input) fs))))
                         cache-draw? memoize)]
      (reify
        proto/IDraw
-       (-draw! [this gs rect]
-         ((drawfn rect) gs))
+       (-draw! [this model input rect]
+         ((drawfn rect) model input))
        proto/IDrawLater
        (-drawfn [this rect]
          (drawfn rect))
        proto/IHandle
-       (-handle [this gs rect]
-         ((handlefn rect) gs))
+       (-handle [this model input rect]
+         ((handlefn rect) model input))
        proto/IHandleLater
        (-handlefn [this rect]
          (handlefn rect))))))
 
 (defn- transient-scene
   ([scene]
-   (falx.ui/scene
+   (falx.engine.ui/scene
      scene
      {:cache-layout? false
       :cache-handle? false
       :cache-draw? false})))
 
-(extend-type falx.scene.protocols.INode
+(extend-type falx.engine.scene.protocols.INode
   proto/IDraw
-  (-draw! [this gs rect]
-    (draw! (transient-scene this) gs rect))
+  (-draw! [this model input rect]
+    (draw! (transient-scene this) model input rect))
   proto/IDrawLater
   (-drawfn [this rect]
     (drawfn (transient-scene this) rect))
   proto/IHandle
-  (-handle [this gs rect]
-    (handle (transient-scene this) gs rect))
+  (-handle [this model input rect]
+    (handle (transient-scene this) model input rect))
   proto/IHandleLater
   (-handlefn [this rect]
     (handlefn (transient-scene this) rect)))
@@ -210,8 +212,8 @@
   [f]
   (reify
     proto/IDraw
-    (-draw! [this gs rect]
-      (draw! (f) gs rect))
+    (-draw! [this model input rect]
+      (draw! (f) model input rect))
     dproto/ISized
     (-size [this w h]
       (dproto/-size (f) w h))))
@@ -222,146 +224,115 @@
   [& body]
   `(env-call (fn [] ~@body)))
 
-(defn bind
-  "Returns an element that applies `f` to the gs before operating on the result.
-  e.g (draw (f gs) gs rect)"
+(defn dynamic
+  "Returns an element dynamically by applying `f` to the model to obtain a ui element.
+  e.g (draw (f model) model rect)"
   ([f]
    (reify
      proto/IDraw
-     (-draw! [this view rect]
-       (proto/-draw! (f view) view rect))
+     (-draw! [this model input rect]
+       (proto/-draw! (f model) model input rect))
      proto/IHandle
-     (-handle [this gs rect]
-       (proto/-handle (f gs) gs rect)))))
+     (-handle [this model input rect]
+       (proto/-handle (f model) model input rect)))))
+
+(defn target
+  "Returns an element that will apply `f` to the model before drawing or handling"
+  ([el f]
+   (reify
+     proto/IDraw
+     (-draw! [this model input rect]
+       (proto/-draw! el (f model) input rect))
+     proto/IDrawLater
+     (-drawfn [this rect]
+       (let [dfn (drawfn el rect)]
+         (fn [model input]
+           (dfn (f model) input))))
+     proto/IHandle
+     (-handle [this model input rect]
+       (proto/-handle el (f model) input rect))
+     proto/IHandleLater
+     (-handlefn [this rect]
+       (let [hfn (handlefn el rect)]
+         (fn [model input]
+           (hfn (f model) input)))))))
 
 (defrecord Switch [key m]
   proto/IDraw
-  (-draw! [this gs rect]
-    (let [el (get m (key gs rect))]
-      (draw! el gs rect)))
+  (-draw! [this model input rect]
+    (let [el (get m (key model input rect))]
+      (draw! el model input rect)))
   proto/IDrawLater
   (-drawfn [this rect]
     (let [m2 (into {} (map (juxt first #(drawfn (val %) rect))) m)]
-      (fn [gs]
-        (when-some [f (get m2 (key gs rect))]
-          (f gs)))))
+      (fn [model input]
+        (when-some [f (get m2 (key model input rect))]
+          (f model input)))))
   proto/IHandle
-  (-handle [this gs rect]
-    (let [el (get m (key gs rect))]
-      (handle el gs rect)))
+  (-handle [this model input rect]
+    (let [el (get m (key model input rect))]
+      (handle el model input rect)))
   proto/IHandleLater
   (-handlefn [this rect]
     (let [m2 (into {} (map (juxt first #(handlefn (val %) rect))) m)]
-      (fn [gs]
-        (if-some [f (get m2 (key gs rect))]
-          (f gs)
-          gs)))))
+      (fn [model input]
+        (when-some [f (get m2 (key model input rect))]
+          (f model input))))))
 
 (defn switch
   "Forms a switch between several elements.
-  `(key gs rect)` is evaluated on draw/handle
+  `(key model input rect)` is evaluated on draw/handle
   The result of which is used to lookup an element in `m`."
   [key m]
   (->Switch key m))
 
-(defn mouse-in?
-  "Is the mouse in the given rect?"
-  [gs rect]
-  (mouse/in? (::mouse/mouse gs) rect))
-
-(defn mouse-click?
-  ([gs]
-   (mouse/left-click? (::mouse/mouse gs)))
-  ([gs rect]
-    (mouse/left-click? (::mouse/mouse gs) rect)))
-
-(defn mouse-alt-click?
-  ([gs]
-   (mouse/right-click? (::mouse/mouse gs)))
-  ([gs rect]
-   (mouse/right-click? (::mouse/mouse gs) rect)))
-
 (defn if-pred
   "Forms a conditional element.
-  `(pred gs rect)` is evaluated, the result of which is used
+  `(pred model input rect)` is evaluated, the result of which is used
   to pick either the `then` or `else` element."
   [pred then else]
   (switch
-    (fn [gs rect]
-      (if (pred gs rect)
+    (fn [model input rect]
+      (if (pred model input rect)
         true
         false))
     {true then
      false else}))
 
-(defn if-focus
-  "If the rect has focus, `then` is picked, otherwise `else` is picked."
-  [then else]
-  (if-pred mouse-in?
-           then
-           else))
+(defn pred
+  [f]
+  (fn [model input _]
+    (f model)))
 
 (defrecord Behaviour [el fs]
   proto/IDraw
-  (-draw! [this gs rect]
-    (draw! el gs rect))
+  (-draw! [this model input rect]
+    (draw! el model input rect))
   proto/IDrawLater
   (-drawfn [this rect]
     (drawfn el rect))
   proto/IHandle
-  (-handle [this gs rect]
-    (as-> gs gs
-          (reduce #(%2 %1 rect) gs fs)
-          (handle el gs rect)))
+  (-handle [this model input rect]
+    (concat
+      (mapcat #(% model input rect) fs)
+      (handle el model input rect)))
   proto/IHandleLater
   (-handlefn [this rect]
     (let [elf (handlefn el rect)]
-      (fn [gs]
-        (-> (reduce #(%2 %1 rect) gs fs)
-            (elf))))))
+      (fn [model input]
+        (concat (mapcat #(% model input rect) fs)
+                (elf model input))))))
 
 (defn behaviour
   ([el & fs]
-    (->Behaviour el (vec fs))))
-
-(defn if-click
-  [then else]
-  (if-pred mouse-click? then else))
-
-(defn if-alt-click
-  [then else]
-  (if-pred mouse-alt-click? then else))
-
-(defn click
-  [el f]
-  (if-click (behaviour el f) el))
-
-(defn alt-click
-  [el f]
-  (if-alt-click (behaviour el f) el))
-
-(defn button
-  "Returns a button element.
-  opts
-   - `:disable-pred` a predicate function of gs, rect that can return whether or not the button should be disabled"
-  ([s]
-   (button s nil))
-  ([s opts]
-   (if-pred (:disable-pred opts (constantly false))
-     (d/button s {:disabled? true})
-     (if-focus
-       (cond-> (d/button s {:focused? true})
-               (:click opts) (click (:click opts))
-               (:alt-click opts) (alt-click (:alt-click opts)))
-       (d/button s)))))
+   (->Behaviour el (vec fs))))
 
 (defn at-mouse
-  ([el size]
-   (let [[w h] size]
-     (at-mouse el w h)))
-  ([el w h]
-    (reify proto/IDraw
-      (-draw! [this gs rect]
-        (let [mouse (::mouse/mouse gs)
-              [x y] (::mouse/point mouse [0 0])]
-          (draw! el gs [x y w h]))))))
+  [el]
+  (reify proto/IDraw
+    (-draw! [this model input rect]
+      (let [rect (rect/put rect (-> input ::input/mouse ::mouse/point))]
+        (draw! el model input rect)))
+    proto/IHandle
+    (-handle [this model input rect]
+      (handle el model input rect))))

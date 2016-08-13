@@ -1,23 +1,28 @@
 (ns falx.menu
-  (:require [falx.ui :as ui]
-            [falx.scene :as scene]
-            [falx.debug :as debug]
-            [falx.ui.protocols :as uiproto]
-            [falx.draw :as d]
+  (:require [falx.engine.ui :as ui]
+            [falx.engine.scene :as scene]
+
+            #_[falx.debug :as debug]
             [falx.sprite :as sprite]
-            [falx.mouse :as mouse]))
+            [falx.widget :as widget]))
 
 (def mouse
-  (ui/at-mouse sprite/mouse-point 32 32))
+  (ui/at-mouse (scene/fit sprite/mouse-point 32 32)))
 
 (def scene
   (scene/stack
-    (scene/fit #'debug/table 400 96)
+    #_(scene/fit #'debug/table 400 96)
     (scene/center
       (scene/rows
-        (ui/button "New" {:click (fn [gs _] (assoc gs :falx/screen :falx.screen/main))})
-        (ui/button "Continue" {:click (fn [gs _] (println "continue") gs)})
-        (ui/button "Options" {:click (fn [gs _] (println "options") gs)})
-        (ui/button "Exit" {:click (fn [gs _] (println "exit") gs)}))
+        (widget/button {:id ::button.new
+                        :s "New"})
+        (widget/button {:id ::button.continue
+                        :s "Continue"})
+        (widget/button {:id ::button.load
+                        :s "Load"})
+        (widget/button {:id ::button.options
+                        :s "Options"})
+        (widget/button {:id ::button.exit
+                        :s "Exit"}))
       [320 320])
     mouse))

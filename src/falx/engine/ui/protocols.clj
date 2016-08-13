@@ -1,7 +1,7 @@
-(ns falx.ui.protocols)
+(ns falx.engine.ui.protocols)
 
 (defprotocol IDraw
-  (-draw! [this model rect]))
+  (-draw! [this model input rect]))
 
 (defprotocol IDrawLater
   (-drawfn [this rect]))

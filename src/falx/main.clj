@@ -60,18 +60,9 @@
                   :let [[x y] pt]]
             (entity/draw! e gs (* x 32) (* y 32) 32 32)))))))
 
-(defn game-click
-  [gs rect]
-  (reduce entity/click gs (at-mouse-pos gs)))
-
-(defn game-alt-click
-  [gs rect]
-  (reduce entity/alt-click gs (at-mouse-pos gs)))
 
 (def game
-  (-> game*
-      (ui/click game-click)
-      (ui/alt-click game-alt-click)))
+  (-> game*))
 
 (def mouse
   (ui/at-mouse sprite/mouse-point 32 32))

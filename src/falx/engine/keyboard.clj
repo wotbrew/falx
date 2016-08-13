@@ -1,7 +1,5 @@
-(ns falx.keyboard
+(ns falx.engine.keyboard
   (:require [falx.gdx.keyboard :as gdx-keyboard]
-            [falx.state :as state]
-            [falx.gdx :as gdx]
             [clojure.set :as set])
   (:refer-clojure :exclude [keys]))
 
@@ -44,16 +42,18 @@
   [x]
   (contains? keys x))
 
-(state/defsignal
-  ::keyboard
-  (gdx/signal
-    {::pressed (set (keep rkeys (gdx-keyboard/pressed)))})
-  :merge
-  (fn [old new]
-    (let [hit (set/difference
-                (::pressed old #{})
-                (::pressed new #{}))]
-      (assoc new ::hit hit))))
+(defn combine
+  [prev new]
+  (let [hit (set/difference (::pressed prev #{}) (::pressed new))]
+    (assoc new ::hit hit
+               ::delta (- (::time new) (::time prev 0)))))
+
+(defn now
+  ([]
+    {::time (System/currentTimeMillis)
+     ::pressed (set (keep rkeys (gdx-keyboard/pressed)))})
+  ([prev]
+    (combine prev (now))))
 
 (defn hit?
   ([keyboard key]

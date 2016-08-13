@@ -1,5 +1,5 @@
 (ns falx.sprite
-  (:require [falx.draw :as d]
+  (:require [falx.engine.draw :as d]
             [clojure.java.io :as io]))
 
 
