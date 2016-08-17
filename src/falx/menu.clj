@@ -15,8 +15,8 @@
     (scene/fit #'debug/table 400 96)
     (scene/center
       (scene/rows
-        (screen/button "New")
-        (screen/button "Continue")
+        (screen/nav-button "New" {:goto ::screen/id.main})
+        (screen/nav-button "Continue" {:goto ::screen/id.main})
         (screen/button "Load")
         (screen/nav-button "Options" {:goto ::screen/id.options})
         (screen/button "Exit"))

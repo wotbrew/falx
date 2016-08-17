@@ -5,7 +5,8 @@
             [falx.engine.input :as input]
             [falx.engine.keyboard :as keyboard]
             [falx.menu]
-            [falx.options]))
+            [falx.options]
+            [falx.main]))
 
 (def max-fps
   60)
