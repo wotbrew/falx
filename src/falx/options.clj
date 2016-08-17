@@ -9,16 +9,24 @@
 (def mouse
   (ui/at-mouse (scene/fit sprite/mouse-point 32 32)))
 
-(def scene
+(screen/defscene ::screen/id.options
   (scene/stack
     (scene/fit #'debug/table 400 96)
     (scene/center
       (scene/htable
         (scene/fitw (d/center "Resolution [800 x 600]") 256)
-        (screen/button "change")
+        (screen/nav-button "change" {:goto-overlay ::screen/id.options.resolution})
         (scene/fitw (d/center "Fullscreen? [on]") 256)
         (screen/button "change"))
       [640 64])
-    mouse))
+    (screen/not-overlayed mouse)))
 
-(screen/defscene ::screen/id.options scene)
+(screen/defscene ::screen/id.options.resolution
+  (scene/stack
+    (scene/center
+      (scene/rows
+        (screen/button "800 x 600")
+        (screen/button "1024 x 768")
+        (screen/button "1280 x 1024"))
+      [320 320])
+    mouse))

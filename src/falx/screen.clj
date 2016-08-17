@@ -18,14 +18,36 @@
 (defmacro defscene
   [key scene]
   `(let [key# ~key]
+     (derive key# ::scene)
      (if config/optimise?
        (let [scene# (ui/scene ~scene)]
          (defmethod scene key# [_#] scene#))
        (defmethod scene key# [_#] ~scene))))
 
+(defmethod ui/kw-handlefn ::scene
+  [k rect]
+  (let [s (scene k)]
+    (ui/handlefn s rect)))
+
+(defmethod ui/kw-handle ::scene
+  [k model input rect]
+  (let [s (scene k)]
+    (ui/handle s model input rect)))
+
+(defmethod ui/kw-drawfn ::scene
+  [k rect]
+  (let [s (scene k)]
+    (ui/drawfn s rect)))
+
+(defmethod ui/kw-draw! ::scene
+  [k model input rect]
+  (let [s (scene k)]
+    (ui/draw! s model input rect)))
+
 (defn screen
   [key size]
   {::scene key
+   ::scene-stack '()
    ::size size
    ::state {}
    ::input {}})
@@ -33,21 +55,51 @@
 (defn handle
   ([screen input]
    (let [[w h :as size] (::size screen)
-         key (::scene screen)
-         scene (scene key)
+         scene (::scene screen)
          screen (assoc screen ::input {})]
      (ui/handle scene screen input [0 0 w h]))))
 
 (defn draw!
   ([screen input]
    (let [[w h] (::size screen)
-         key (::scene screen)
-         scene (scene key)]
+         scene (::scene screen)]
      (ui/draw! scene screen input [0 0 w h]))))
+
+(defn back
+  [screen]
+  (let [stack (::scene-stack screen)
+        scene (first stack)]
+    (if scene
+      (assoc screen ::scene scene
+                    ::scene-stack (pop stack))
+      screen)))
 
 (defn goto
   [screen key]
-  (assoc screen ::scene key))
+  (assoc screen
+    ::scene key
+    ::scene-stack (conj (::scene-stack screen '()) (::scene screen))))
+
+(def half-background
+  (d/recolor d/pixel [0 0 0 0.5]))
+
+(defn goto-overlay
+  [screen scene]
+  (let [s (scene/stack
+            (ui/mapping (::scene screen)
+                        (fn [screen _ _]
+                          (assoc screen ::overlay? true)))
+            half-background
+            (ui/mapping scene
+                        (fn [screen _ _]
+                          (dissoc screen ::overlay?))))]
+    (goto screen s)))
+
+(defn not-overlayed
+  [el]
+  (ui/when-pred
+    (ui/pred (complement ::overlay?))
+    el))
 
 (defn- dissoc-in
   [m [k & ks]]
@@ -56,26 +108,6 @@
       (assoc m k m2)
       (dissoc m k))
     (dissoc m k)))
-
-(defn expand
-  [screen id]
-  (-> (assoc-in screen [::state id ::expanded?] true)
-      (update ::expanded (fnil conj #{}) id)))
-
-(defn unexpand
-  [screen id]
-  (-> (dissoc-in screen [::state id ::expanded?])
-      (update ::expanded disj id)))
-
-(defn expanded?
-  [screen id]
-  (-> screen ::state (get id) ::expanded?))
-
-(defn toggle-expand
-  [screen id]
-  (if (expanded? screen id)
-    (unexpand screen id)
-    (expand screen id)))
 
 (defn ensure-id
   [opts]
@@ -97,10 +129,18 @@
     then
     else))
 
+(defn if-overlayed
+  [then else]
+  (ui/if-pred
+    (ui/pred ::overlay?)
+    then
+    else))
+
 (defn focused-pred
   [id]
   (fn [screen input rect]
     (and
+      (not (-> screen ::overlay?))
       (not (-> screen ::state (get id) ::disabled?))
       (let [mouse (::input/mouse input)]
         (mouse/in? mouse rect)))))
@@ -109,17 +149,6 @@
   [id then else]
   (ui/if-pred
     (focused-pred id)
-    then
-    else))
-
-(defn expanded-pred
-  [id]
-  (ui/pred #(expanded? % id)))
-
-(defn if-expanded
-  [id then else]
-  (ui/if-pred
-    (expanded-pred id)
     then
     else))
 
@@ -227,9 +256,19 @@
    (let [opts (merge
                 opts
                 {:focused-behavior
-                 (fn [screen input rect]
-                   (if (input/clicked? input)
-                     (goto screen (or (:goto opts) (::scene screen)))
+                 (cond
+                   (:goto opts)
+                   (fn [screen input rect]
+                     (if (input/clicked? input)
+                       (goto screen (:goto opts))
+                       screen))
+                   (:goto-overlay opts)
+                   (fn [screen input rect]
+                     (if (input/clicked? input)
+                       (goto-overlay screen (:goto-overlay opts))
+                       screen))
+                   :else
+                   (fn [screen input rect]
                      screen))})]
      (button s opts))))
 

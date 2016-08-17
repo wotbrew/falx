@@ -123,7 +123,7 @@
 (extend-protocol proto/IHandleLater
   nil
   (-handlefn [this rect]
-    (fn [_ model input]
+    (fn [model input]
       model))
   Object
   (-handlefn [this rect]
@@ -292,6 +292,15 @@
     {true then
      false else}))
 
+(defn when-pred
+  "Forms a conditional element.
+  `(pred model input rect)` is evaluated, if true.
+   The elements will be used."
+  ([pred then]
+   (if-pred pred then nil))
+  ([pred then & more]
+    (when-pred pred (apply scene/stack then more))))
+
 (defn pred
   [f]
   (fn [model input _]
@@ -318,6 +327,32 @@
 (defn behaviour
   ([el & fs]
    (->Behaviour el (vec fs))))
+
+(defrecord Mapping [el fs]
+  proto/IDraw
+  (-draw! [this model input rect]
+    (as-> (reduce #(%2 %1 input rect) model fs) model
+          (draw! el model input rect)))
+  proto/IDrawLater
+  (-drawfn [this rect]
+    (let [dfn (drawfn el rect)]
+      (fn [model input]
+        (-> (reduce #(%2 %1 input rect) model fs)
+            (dfn input)))))
+  proto/IHandle
+  (-handle [this model input rect]
+    (as-> (reduce #(%2 %1 input rect) model fs) model
+          (handle el model input rect)))
+  proto/IHandleLater
+  (-handlefn [this rect]
+    (let [elf (handlefn el rect)]
+      (fn [model input]
+        (-> (reduce #(%2 %1 input rect) model fs)
+            (elf input))))))
+
+(defn mapping
+  ([el & fs]
+   (->Mapping el (vec fs))))
 
 (defn at-mouse
   [el]
