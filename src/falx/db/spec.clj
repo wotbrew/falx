@@ -6,7 +6,7 @@
 (s/def ::db/id integer?)
 (s/def ::db/key keyword?)
 (s/def ::db/value
-  (s/and ::s/any
+  (s/and any?
          #(cond (double? %) (not (or (.isNaN ^Double %)
                                      (.isInfinite ^Double %)))
                 (float? %) (not (or (.isNaN ^Float %)
@@ -87,7 +87,7 @@
 
 (s/fdef db/entity?
   :args (s/cat :x (s/or :entity ::db/entity
-                        :else ::s/any))
+                        :else any?))
   :ret boolean?
   :fn (s/and
         (fn [{ret :ret {[_ arg] :x} :args}]

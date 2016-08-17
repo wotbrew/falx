@@ -86,11 +86,15 @@
       (layout result node
               [(+ x left)
                (+ y top)
-               (- w left right)
-               (- h top bottom)])))
+               w h])))
   proto/IWrap
   (-child [this]
-    node))
+    node)
+  proto/ISized
+  (-size [this rect]
+    (let [[_ _ w h] rect]
+      [(- w left right)
+       (- h top bottom)])))
 
 (defn pad
   ([node padding]
@@ -99,8 +103,8 @@
         (:top padding 0)
         (:right padding 0)
         (:bottom padding 0)))
-  ([node left top bottom right]
-   (->Pad node left top bottom right)))
+  ([node left top right bottom]
+   (->Pad node left top right bottom)))
 
 (defrecord At [node pt]
   proto/INode
@@ -275,7 +279,10 @@
           result nodes))))
   proto/IWrapMany
   (-children [this]
-    nodes))
+    nodes)
+  proto/ISized
+  (-size [this rect]
+    (rect/size rect)))
 
 (defn coll->cols
   ([nodes]
@@ -338,7 +345,43 @@
 
 (def coll->items coll->hitems)
 
-(def items hitems)
+(defrecord Items [nodes]
+  INode
+  (-layout [this result rect]
+    (if (empty? nodes)
+      result
+      (let [[rx ry rw h] rect
+            xctr (volatile! 0)
+            yctr (volatile! 0)
+            max-offset (+ rx rw)]
+        (reduce-kv
+          (fn [result i node]
+            (let [[w h] (size node rect)
+                  x (+ rx @xctr)
+                  y (+ ry @yctr)
+                  offset (+ x w)]
+              (vswap! xctr + w)
+              (if (<= offset max-offset)
+                (layout result node [x y w h])
+                (do
+                  (vreset! xctr 0)
+                  (vswap! yctr + h)
+                  (layout result node [rx (+ y h) w h])))))
+          result nodes))))
+  proto/IWrapMany
+  (-children [this]
+    nodes)
+  proto/ISized
+  (-size [this rect]
+    (rect/size rect)))
+
+(defn coll->items
+  [nodes]
+  (->Items (vec nodes)))
+
+(defn items
+  [& nodes]
+  (coll->items nodes))
 
 (defrecord VItems [size nodes]
   INode

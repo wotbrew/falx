@@ -36,12 +36,12 @@
   (let [[k rest] binding]
     (case k
       :hit (cond
-             (keyboard/key? rest) (fn [input] (keyboard/hit? (::keyboard input) rest))
-             (mouse/button? rest) (fn [input] (mouse/hit? (::mouse input) rest))
+             (keyboard/key? rest) (fn [input] (keyboard/some-hit (::keyboard input) rest))
+             (mouse/button? rest) (fn [input] (mouse/some-hit (::mouse input) rest))
              :else (constantly false))
       :pressed (cond
-                 (keyboard/key? rest) (fn [input] (keyboard/pressed? (::keyboard input) rest))
-                 (mouse/button? rest) (fn [input] (mouse/pressed? (::mouse input) rest))
+                 (keyboard/key? rest) (fn [input] (keyboard/some-pressed (::keyboard input) rest))
+                 (mouse/button? rest) (fn [input] (mouse/some-pressed? (::mouse input) rest))
                  :else (constantly false))
       :either (let [fs (mapv checkfn rest)]
                 (apply some-fn fs))
@@ -67,3 +67,16 @@
   (for [[k bind] bindmap
         :when (check input bind)]
     k))
+
+(defn hit-set
+  [input]
+  (into #{} cat [(-> input ::mouse ::mouse/hit)
+                 (-> input ::keyboard ::keyboard/hit)]))
+
+(defn pressed-set
+  [input]
+  (into #{} cat [(-> input ::mouse ::mouse/pressed)
+                 (-> input ::keyboard ::keyboard/pressed)]))
+
+(def clicked?
+  (checkfn (hit ::mouse/button.left)))

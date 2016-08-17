@@ -59,3 +59,11 @@
   "Convenience function that asks both pressed? and in?"
   ([mouse button rect]
     (and (pressed? mouse button) (in? mouse rect))))
+
+(defn some-hit
+  [mouse button]
+  ((::hit mouse #{}) button))
+
+(defn some-pressed?
+  [mouse button]
+  ((::pressed mouse #{}) button))

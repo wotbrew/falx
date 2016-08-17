@@ -62,3 +62,11 @@
 (defn pressed?
   ([keyboard key]
    (contains? (::pressed keyboard) key)))
+
+(defn some-hit
+  [keyboard key]
+  ((::hit keyboard #{}) key))
+
+(defn some-pressed
+  [keyboard key]
+  ((::pressed keyboard #{}) key))

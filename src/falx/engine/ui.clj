@@ -69,15 +69,15 @@
 (defmulti kw-drawfn (fn [k rect] k))
 (defmethod kw-drawfn :default
   [k rect]
-  #(kw-draw! k % rect))
+  #(kw-draw! k %1 %2 rect))
 
 (extend-protocol proto/IHandle
   nil
   (-handle [this model input rect]
-    nil)
+    model)
   Object
   (-handle [this model input rect]
-    nil)
+    model)
   Var
   (-handle [this model input rect]
     (handle (var-get this) model input rect))
@@ -123,7 +123,8 @@
 (extend-protocol proto/IHandleLater
   nil
   (-handlefn [this rect]
-    noop)
+    (fn [_ model input]
+      model))
   Object
   (-handlefn [this rect]
     (fn [model input]
@@ -160,7 +161,7 @@
                                              (proto/-handlefn el rect))
                                            layout)]
                               (fn [model input]
-                                (into [] (mapcat #(%1 model input)) fs))))
+                                (reduce #(%2 %1 input) model fs))))
                           cache-handle? memoize)
          drawfn (cond-> (fn [rect]
                           (let [layout (layoutfn rect)
@@ -225,42 +226,32 @@
   `(env-call (fn [] ~@body)))
 
 (defn dynamic
-  "Returns an element dynamically by applying `f` to the model to obtain a ui element.
-  e.g (draw (f model) model rect)"
+  "Returns an element dynamically by applying `f` to the model, input and rect to obtain a ui element.
+  e.g (draw (f model input rect) model input rect)"
   ([f]
    (reify
      proto/IDraw
      (-draw! [this model input rect]
-       (proto/-draw! (f model) model input rect))
+       (proto/-draw! (f model input rect) model input rect))
      proto/IHandle
      (-handle [this model input rect]
-       (proto/-handle (f model) model input rect)))))
+       (proto/-handle (f model input rect) model input rect))))
+  ([f & args]
+   (dynamic #(apply f % args))))
 
 (defn target
-  "Returns an element that will apply `f` to the model before drawing or handling"
-  ([el f]
-   (reify
-     proto/IDraw
-     (-draw! [this model input rect]
-       (proto/-draw! el (f model) input rect))
-     proto/IDrawLater
-     (-drawfn [this rect]
-       (let [dfn (drawfn el rect)]
-         (fn [model input]
-           (dfn (f model) input))))
-     proto/IHandle
-     (-handle [this model input rect]
-       (proto/-handle el (f model) input rect))
-     proto/IHandleLater
-     (-handlefn [this rect]
-       (let [hfn (handlefn el rect)]
-         (fn [model input]
-           (hfn (f model) input)))))))
+  "Returns an element dynamically by applying `f` to the model to obtain a ui element.
+  e.g (draw (f model) model input rect)"
+  ([f]
+   (dynamic (fn [model _ _] (f model))))
+  ([f & args]
+   (target #(apply f % args))))
+
 
 (defrecord Switch [key m]
   proto/IDraw
   (-draw! [this model input rect]
-    (let [el (get m (key model input rect))]
+    (when-some [el (get m (key model input rect))]
       (draw! el model input rect)))
   proto/IDrawLater
   (-drawfn [this rect]
@@ -270,14 +261,16 @@
           (f model input)))))
   proto/IHandle
   (-handle [this model input rect]
-    (let [el (get m (key model input rect))]
-      (handle el model input rect)))
+    (if-some [el (get m (key model input rect))]
+      (handle el model input rect)
+      model))
   proto/IHandleLater
   (-handlefn [this rect]
     (let [m2 (into {} (map (juxt first #(handlefn (val %) rect))) m)]
       (fn [model input]
-        (when-some [f (get m2 (key model input rect))]
-          (f model input))))))
+        (if-some [f (get m2 (key model input rect))]
+          (f model input)
+          model)))))
 
 (defn switch
   "Forms a switch between several elements.
@@ -313,15 +306,14 @@
     (drawfn el rect))
   proto/IHandle
   (-handle [this model input rect]
-    (concat
-      (mapcat #(% model input rect) fs)
-      (handle el model input rect)))
+    (as-> (reduce #(%2 %1 input rect) model fs) model
+          (handle el model input rect)))
   proto/IHandleLater
   (-handlefn [this rect]
     (let [elf (handlefn el rect)]
       (fn [model input]
-        (concat (mapcat #(% model input rect) fs)
-                (elf model input))))))
+        (-> (reduce #(%2 %1 input rect) model fs)
+            (elf input))))))
 
 (defn behaviour
   ([el & fs]

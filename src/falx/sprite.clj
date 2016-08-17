@@ -61,6 +61,12 @@
 (def slot
   (gui32 1 0))
 
+(def up
+  (gui32 0 1))
+
+(def down
+  (gui32 1 1))
+
 ;; =====
 ;; Mouse
 ;; =====
