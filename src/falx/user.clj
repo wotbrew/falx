@@ -30,6 +30,7 @@
 
 (def default-settings
   {::setting.resolution [800 600]
+   ::setting.cell-size [32 32]
    ::setting.cam-speed 1.0})
 
 (defn get-setting

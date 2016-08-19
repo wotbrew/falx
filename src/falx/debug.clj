@@ -17,9 +17,14 @@
 (def dkeyboard #(dinput (comp %1 ::input/keyboard)))
 
 (def table
-  (scene/htable
-    (scene/fitw "fps" 64) (ui/target ::frame/fps)
-    "delta" (ui/target ::frame/delta)
-    "frameid" (ui/target ::frame/frame-id)
-    "mouse" (dmouse (juxt ::mouse/point ::mouse/pressed))
-    "keyboard" (dkeyboard (juxt ::keyboard/pressed))))
+  (->
+    (scene/htable
+      (scene/fitw "fps" 64) (ui/target ::frame/fps)
+      "delta" (ui/target ::frame/delta)
+      "frameid" (ui/target ::frame/frame-id)
+      "mouse" (dmouse (juxt ::mouse/point ::mouse/pressed))
+      "keyboard" (dkeyboard (juxt ::keyboard/pressed))
+      "camera" (ui/target :falx.main/camera)
+      "wmouse" (ui/target (comp :falx.main.world-mouse/cell :falx.main/world-mouse))
+      )
+    (scene/fit 600 128)))

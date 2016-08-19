@@ -11,7 +11,7 @@
 
 (screen/defscene ::screen/id.options
   (scene/stack
-    (scene/fit #'debug/table 400 96)
+    #'debug/table
     (scene/center
       (scene/htable
         (scene/fitw (d/center "Resolution [800 x 600]") 256)

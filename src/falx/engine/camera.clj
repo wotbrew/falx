@@ -11,18 +11,26 @@
   (delay (cam/camera [800 600])))
 
 (defn sync!
-  [rect]
+  [gdx-cam rect]
   (let [[x y w h] rect
         hw (int (/ w 2))
-        hh (int (/ h 2))
-        gdx-cam @gdx-cam]
+        hh (int (/ h 2))]
 
     (cam/set-size! gdx-cam w h)
     (cam/set-pos! gdx-cam (+ x hw) (+ y hh))))
 
+(defn screen-point
+  [pt]
+  (cam/screen-pt @gdx-cam pt))
+
+(defn world-point
+  [pt]
+  (cam/world-pt @gdx-cam pt))
+
 (defmacro view
   [rect & body]
-  `(gdx/with-cam
-     @gdx-cam
-     (sync! ~rect)
-     ~@body))
+  `(let [gdx-cam# @gdx-cam]
+     (sync! gdx-cam# ~rect)
+     (gdx/with-cam
+       gdx-cam#
+       ~@body)))

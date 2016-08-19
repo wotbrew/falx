@@ -4,7 +4,8 @@
             [falx.menu]
             [falx.options]
             [falx.main]
-            [falx.frame :as frame]))
+            [falx.frame :as frame]
+            [falx.user :as user]))
 
 (def max-fps
   60)
@@ -20,9 +21,12 @@
       (error e)
       (Thread/sleep 5000))))
 
+(def resolution-setting
+  (user/setting ::user/setting.resolution))
+
 (defn -main
   [& args]
   (gdx/start-lwjgl!
     {:max-foreground-fps 60
      :max-background-fps 60
-     :size [800 600]}))
+     :size (resolution-setting)}))

@@ -7,25 +7,34 @@
             [falx.engine.ui.protocols :as proto]
             [falx.engine.draw :as d]
             [falx.frame :as frame]
-            [falx.main.camera :as cam]))
+            [falx.main.camera :as cam]
+            [falx.main.world-mouse :as world-mouse]
+            [falx.user :as user]))
 
 (def mouse
   (ui/at-mouse
     (scene/fit sprite/mouse-point 32 32)))
 
+(def resolution-default
+  (user/default-settings ::user/setting.resolution))
+
 (defn render!
   [screen input rect]
-  (cam/view
-    (::camera screen [0 0])
-    (::screen/size screen [800 600])
-    (d/draw! sprite/human-male 0 0 32 32)))
+  (let [size (::screen/size screen resolution-default)
+        [w h] size
+        [cx cy] (::camera screen [0 0])]
+    (cam/view
+      [cx cy w h]
+      (d/draw! sprite/human-male 0 0 32 32))))
 
 (defn handle
   [screen input]
   (let [user (::frame/user screen)
-        delta (::frame/delta screen)]
-    (-> screen
-        (update ::camera cam/handle input user delta))))
+        delta (::frame/delta screen)
+        cam (-> screen ::camera (cam/handle input user delta))]
+    (assoc screen
+      ::camera cam
+      ::world-mouse (world-mouse/mouse input user cam))))
 
 (def main-view
   (reify proto/IDraw
@@ -38,5 +47,5 @@
 (screen/defscene ::screen/id.main
   (scene/stack
     main-view
-    (scene/fit #'debug/table 400 96)
+    #'debug/table
     mouse))

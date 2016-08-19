@@ -1,7 +1,8 @@
 (ns falx.main.camera
   (:require [falx.user :as user]
             [falx.engine.point :as pt]
-            [falx.engine.camera :as cam]))
+            [falx.engine.camera :as cam]
+            [falx.engine.rect :as rect]))
 
 (def fast-requested?
   (user/binding ::user/bind.mod))
@@ -31,11 +32,11 @@
 
 (defn add
   [cam dir speed]
-  (pt/add cam (pt/scale dir speed)))
+  (rect/shift cam (pt/scale dir speed)))
 
 (defn handle
   [cam input user delta]
-  (let [cam (or cam [0 0])
+  (let [cam (or cam [0 0 800 600])
         speed (speed input user delta)]
     (cond-> cam
       (left-requested? user input) (add pt/left speed)
@@ -43,10 +44,23 @@
       (down-requested? user input) (add pt/down speed)
       (up-requested? user input) (add pt/up speed))))
 
+(def ^:dynamic *viewing* nil)
+
 (defmacro view
-  [cam size & body]
-  `(let [[cx# cy#] ~cam
-        [w# h#] ~size]
-    (cam/view
-      [cx# cy# w# h#]
-      ~@body)))
+  [cam & body]
+  `(let [cam# ~cam
+         viewing# cam#]
+     (if (= viewing# *viewing*)
+       (do ~@body)
+       (binding [*viewing* viewing#]
+         (cam/view
+           cam#
+           ~@body)))))
+
+(defn world-point
+  [cam pt]
+  (view cam (cam/world-point pt)))
+
+(defn screen-point
+  [cam pt]
+  (view cam (cam/screen-point pt)))

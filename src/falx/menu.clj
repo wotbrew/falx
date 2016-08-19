@@ -12,7 +12,7 @@
 (screen/defscene
   ::screen/id.menu
   (scene/stack
-    (scene/fit #'debug/table 400 96)
+    #'debug/table
     (scene/center
       (scene/rows
         (screen/nav-button "New" {:goto ::screen/id.main})
