@@ -292,6 +292,3 @@
   [img opts]
   (-> (hover-img img opts)
       icon))
-
-(def mouse
-  (ui/at-mouse (scene/fit sprite/mouse-point config/cell-size)))

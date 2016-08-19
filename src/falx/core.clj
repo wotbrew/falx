@@ -29,4 +29,5 @@
   (gdx/start-lwjgl!
     {:max-foreground-fps 60
      :max-background-fps 60
+     :vsync? false
      :size (resolution-setting)}))

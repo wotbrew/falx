@@ -29,6 +29,8 @@
      (set! (.-vSyncEnabled o) (boolean vsync?))
      (set! (.-fullscreen o) (boolean fullscreen?))
      (set! (.-resizable o) (boolean resizable?))
+     (set! (.-foregroundFPS o) (int max-foreground-fps))
+     (set! (.-backgroundFPS o) (int max-background-fps))
      o)))
 
 (defn app
