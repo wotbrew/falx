@@ -15,10 +15,11 @@
 
 (defn render!
   [screen input rect]
-  (cam/view
-    (let [point (::camera screen [0 0])]
-      (rect/put rect point))
-    (d/draw! sprite/human-male 0 0 32 32)))
+  (let [[cx cy] (::camera screen [0 0])
+         [w h] (::size screen [800 600])]
+    (cam/view
+      [cx cy w h]
+      (d/draw! sprite/human-male 0 0 32 32))))
 
 (def main-view
   (reify proto/IDraw
