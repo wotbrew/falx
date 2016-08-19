@@ -4,7 +4,8 @@
             [falx.engine.ui :as ui]
             [falx.engine.input :as input]
             [falx.engine.mouse :as mouse]
-            [falx.engine.keyboard :as keyboard]))
+            [falx.engine.keyboard :as keyboard]
+            [falx.frame :as frame]))
 
 (defn dinput
   [f]
@@ -17,8 +18,8 @@
 
 (def table
   (scene/htable
-    (scene/fitw "fps" 64) gdx/fps
-    "delta" gdx/delta-time
-    "frameid" gdx/frame-id
+    (scene/fitw "fps" 64) (ui/target ::frame/fps)
+    "delta" (ui/target ::frame/delta)
+    "frameid" (ui/target ::frame/frame-id)
     "mouse" (dmouse (juxt ::mouse/point ::mouse/pressed))
     "keyboard" (dkeyboard (juxt ::keyboard/pressed))))

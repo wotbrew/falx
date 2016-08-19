@@ -99,6 +99,8 @@
   "The `north` identity point"
   [0 -1])
 
+(def up north)
+
 (def north-west
   "The `north-west` identity point"
   [-1 -1])
@@ -111,13 +113,19 @@
   "The `west` identity point"
   [-1 0])
 
+(def left west)
+
 (def east
   "The `east` identity point"
   [1 0])
 
+(def right east)
+
 (def south
   "The `south` identity point"
   [0 1])
+
+(def down south)
 
 (def south-east
   "The `south-east` identity point"
