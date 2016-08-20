@@ -1,4 +1,4 @@
-(ns falx.main
+(ns falx.screens.main
   (:require [falx.screen :as screen]
             [falx.engine.scene :as scene]
             [falx.engine.ui :as ui]
@@ -7,8 +7,8 @@
             [falx.engine.ui.protocols :as proto]
             [falx.engine.draw :as d]
             [falx.frame :as frame]
-            [falx.main.camera :as cam]
-            [falx.main.world-mouse :as world-mouse]
+            [falx.screens.main.camera :as cam]
+            [falx.screens.main.world-mouse :as world-mouse]
             [falx.user :as user]))
 
 (def mouse

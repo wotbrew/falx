@@ -1,4 +1,4 @@
-(ns falx.menu
+(ns falx.screens.menu
   (:require [falx.engine.ui :as ui]
             [falx.engine.scene :as scene]
 

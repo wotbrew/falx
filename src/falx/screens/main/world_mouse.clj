@@ -1,5 +1,5 @@
-(ns falx.main.world-mouse
-  (:require [falx.main.camera :as cam]
+(ns falx.screens.main.world-mouse
+  (:require [falx.screens.main.camera :as cam]
             [falx.engine.mouse :as mouse]
             [falx.user :as user]
             [falx.engine.input :as input]

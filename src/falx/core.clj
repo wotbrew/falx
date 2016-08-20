@@ -1,9 +1,9 @@
 (ns falx.core
   (:require [falx.gdx :as gdx]
             [clojure.tools.logging :refer [error info debug]]
-            [falx.menu]
-            [falx.options]
-            [falx.main]
+            [falx.screens.menu]
+            [falx.screens.options]
+            [falx.screens.main]
             [falx.frame :as frame]
             [falx.user :as user]))
 

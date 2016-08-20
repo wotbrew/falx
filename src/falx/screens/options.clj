@@ -1,4 +1,4 @@
-(ns falx.options
+(ns falx.screens.options
   (:require [falx.engine.scene :as scene]
             [falx.engine.ui :as ui]
             [falx.sprite :as sprite]
