@@ -1,4 +1,4 @@
-(ns falx.state.party
+(ns falx.party
   (:require [falx.db :as db]
             [falx.entity.creature :as cre]))
 

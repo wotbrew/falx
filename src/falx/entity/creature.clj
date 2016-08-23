@@ -1,9 +1,10 @@
 (ns falx.entity.creature
   (:require [falx.entity :as entity]))
 
-(defn create
-  [& {:as kvs}]
-  (entity/create ::entity/type.creature kvs))
+(def template
+  {::entity/type ::entity/type.creature
+   ::entity/layer ::entity/layer.creature
+   ::entity/solid? true})
 
 (defn select
   [cre]

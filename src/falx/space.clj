@@ -1,4 +1,4 @@
-(ns falx.state.space
+(ns falx.space
   (:require [falx.db :as db]
             [falx.entity :as entity]
             [falx.engine.point :as pt]))
@@ -18,6 +18,14 @@
 (defn iat-slice
   [db slice]
   (db/iquery db ::entity/slice slice))
+
+(defn at-map
+  [db map]
+  (db/query db ::entity/map map))
+
+(defn iat-map
+  [db map]
+  (db/iquery db ::entity/map map))
 
 (defn obstructions
   [db id pos]

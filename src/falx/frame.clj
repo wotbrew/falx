@@ -26,13 +26,13 @@
 (def render
   (let [input-state (volatile! nil)
         screen-state (volatile! initial-screen)]
-    (fn [world user]
+    (fn [db user]
       (vreset! debug-input @input-state)
       (vreset! debug-screen @screen-state)
       (let [input (vswap! input-state input/combine (input/now))
             _ (vswap! screen-state assoc
                       ::screen/size (resolution-setting user)
-                      ::world world
+                      ::db db
                       ::user user
                       ::fps (gdx/fps)
                       ::frame-id (gdx/frame-id)

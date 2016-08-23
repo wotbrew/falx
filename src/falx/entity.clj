@@ -41,9 +41,3 @@
    (pos (::map e) pt))
   ([e x y]
    (map-pos e [x y])))
-
-(defn create
-  [type & {:as kvs}]
-  (merge
-    {::type type}
-    kvs))

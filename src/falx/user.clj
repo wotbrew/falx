@@ -1,8 +1,8 @@
 (ns falx.user
-                                  (:require [falx.config :as config]
-                                            [falx.engine.input :as input]
-                                            [falx.engine.keyboard :as keyboard])
-                                  (:refer-clojure :exclude [binding]))
+  (:require [falx.config :as config]
+            [falx.engine.input :as input]
+            [falx.engine.keyboard :as keyboard])
+  (:refer-clojure :exclude [binding]))
 
 (def default-bindings
   (cond->>
@@ -37,6 +37,10 @@
   [user key]
   (or (-> user ::settings (get key))
       (default-settings key)))
+
+(defn set-setting
+  [user key val]
+  (assoc-in user [::settings key] val))
 
 (defn setting
   [key]

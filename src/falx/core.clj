@@ -5,7 +5,13 @@
             [falx.screen.options]
             [falx.screen.main]
             [falx.frame :as frame]
-            [falx.user :as user]))
+            [falx.user :as user]
+            [falx.db :as db]
+            [falx.entity.creature :as cre]
+            [falx.entity :as entity]
+            [falx.space :as space]
+            [falx.party :as party]
+            [falx.game :as g]))
 
 (def max-fps
   60)
@@ -14,15 +20,12 @@
   (delay
     (gdx/bitmap-font)))
 
-(def state
-  (ref {}))
-
-(def user
-  (ref {}))
+(def g
+  (g/game))
 
 (gdx/defrender
   (try
-    (frame/render @state @user)
+    (frame/render @(g/db-ref g) @(g/user-ref g))
     (catch Throwable e
       (error e)
       (Thread/sleep 5000))))
