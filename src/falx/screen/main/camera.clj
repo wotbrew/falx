@@ -1,4 +1,4 @@
-(ns falx.screens.main.camera
+(ns falx.screen.main.camera
   (:require [falx.user :as user]
             [falx.engine.point :as pt]
             [falx.engine.camera :as cam]

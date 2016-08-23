@@ -1,9 +1,9 @@
 (ns falx.core
   (:require [falx.gdx :as gdx]
             [clojure.tools.logging :refer [error info debug]]
-            [falx.screens.menu]
-            [falx.screens.options]
-            [falx.screens.main]
+            [falx.screen.menu]
+            [falx.screen.options]
+            [falx.screen.main]
             [falx.frame :as frame]
             [falx.user :as user]))
 
@@ -14,9 +14,15 @@
   (delay
     (gdx/bitmap-font)))
 
+(def state
+  (ref {}))
+
+(def user
+  (ref {}))
+
 (gdx/defrender
   (try
-    (frame/render {} {})
+    (frame/render @state @user)
     (catch Throwable e
       (error e)
       (Thread/sleep 5000))))

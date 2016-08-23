@@ -121,6 +121,6 @@
   ([db id f]
     (if-some [e (entity db id)]
       (replace db (f e))
-      (add db (f nil))))
+      (add db (f {::id id}))))
   ([db id f & args]
     (alter db id #(apply f % args))))

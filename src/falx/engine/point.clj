@@ -207,6 +207,20 @@
 (def cardinal-directions
   clockwise-cardinal-directions)
 
+(defn adj?
+  ([p1 p2]
+   (adj? (x p1) (y p2) (x p2) (y p2)))
+  ([pt x2 y2]
+   (adj? (x pt) (y pt) x2 y2))
+  ([x1 y1 x2 y2]
+   (let [x1 (long x1)
+         y1 (long y1)
+         x2 (long x2)
+         y2 (long y2)]
+     (and (not (and (= x1 x2) (= y1 y2)))
+          (<= (Math/abs (- x1 x2)) 1)
+          (<= (Math/abs (- y1 y2)) 1)))))
+
 (defn adj
   ([pt]
    (adj (x pt) (y pt)))
