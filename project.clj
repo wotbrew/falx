@@ -3,7 +3,7 @@
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[org.clojure/clojure "1.9.0-alpha11"]
+  :dependencies [[org.clojure/clojure "1.9.0-alpha12"]
                  [org.clojure/tools.logging "0.3.1"]
                  [org.clojure/core.async "0.2.385"]
                  [org.clojure/test.check "0.9.0"]
@@ -19,6 +19,5 @@
                   "https://oss.sonatype.org/content/repositories/releases/"]]
   :source-paths ["src/clj"
                  "src/java"]
-  :main ^:skip-aot falx.core
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all}})

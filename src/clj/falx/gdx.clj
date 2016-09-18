@@ -20,7 +20,9 @@
   []
   (assert (some? Gdx/app) "Gdx started"))
 
-(def ^:dynamic *on-thread* false)
+(def ^:dynamic *on-thread*
+  "Will be true when the current thread *is* the gdx thread."
+  false)
 
 (defn run*
   "Calls the function on the gdx thread, returns a delay that will yield the result."
@@ -49,8 +51,8 @@
   Requires a function `f` which is to be called with 0-args every frame.
 
   opts:
-  `size` a vector of [w h] which defines the initial screen size (default [800, 600])
-  `:title` the initial screen title. (default \"Untitled\")"
+  `:size` A vector of [w h] which defines the initial screen size. (default [800, 600])
+  `:title` The initial screen title. (default \"Untitled\")"
   [f & {:as opts}]
   (let [listener
         (reify ApplicationListener
@@ -97,20 +99,20 @@
   "Returns a color from `c`, or from rgba values of 0 to 1.0.
   Coercion is performed via the IGdxColor protocol."
   ([c]
-   (-gdx-color color))
+   (-gdx-color c))
   ([r g b a]
    (Color. r g b a)))
 
 (defn pixmap
   "Returns a pixmap, which is a surface you can draw to in a simple way.
   opts:
-  `:fill` - fills the initial pixmap with the specified color"
-  [w h & {:as opts}]
-  (let [p (Pixmap. (int w) (int h) Pixmap$Format/RGBA8888)]
-    (when-some [^Color c (some-> opts :fill color)]
-      (.setColor p c)
-      (.fill p))
-    p))
+  `:fill` Fills the initial pixmap with the specified color"
+  ([w h & {:as opts}]
+   (let [p (Pixmap. (int w) (int h) Pixmap$Format/RGBA8888)]
+     (when-some [^Color c (some-> opts :fill color)]
+       (.setColor p c)
+       (.fill p))
+     p)))
 
 (defn texture
   "Loads the texture from the given file."
@@ -288,7 +290,6 @@
       ~@body)
     ~@body))
 
-
 (defmacro with-color
   "Will use the given color contextually in the body, when not otherwise specified."
   [c & body]
@@ -305,7 +306,7 @@
          (some-> b# (.setColor ob#))
          (some-> f# (.setColor of#))))))
 
-(defprotocol IDrawable
+(defprotocol IDraw
   "A thing that can be drawn directly to the screen, bounded by a rectangle."
   (-draw! [this x y w h] "Draws the thing to the screen"))
 
@@ -315,7 +316,7 @@
   [o x y w h]
   (-draw! o x y w h))
 
-(extend-protocol IDrawable
+(extend-protocol IDraw
   CharSequence
   (-draw! [this x y w h]
     (.drawWrapped ^BitmapFont (ensure-font) ^SpriteBatch (ensure-batch) this  (float x) (float y) (float w)))
@@ -337,9 +338,9 @@
   All are optional, but will effect what operations are available to you in the body.
 
   opts:
-   `:batch` A SpriteBatch instance
-   `:font` A font to use for rendering bare strings
-   `:camera` A camera to use"
+   `:batch` A SpriteBatch instance.
+   `:font` A font to use for rendering bare strings.
+   `:camera` A camera to use."
   [opts & body]
   `(let [opts# ~opts
          batch# (:batch opts#)
@@ -363,9 +364,9 @@
   "Returns statistics about the current frame
   as a map.
   e.g
-  `:fps` the current frames per second count
-  `:delta` the delta time in seconds since the last frame
-  `:frame-id` the identity of the frame, this increases sequentially over time"
+  `:fps` The current frames per second count.
+  `:delta` The delta time in seconds since the last frame.
+  `:frame-id` The identity of the frame, this increases sequentially over time."
   []
   (ensure-started)
   (let [gfx Gdx/graphics]
@@ -382,9 +383,9 @@
      (.getY input)]))
 
 (def ^:private buttons
-  {:left Input$Buttons/LEFT
-   :middle Input$Buttons/MIDDLE
-   :right Input$Buttons/RIGHT})
+  {::left Input$Buttons/LEFT
+   ::middle Input$Buttons/MIDDLE
+   ::right Input$Buttons/RIGHT})
 
 (defn buttons-pressed
   "Returns the set of currently pressed buttons"
@@ -403,9 +404,9 @@
          (let [alphabet "abcdefghijklmnopqrstuvwxyz"]
            (for [c alphabet]
              [(keyword (str c)) (Input$Keys/valueOf (str/upper-case (str c)))])))
-       {:esc Input$Keys/ESCAPE
-        :shift-left Input$Keys/SHIFT_LEFT
-        :shift-right Input$Keys/SHIFT_RIGHT
+       {::esc Input$Keys/ESCAPE
+        ::shift-left Input$Keys/SHIFT_LEFT
+        ::shift-right Input$Keys/SHIFT_RIGHT
         ;;todo fill in the rest...
         }
        (into {})))
