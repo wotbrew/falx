@@ -132,7 +132,7 @@
 (defn texture-region
   "Returns a texture region of the texture. Returns the TextureRegion instance."
   [t x y w h]
-  (let [region (TextureRegion. ^Texture t (float x) (float y) (float w) (float h))]
+  (let [region (TextureRegion. ^Texture t (int x) (int y) (int w) (int h))]
     ;;We want to work with y pointing down.
     (.flip region false true)
     region))
@@ -403,12 +403,12 @@
   (->> (concat
          (let [alphabet "abcdefghijklmnopqrstuvwxyz"]
            (for [c alphabet]
-             [(keyword (str c)) (Input$Keys/valueOf (str/upper-case (str c)))])))
-       {::esc Input$Keys/ESCAPE
-        ::shift-left Input$Keys/SHIFT_LEFT
-        ::shift-right Input$Keys/SHIFT_RIGHT
-        ;;todo fill in the rest...
-        }
+             [(keyword "falx.gdx" (str c)) (Input$Keys/valueOf (str/upper-case (str c)))]))
+         {::esc Input$Keys/ESCAPE
+          ::shift-left Input$Keys/SHIFT_LEFT
+          ::shift-right Input$Keys/SHIFT_RIGHT
+          ;;todo fill in the rest...
+          })
        (into {})))
 
 (defn keys-pressed
