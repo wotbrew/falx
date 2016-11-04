@@ -14,7 +14,8 @@
                  [com.badlogicgames.gdx/gdx-platform "1.5.0"
                   :classifier "natives-desktop"]
                  [log4j/log4j "1.2.17"]
-                 [org.clojure/data.priority-map "0.0.7"]]
+                 [org.clojure/data.priority-map "0.0.7"]
+                 [ubergraph "0.3.0"]]
   :repositories [["sonatype"
                   "https://oss.sonatype.org/content/repositories/releases/"]]
   :source-paths ["src/clj"

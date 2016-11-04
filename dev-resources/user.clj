@@ -3,6 +3,6 @@
 
  (comment
    ;;run thegame
-   (core/-main)
+   (core/start!)
 
    )

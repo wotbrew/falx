@@ -103,6 +103,11 @@
   ([r g b a]
    (Color. r g b a)))
 
+(defn color->vec
+  [c]
+  (let [^Color c (color c)]
+    [(.-r c) (.-g c) (.-b c) (.-a c)]))
+
 (defn pixmap
   "Returns a pixmap, which is a surface you can draw to in a simple way.
   opts:
@@ -231,6 +236,10 @@
   "Bound to a SpriteBatch instance typically when rendering via `with-batch`."
   nil)
 
+(def ^:dynamic *font*
+  "Bound to a BitmapFont instance typically when rendering via `with-font`."
+  nil)
+
 (defn ensure-batch
   "Returns the bound *batch* or throws an exception."
   []
@@ -271,10 +280,6 @@
        ~@body)
      (do ~@body)))
 
-(def ^:dynamic *font*
-  "Bound to a BitmapFont instance typically when rendering via `with-font`."
-  nil)
-
 (defn ensure-font
   "Returns the bound *font* or throws an exception."
   []
@@ -306,26 +311,17 @@
          (some-> b# (.setColor ob#))
          (some-> f# (.setColor of#))))))
 
-(defprotocol IDraw
-  "A thing that can be drawn directly to the screen, bounded by a rectangle."
-  (-draw! [this x y w h] "Draws the thing to the screen"))
+(defn draw-text!
+  [batch font s x y w h]
+  (.drawWrapped ^BitmapFont font ^SpriteBatch batch (str s)  (float x) (float y) (float w)))
 
-(defn draw!
-  "Draws the thing to the screen
-  e.g (draw! \"hello world!\" 32 32 64 32)"
-  [o x y w h]
-  (-draw! o x y w h))
+(defn draw-texture!
+  [batch t x y w h]
+  (.draw ^SpriteBatch batch ^Texture t (float x) (float y) (float w) (float h)))
 
-(extend-protocol IDraw
-  CharSequence
-  (-draw! [this x y w h]
-    (.drawWrapped ^BitmapFont (ensure-font) ^SpriteBatch (ensure-batch) this  (float x) (float y) (float w)))
-  Texture
-  (-draw! [this x y w h]
-    (.draw ^SpriteBatch (ensure-batch) this (float x) (float y) (float w) (float h)))
-  TextureRegion
-  (-draw! [this x y w h]
-    (.draw ^SpriteBatch (ensure-batch) this (float x) (float y) (float w) (float h))))
+(defn draw-texture-region!
+  [batch tr x y w h]
+  (.draw ^SpriteBatch batch ^TextureRegion tr (float x) (float y) (float w) (float h)))
 
 (defn clear!
   "Clears the screen"
@@ -382,7 +378,7 @@
     [(.getX input)
      (.getY input)]))
 
-(def ^:private buttons
+(def buttons
   {::left Input$Buttons/LEFT
    ::middle Input$Buttons/MIDDLE
    ::right Input$Buttons/RIGHT})
@@ -399,7 +395,7 @@
                set))]
     (persistent! (reduce-kv rf set buttons))))
 
-(def ^:private keyboard-keys
+(def keyboard-keys
   (->> (concat
          (let [alphabet "abcdefghijklmnopqrstuvwxyz"]
            (for [c alphabet]

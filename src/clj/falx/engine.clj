@@ -43,8 +43,8 @@
 (defn next-input
   [previous-input input]
   (assoc input
-    :hit (set/difference (:down previous-input)
-                         (:down input))))
+    :hit (set/difference (:down previous-input #{})
+                         (:down input #{}))))
 
 (def current-input
   (let [keymap (some-fn
@@ -91,3 +91,15 @@
                (- elapsed-time pet)
                0)
              elapsed-time)))
+
+(defn renderer
+  [drawfn w h]
+  (let [batch (gdx/batch)
+        font (gdx/font)
+        camera (gdx/camera w h)]
+    (fn [frame]
+      (gdx/render
+        {:batch batch
+         :font font
+         :camera camera}
+        (drawfn frame)))))
