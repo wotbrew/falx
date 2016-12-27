@@ -58,7 +58,7 @@
       (resize [this width height]
         (do-resize width height))
       (render [this]
-       (do-render))
+        (do-render))
       (pause [this]
         )
       (resume [this]
@@ -130,7 +130,7 @@
 (defmacro with-color
   [color & body]
   `(let [c# ~color
-         o# (.getColor sprite-batch)]
+         o# (.cpy (.getColor sprite-batch))]
      (set-color! c#)
      (try
        ~@body
