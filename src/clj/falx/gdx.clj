@@ -122,7 +122,7 @@
 
 (def ^:dynamic ^BitmapFont *font* default-font)
 
-(defn- set-color!
+(defn set-color!
   [^Color color]
   (.setColor sprite-batch color)
   (.setColor *font* color))
@@ -140,7 +140,7 @@
 (defmacro with-tint
   [color & body]
   `(let [^Color c# ~color
-         o# (.getColor sprite-batch)
+         o# (.cpy (.getColor sprite-batch))
          ^Color tmp# (.cpy o#)
          tmp# (.mul tmp# c#)]
      (set-color! tmp#)
@@ -455,11 +455,11 @@
   (volatile! {:keys-down #{}
               :buttons-down #{}}))
 
-(defn current-tick-data
+(defn current-tick
   []
   @tick-ref)
 
-(defn- set-tick-data!
+(defn- set-tick!
   []
   (let [{:keys [keys-down buttons-down]} @tick-ref
         keys-down2 (into #{} (filter #(.isKeyPressed Gdx/input %)) key-codes)
@@ -506,7 +506,7 @@
        (.setProjectionMatrix sprite-batch (.-combined camera))
        (GL11/glClear GL11/GL_COLOR_BUFFER_BIT)
        (try
-         (let [tick-data (set-tick-data!)]
+         (let [tick-data (set-tick!)]
            (run! #(% tick-data) (map @tick-handlers (sort-by @tick-handler-sort (keys @tick-handlers)))))
          (catch Throwable e#
            (GL11/glClear GL11/GL_COLOR_BUFFER_BIT)
