@@ -1,40 +1,82 @@
 (ns falx.gdx
-  "A clojure wrapper for libgdx.
-  Many gdx operations are not threadsafe, and need to be called on the gdx application thread.
-  If in doubt, use `run` to dispatch the operations correctly on the gdx thread.
-
-  Most functions will require the gdx app to be running in order to work."
-  (:require [clojure.java.io :as io]
-            [clojure.string :as str])
-  (:import (com.badlogic.gdx Gdx ApplicationListener Input$Buttons Input$Keys)
+  (:require [clojure.set :as set]
+            [clojure.pprint :refer [pprint]])
+  (:import (com.badlogic.gdx Gdx ApplicationListener Application Input$Keys Input$Buttons)
+           (java.net URL)
+           (com.badlogic.gdx.backends.lwjgl LwjglApplication)
+           (com.badlogic.gdx.graphics Texture Pixmap Pixmap$Format Color OrthographicCamera)
            (com.badlogic.gdx.files FileHandle)
-           (com.badlogic.gdx.graphics Texture Pixmap Pixmap$Format Color OrthographicCamera Camera)
            (com.badlogic.gdx.graphics.g2d TextureRegion SpriteBatch BitmapFont BitmapFont$TextBounds)
-           (com.badlogic.gdx.math Vector3 Matrix4)
-           (com.badlogic.gdx.backends.lwjgl LwjglApplicationConfiguration LwjglApplication)
            (org.lwjgl.opengl GL11)
-           (clojure.lang Indexed)))
+           (java.io Writer PrintWriter)))
 
-(defn ensure-started
-  "Throws if the gdx application instance hasn't started."
+(set! *warn-on-reflection* true)
+
+(def config-ref
+  (atom {:size           [640 480]
+         :fullscreen? false
+         :title          (str *ns*)
+         :show-debug-key Input$Keys/F1}))
+
+(defn configure!
+  [& {:as kvs}]
+  (swap! config-ref merge kvs))
+
+(def ^:private last-config-ref
+  (atom {}))
+
+(def ^:dynamic *on-render-thread* false)
+
+(def ^:private renderer (atom (fn [])))
+
+(defn- do-render
   []
-  (assert (some? Gdx/app) "Gdx started"))
+  (try
+    (let [lcfg @last-config-ref
+          {:keys [fullscreen? title size] :as cfg} @config-ref
+          [w h] size]
+      (when (or (not= (:size lcfg) size)
+                (not= (:fullscreen? lcfg) fullscreen?))
+        (.setDisplayMode Gdx/graphics w h (boolean fullscreen?)))
+      (when (not= (:title lcfg) title)
+        (.setTitle Gdx/graphics (str title)))
+      (reset! last-config-ref cfg))
+    (binding [*on-render-thread* true]
+      (@renderer))
+    (catch Throwable e
+      ;; swallow
+      )))
 
-(def ^:dynamic *on-thread*
-  "Will be true when the current thread *is* the gdx thread."
-  false)
+(defn- do-resize
+  [w h]
+  (swap! config-ref assoc :size [(long w) (long h)]))
 
-(defn run*
-  "Calls the function on the gdx thread, returns a delay that will yield the result."
+(defonce ^Application app
+  (LwjglApplication.
+    (reify ApplicationListener
+      (create [this])
+      (resize [this width height]
+        (do-resize width height))
+      (render [this]
+       (do-render))
+      (pause [this]
+        )
+      (resume [this]
+        )
+      (dispose [this]
+        ))))
+
+(defn dispatch
   [f]
-  (ensure-started)
-  (if *on-thread*
-    (deliver (promise) (f))
+  (if *on-render-thread*
+    (delay (f))
     (let [p (promise)]
       (.postRunnable
-        Gdx/app
-        (fn []
-          (deliver p (try (f) (catch Throwable e e)))))
+        app
+        (fn [] (try
+                 (deliver p (f))
+                 (catch Throwable e
+                   (deliver p e)))))
       (delay
         (let [ret @p]
           (if (instance? Throwable ret)
@@ -42,379 +84,474 @@
             ret))))))
 
 (defmacro run
-  "Runs body on the gdx thread, returns a delay that will yield the result."
   [& body]
-  `(run* (fn [] ~@body)))
+  `(if *on-render-thread*
+     (do ~@body)
+     @(dispatch (fn [] ~@body))))
 
-(defn lwjgl-app
-  "Creates and starts an lwjgl gdx application.
-  Requires a function `f` which is to be called with 0-args every frame.
-
-  opts:
-  `:size` A vector of [w h] which defines the initial screen size. (default [800, 600])
-  `:title` The initial screen title. (default \"Untitled\")"
-  [f & {:as opts}]
-  (let [listener
-        (reify ApplicationListener
-          (create [this]
-            this)
-          (resize [this width height]
-            this)
-          (render [this]
-            (try
-              (binding [*on-thread* true]
-                (f))
-              (catch Throwable e
-                nil)))
-          (pause [this]
-            this)
-          (resume [this]
-            this)
-          (dispose [this]
-            this))
-        cfg (LwjglApplicationConfiguration.)
-        [w h] (:size opts [800 600])]
-    (set! (.-width cfg) w)
-    (set! (.-height cfg) h)
-    (set! (.-title cfg) (:title opts "Untitled"))
-    (LwjglApplication. listener cfg)))
-
-(defn- ^FileHandle file-handle
+(defn ^FileHandle file-handle
   [x]
-  (FileHandle. (io/file x)))
+  (if (instance? URL x)
+    (.classpath Gdx/files (.getPath ^URL x))
+    (.classpath Gdx/files (str x))))
 
-(defprotocol IGdxColor
-  "A thing that can translated into a gdx Color instance."
-  (-gdx-color [this] "Coerce the input into a gdx Color instance."))
+(defonce texture
+  (memoize (fn [file] (run (Texture. (file-handle file))))))
 
-(extend-protocol IGdxColor
-  Color
-  (-gdx-color [this] this)
-  Indexed
-  (-gdx-color [this]
-    (let [[r g b a] this]
-      (Color. r g b a))))
-
-(defn color
-  "Returns a color from `c`, or from rgba values of 0 to 1.0.
-  Coercion is performed via the IGdxColor protocol."
-  ([c]
-   (-gdx-color c))
-  ([r g b a]
-   (Color. r g b a)))
-
-(defn color->vec
-  [c]
-  (let [^Color c (color c)]
-    [(.-r c) (.-g c) (.-b c) (.-a c)]))
-
-(defn pixmap
-  "Returns a pixmap, which is a surface you can draw to in a simple way.
-  opts:
-  `:fill` Fills the initial pixmap with the specified color"
-  ([w h & {:as opts}]
-   (let [p (Pixmap. (int w) (int h) Pixmap$Format/RGBA8888)]
-     (when-some [^Color c (some-> opts :fill color)]
-       (.setColor p c)
-       (.fill p))
-     p)))
-
-(defn texture
-  "Loads the texture from the given file."
-  [file]
-  (Texture. (file-handle file)))
-
-(defn pixmap->texture
-  "Returns a texture for the given pixmap."
-  [p]
-  (Texture. ^Pixmap p))
-
-(defn pixel
-  "Returns a 1x1 texture of the color given by `c`."
-  [c]
-  (pixmap->texture (pixmap 1 1 :fill c)))
+(defonce ^Texture pixel
+  (run
+    (let [pm (doto (Pixmap. 1 1 Pixmap$Format/RGBA8888)
+               (.setColor Color/WHITE)
+               (.fill))]
+      (Texture. ^Pixmap pm))))
 
 (defn texture-region
-  "Returns a texture region of the texture. Returns the TextureRegion instance."
-  [t x y w h]
-  (let [region (TextureRegion. ^Texture t (int x) (int y) (int w) (int h))]
-    ;;We want to work with y pointing down.
-    (.flip region false true)
-    region))
+  [^Texture tex x y w h]
+  (doto (TextureRegion. tex (long x) (long y) (long w) (long h))
+    (.flip false true)))
 
-(defn font
-  "Returns a new bitmap font. If a font file isn't provided, loads
-  the default font from the libgdx jar."
-  ([]
-   (BitmapFont. true))
-  ([file]
-   (BitmapFont. (file-handle file) true)))
+(defonce ^OrthographicCamera camera
+  (run (doto (OrthographicCamera.)
+         (.setToOrtho true 640 480))))
 
-(defn measure
-  "Measures the string s with the font, returns a vector of [w h]."
-  ([font s]
-   (let [^BitmapFont$TextBounds bounds (.getMultiLineBounds font (str s))]
-     [(.-width bounds) (.-height bounds)]))
-  ([font s w]
-   (let [^BitmapFont$TextBounds bounds (.getWrappedBounds font (str s) (float w))]
-     [(.-width bounds) (.-height bounds)])))
+(defonce ^SpriteBatch sprite-batch
+  (run (SpriteBatch.)))
 
-(declare look!)
+(defonce ^BitmapFont default-font
+  (run (BitmapFont. true)))
 
-(defn camera
-  "Returns an OrthographicCamera instance."
-  [w h]
-  (doto (OrthographicCamera. w h)
-    ;; We want to work with y pointing down.
-    (.setToOrtho true)
-    (look! 0 0)))
+(def ^:dynamic ^BitmapFont *font* default-font)
 
-(defn look!*
-  "Like `look!` but doesn't automatically .update the camera. Use this if
-  you want to perform several transformations before calling .update yourself."
-  [cam x y]
-  (let [^Vector3 pos (.-position ^OrthographicCamera cam)
-        w (.-viewportWidth cam)
-        h (.-viewportHeight cam)]
-    ;; start 0,0 at top left of world
-    (.set pos (+ (/ w 2) (float x)) (+ (/ h 2) (float y)) 0)))
-
-(defn look!
-  "Points the camera at the given x, y co-ordinates."
-  [cam x y]
-  (doto ^OrthographicCamera cam
-    (look!* x y)
-    (.update)))
-
-(defn view!*
-  "Like `view!` but doesn't automatically .update the camera. Use this if
-  you want to perform several transformations before calling .update yourself."
-  ([cam w h]
-    ;; We want to work with y pointing down.
-   (.setToOrtho  ^OrthographicCamera cam true w h))
-  ([cam x y w h]
-   (doto ^OrthographicCamera cam
-     (look! x y)
-     (view!* w h))))
-
-(defn view!
-  "Sets the location and viewport of the camera to the given rectangle.
-  If `x` and `y` are omitted, simply resizes the camera viewport."
-  ([cam w h]
-   (doto ^OrthographicCamera cam
-     (view!* w h)
-     (.update)))
-  ([cam x y w h]
-   (doto ^OrthographicCamera cam
-     (view!* x y w h)
-     (.update))))
-
-(defn project
-  "Returns the given world co-ordinates and projects them via the camera into screen co-ordinates.
-  Returns the screen co-ordinates as a vector of [x y]."
-  [cam x y]
-  (let [v3 (Vector3. x y 1)]
-    (.project ^Camera cam v3)
-    [(int (.-x v3))
-     (int (.-y v3))]))
-
-(defn unproject
-  "Returns the given screen co-ordinates and reverse projects them via the camera into world co-ordinates.
-  Returns the world co-ordinates as a vector of [x y]."
-  [cam x y]
-  (let [v3 (Vector3. x y 1)]
-    (.unproject ^Camera cam v3)
-    [(int (.-x v3))
-     (int (.-y v3))]))
-
-(defn batch
-  "Returns a new SpriteBatch"
-  []
-  (SpriteBatch.))
-
-(def ^:dynamic *batch*
-  "Bound to a SpriteBatch instance typically when rendering via `with-batch`."
-  nil)
-
-(def ^:dynamic *font*
-  "Bound to a BitmapFont instance typically when rendering via `with-font`."
-  nil)
-
-(defn ensure-batch
-  "Returns the bound *batch* or throws an exception."
-  []
-  (if-some [b *batch*]
-    b
-    (throw (Exception. "*batch* is not bound"))))
-
-(defmacro with-batch
-  "Will use the given sprite batch contextually in the body, when not otherwise specified."
-  [batch & body]
-  `(if-some [^SpriteBatch b# ~batch]
-     (binding [*batch* b#]
-       (.begin b#)
-       (try
-         ~@body
-         (finally
-           (.end b#))))
-     (do ~@body)))
-
-(defmacro with-projection
-  "Will use the given projection matrix contextually in the body, when not otherwise specified."
-  [matrix & body]
-  `(let [^SpriteBatch b# (ensure-batch)
-         ^Matrix4 m# ~matrix
-         ^Matrix4 o# (.cpy (.getProjectionMatrix b#))]
-     (.setProjectionMatrix b# m#)
-     (try
-       ~@body
-       (finally
-         (.setProjectionMatrix b# o#)))))
-
-(defmacro with-camera
-  "Will use the given camera contextually in the body, when not otherwise specified."
-  [cam & body]
-  `(if-some [^OrthographicCamera c# ~cam]
-     (with-projection
-       (.-combined c#)
-       ~@body)
-     (do ~@body)))
-
-(defn ensure-font
-  "Returns the bound *font* or throws an exception."
-  []
-  (if-some [f *font*]
-    f
-    (throw (Exception. "*font* is not bound"))))
-
-(defmacro with-font
-  "Will use the given font contextually in the body, when not otherwise specified."
-  [font & body]
-  `(if-some [font# ~font]
-    (binding [*font* font#]
-      ~@body)
-    ~@body))
+(defn- set-color!
+  [^Color color]
+  (.setColor sprite-batch color)
+  (.setColor *font* color))
 
 (defmacro with-color
-  "Will use the given color contextually in the body, when not otherwise specified."
-  [c & body]
-  `(let [^Color c# (color ~c)
-         ^SpriteBatch b# *batch*
-         ^BitmapFont f# *font*
-         ob# (some-> b# .getColor)
-         of# (some-> f# .getColor)]
-     (some-> b# (.setColor c#))
-     (some-> f# (.setColor c#))
+  [color & body]
+  `(let [c# ~color
+         o# (.getColor sprite-batch)]
+     (set-color! c#)
      (try
        ~@body
        (finally
-         (some-> b# (.setColor ob#))
-         (some-> f# (.setColor of#))))))
+         (set-color! o#)))))
 
-(defn draw-text!
-  [batch font s x y w h]
-  (.drawWrapped ^BitmapFont font ^SpriteBatch batch (str s)  (float x) (float y) (float w)))
+(defmacro with-tint
+  [color & body]
+  `(let [^Color c# ~color
+         o# (.getColor sprite-batch)
+         ^Color tmp# (.cpy o#)
+         tmp# (.mul tmp# c#)]
+     (set-color! tmp#)
+     (try
+       ~@body
+       (finally
+         (set-color! o#)))))
+
+(defn draw-string!
+  ([s x y]
+    (.drawMultiLine *font* sprite-batch (str s) (float x) (float y))
+    nil)
+  ([s x y w]
+   (.drawWrapped *font* sprite-batch (str s) (float x) (float y) (float w))
+   nil))
 
 (defn draw-texture!
-  [batch t x y w h]
-  (.draw ^SpriteBatch batch ^Texture t (float x) (float y) (float w) (float h)))
+  ([^Texture tex x y]
+   (.draw sprite-batch tex (float x) (float y)))
+  ([^Texture tex x y w h]
+   (.draw sprite-batch tex (float x) (float y) (float w) (float h))))
 
 (defn draw-texture-region!
-  [batch tr x y w h]
-  (.draw ^SpriteBatch batch ^TextureRegion tr (float x) (float y) (float w) (float h)))
+  ([^TextureRegion tr x y]
+    (.draw sprite-batch tr (float x) (float y)))
+  ([^TextureRegion tr x y w h]
+   (.draw sprite-batch tr (float x) (float y) (float w) (float h))))
 
-(defn clear!
-  "Clears the screen"
+(defprotocol IDrawAt
+  (draw-at! [this x y]))
+
+(extend-protocol IDrawAt
+  String
+  (draw-at! [this x y]
+    (.drawMultiLine *font* sprite-batch this (float x) (float y)))
+  Texture
+  (draw-at! [this x y]
+    (.draw sprite-batch this (float x) (float y)))
+  TextureRegion
+  (draw-at! [this x y]
+    (.draw sprite-batch this (float x) (float y))))
+
+(defprotocol IDrawIn
+  (draw-in! [this x y w h]))
+
+(extend-protocol IDrawIn
+  String
+  (draw-in! [this x y w _]
+    (.drawWrapped *font* sprite-batch this (float x) (float y) (float w)))
+  Texture
+  (draw-in! [this x y w h]
+    (.draw sprite-batch this (float x) (float y) (float w) (float h)))
+  TextureRegion
+  (draw-in! [this x y w h]
+    (.draw sprite-batch this (float x) (float y) (float w) (float h))))
+
+(defn draw!
+  ([obj]
+   (draw! obj 0 0))
+  ([obj loc]
+    (case (count loc)
+      2 (draw-at! obj (nth loc 0) (nth loc 1))
+      4 (draw-in! obj (nth loc 0) (nth loc 1) (nth loc 2) (nth loc 3))))
+  ([obj x y]
+    (draw-at! obj x y))
+  ([obj x y w h]
+    (draw-in! obj x y w h)))
+
+(defn draw-pixel!
+  ([^double x ^double y]
+   (.draw sprite-batch pixel x y))
+  ([^double x ^double y ^double w ^double h]
+   (.draw sprite-batch pixel x y w h)))
+
+(defn draw-box!
+  ([x y w h]
+   (draw-box! x y w h 1))
+  ([x y w h t]
+   (let [x (float x)
+         y (float y)
+         w (float w)
+         h (float h)
+         t (float t)]
+     (draw-pixel! x y w t)
+     (draw-pixel! x y t h)
+     (draw-pixel! x (+ y h (- t)) w t)
+     (draw-pixel! (+ x w (- t)) y t h))))
+
+(defn- box*
+  ([t]
+   (reify IDrawIn
+     (draw-in! [this x y w h]
+       (draw-box! x y w h t)))))
+
+(def box1 (box* 1))
+
+(defn box
+  ([] box1)
+  ([thickness]
+    (box* thickness)))
+
+(defn recolor
+  [obj color]
+  (reify IDrawIn
+    (draw-in! [this x y w h]
+      (with-color color (draw-in! obj x y w h)))
+    IDrawAt
+    (draw-at! [this x y]
+      (with-color color (draw-at! obj x y)))))
+
+(defn tint
+  [obj color]
+  (reify IDrawIn
+    (draw-in! [this x y w h]
+      (with-tint color (draw-in! obj x y w h)))
+    IDrawAt
+    (draw-at! [this x y]
+      (with-tint color (draw-at! obj x y)))))
+
+(def nothing
+  (reify IDrawIn
+    (draw-in! [this x y w h])
+    IDrawAt
+    (draw-at! [this x y])))
+
+(defn overlay
+  ([] nothing)
+  ([a] a)
+  ([a b]
+   (reify IDrawIn
+     (draw-in! [this x y w h]
+       (draw-in! a x y w h)
+       (draw-in! b x y w h))
+     IDrawAt
+     (draw-at! [this x y]
+       (draw-at! a x y)
+       (draw-at! b x y))))
+  ([a b c]
+   (reify IDrawIn
+     (draw-in! [this x y w h]
+       (draw-in! a x y w h)
+       (draw-in! b x y w h)
+       (draw-in! c x y w h))
+     IDrawAt
+     (draw-at! [this x y]
+       (draw-at! a x y)
+       (draw-at! b x y)
+       (draw-at! c x y))))
+  ([a b c d]
+   (reify IDrawIn
+     (draw-in! [this x y w h]
+       (draw-in! a x y w h)
+       (draw-in! b x y w h)
+       (draw-in! c x y w h)
+       (draw-in! d x y w h))
+     IDrawAt
+     (draw-at! [this x y]
+       (draw-at! a x y)
+       (draw-at! b x y)
+       (draw-at! c x y)
+       (draw-at! d x y))))
+  ([a b c d & more]
+   (reify IDrawIn
+     (draw-in! [this x y w h]
+       (draw-in! a x y w h)
+       (draw-in! b x y w h)
+       (draw-in! c x y w h)
+       (draw-in! d x y w h)
+       (run! #(draw-in! % x y w h) more))
+     IDrawAt
+     (draw-at! [this x y]
+       (draw-at! a x y)
+       (draw-at! b x y)
+       (draw-at! c x y)
+       (draw-at! d x y)
+       (run! #(draw-at! % x y) more)))))
+
+(defn translate
+  ([obj loc]
+    (let [[x y] loc]
+      (translate obj x y)))
+  ([obj x2 y2]
+    (reify IDrawIn
+      (draw-in! [this x y w h]
+        (draw-in! obj (+ x x2) (+ y y2) w h))
+      IDrawAt
+      (draw-at! [this x y]
+        (draw-at! obj (+ x x2) (+ y y2))))))
+
+(defn resize
+  ([obj size]
+    (let [[w h] size]
+      (resize obj w h)))
+  ([obj w h]
+   (reify IDrawIn
+     (draw-in! [this x y _ _]
+       (draw-in! obj x y w h))
+     IDrawAt
+     (draw-at! [this x y]
+       (draw-in! obj x y w h)))))
+
+(defn in
+  ([obj loc]
+    (let [[x y w h] loc]
+      (in obj x y w h)))
+  ([obj x y w h]
+   (reify IDrawIn
+     (draw-in! [this x2 y2 _ _]
+       (draw-in! obj (+ x x2) (+ y y2) w h))
+     IDrawAt
+     (draw-at! [this x2 y2]
+       (draw-in! obj (+ x x2) (+ y y2 ) w h)))))
+
+(defprotocol IMeasure
+  (-measure [this]))
+
+(defprotocol IMeasureIn
+  (-measure-in [this w h]))
+
+(extend-protocol IMeasure
+  String
+  (-measure [this]
+    (run
+      (let [^BitmapFont$TextBounds tb (.getMultiLineBounds *font* this)]
+        [(.-width tb) (.-height tb)])))
+  Texture
+  (-measure [this]
+    [(.getWidth this) (.getHeight this)])
+  TextureRegion
+  (-measure [this]
+    [(.getRegionWidth this) (.getRegionHeight this)]))
+
+(extend-protocol IMeasureIn
+  String
+  (-measure-in [this w h]
+    (run
+      (let [^BitmapFont$TextBounds tb (.getWrappedBounds *font* this w)]
+        [(.-width tb) (.-height tb)])))
+  Texture
+  (-measure-in-in [this w h]
+    [w h])
+  TextureRegion
+  (-measure-in-in [this w h]
+    [w h]))
+
+(defn measure
+  ([obj]
+    (-measure obj))
+  ([obj size]
+    (-measure-in obj (nth size 0) (nth size 1)))
+  ([obj w h]
+    (-measure-in obj w h)))
+
+(defn draw-tiled!
+  [obj x y w h w2 h2]
+  (let [x (float x)
+        y (float y)
+        w (float w)
+        h (float h)
+        w2 (float w2)
+        h2 (float h2)
+        columns (Math/ceil (/ w (max 1 w2)))
+        rows (Math/ceil (/ h (max 1 h2)))]
+    (loop [c 0]
+      (when (< c columns)
+        (loop [r 0]
+          (when (< r rows)
+            (draw! obj (+ x (* w2 c)) (+ y (* h2 r)) w2 h2)
+            (recur (inc r))))
+        (recur (inc c))))))
+
+(defn tiled
+  ([obj]
+    (let [[w h] (measure obj)]
+      (tiled obj w h)))
+  ([obj size]
+    (let [[w h] size]
+      (tiled obj w h)))
+  ([obj w2 h2]
+   (reify IDrawIn
+     (draw-in! [_ x y w h]
+       (draw-tiled! obj x y w h w2 h2)))))
+
+(def key-codes
+  (set
+    (for [n (range 256)
+          :let [k (Input$Keys/toString n)]
+          :when (some? k)]
+      (Input$Keys/valueOf k))))
+
+(defn describe-key-code
+  [n]
+  (Input$Keys/toString n))
+
+(def button-codes
+  #{Input$Buttons/BACK
+    Input$Buttons/FORWARD
+    Input$Buttons/LEFT
+    Input$Buttons/MIDDLE
+    Input$Buttons/RIGHT})
+
+(defn describe-button-code
+  [^long n]
+  (case n
+    0 "Left"
+    1 "Right"
+    2 "Middle"
+    3 "Back"
+    4 "Forward"))
+
+(def ^:private tick-ref
+  (volatile! {:keys-down #{}
+              :buttons-down #{}}))
+
+(defn current-tick-data
   []
-  (GL11/glClearColor 0 0 0 0)
-  (GL11/glClear GL11/GL_COLOR_BUFFER_BIT))
+  @tick-ref)
 
-(defmacro render
-  "Prepares the screen for rendering, executing body binding the following resources.
-  All are optional, but will effect what operations are available to you in the body.
-
-  opts:
-   `:batch` A SpriteBatch instance.
-   `:font` A font to use for rendering bare strings.
-   `:camera` A camera to use."
-  [opts & body]
-  `(let [opts# ~opts
-         batch# (:batch opts#)
-         font# (:font opts#)
-         cam# (:camera opts#)]
-     (clear!)
-     (->> (do ~@body)
-          (with-camera cam#)
-          (with-font font#)
-          (with-batch batch#))))
-
-(defn resize!
-  "Resizes the screen
-  opts:
-   `fullscreen?` - Whether or not the app should run in full screen (false)"
-  [w h & {:as opts}]
-  (ensure-started)
-  (.setDisplayMode Gdx/graphics w h (boolean (:fullscreen? opts))))
-
-(defn frame-stats
-  "Returns statistics about the current frame
-  as a map.
-  e.g
-  `:fps` The current frames per second count.
-  `:delta` The delta time in seconds since the last frame.
-  `:frame-id` The identity of the frame, this increases sequentially over time."
+(defn- set-tick-data!
   []
-  (ensure-started)
-  (let [gfx Gdx/graphics]
-    {:fps (.getFramesPerSecond gfx)
-     :delta (.getDeltaTime gfx)
-     :frame-id (.getFrameId gfx)}))
+  (let [{:keys [keys-down buttons-down]} @tick-ref
+        keys-down2 (into #{} (filter #(.isKeyPressed Gdx/input %)) key-codes)
+        buttons-down2 (into #{} (filter #(.isButtonPressed Gdx/input %)) button-codes)
+        mouse-loc [(.getX Gdx/input) (.getY Gdx/input)]
+        frame-id (.getFrameId Gdx/graphics)
+        fps (.getFramesPerSecond Gdx/graphics)
+        delta (.getDeltaTime Gdx/graphics)
+        keys-hit (set/difference keys-down keys-down2)
+        buttons-hit (set/difference buttons-down buttons-down2)]
+    (vreset! tick-ref
+             {:config @config-ref
+              :keys-down    keys-down2
+              :keys-hit     keys-hit
+              :buttons-down buttons-down2
+              :buttons-hit  buttons-hit
+              :fps          fps
+              :delta        delta
+              :frame-id     frame-id
+              :mouse-loc    mouse-loc})))
 
-(defn mouse
-  "Returns the current mouse co-ordinates as a vector of `x` and `y`."
-  []
-  (ensure-started)
-  (let [input Gdx/input]
-    [(.getX input)
-     (.getY input)]))
+(def ^:private tick-handlers (atom {}))
+(def ^:private tick-handler-sort (atom {}))
 
-(def buttons
-  {::left Input$Buttons/LEFT
-   ::middle Input$Buttons/MIDDLE
-   ::right Input$Buttons/RIGHT})
+(defn assoc-tickfn!
+  ([k f]
+    (assoc-tickfn! k f 0))
+  ([k f n]
+   (swap! tick-handlers assoc k f)
+   (swap! tick-handler-sort assoc k n)
+   (reset!
+     renderer
+     (fn []
+       (.begin sprite-batch)
+       (let [cfg @config-ref
+             [w h] (:size cfg)
+             ow (.-viewportWidth camera)
+             oh (.-viewportHeight camera)]
+         (when (or (not= w ow)
+                   (not= h oh))
+           (.setToOrtho camera true (float w) (float h))
+           (.update camera)))
+       (.update camera)
+       (.setProjectionMatrix sprite-batch (.-combined camera))
+       (GL11/glClear GL11/GL_COLOR_BUFFER_BIT)
+       (try
+         (let [tick-data (set-tick-data!)]
+           (run! #(% tick-data) (map @tick-handlers (sort-by @tick-handler-sort (keys @tick-handlers)))))
+         (catch Throwable e#
+           (GL11/glClear GL11/GL_COLOR_BUFFER_BIT)
+           (draw! (with-out-str (.printStackTrace e# (PrintWriter. ^Writer *out*))) 0 0))
+         (finally
+           (.end sprite-batch)))))
+   nil))
 
-(defn buttons-pressed
-  "Returns the set of currently pressed buttons"
-  []
-  (ensure-started)
-  (let [input Gdx/input
-        set (transient #{})
-        rf (fn [set k ^Input$Buttons v]
-             (if (.isButtonPressed input v)
-               (conj! set k)
-               set))]
-    (persistent! (reduce-kv rf set buttons))))
+(def ^:dynamic *translation* [0 0])
 
-(def keyboard-keys
-  (->> (concat
-         (let [alphabet "abcdefghijklmnopqrstuvwxyz"]
-           (for [c alphabet]
-             [(keyword "falx.gdx" (str c)) (Input$Keys/valueOf (str/upper-case (str c)))]))
-         {::esc Input$Keys/ESCAPE
-          ::shift-left Input$Keys/SHIFT_LEFT
-          ::shift-right Input$Keys/SHIFT_RIGHT
-          ;;todo fill in the rest...
-          })
-       (into {})))
+(defmacro with-translation
+  [loc & body]
+  `(let [loc# ~loc]
+     (if (= *translation* loc#)
+       (do ~@body)
+       (binding [*translation* loc#]
+         (let [pos# (.cpy (.-position camera))
+               [x# y#] loc#
+               x# (float x#)
+               y# (float y#)]
+           (.translate camera (- x#) (- y#))
+           (.update camera)
+           (.setProjectionMatrix sprite-batch (.-combined camera))
+           (try
+             ~@body
+             (finally
+               (.set (.-position camera) pos#)
+               (.update camera)
+               (.setProjectionMatrix sprite-batch (.-combined camera)))))))))
 
-(defn keys-pressed
-  "Returns the set of currently pressed keys"
-  []
-  (ensure-started)
-  (let [input Gdx/input
-        set (transient #{})
-        rf (fn [set k ^Input$Keys v]
-             (if (.isKeyPressed input v)
-               (conj! set k)
-               set))]
-    (persistent! (reduce-kv rf set keyboard-keys))))
+(defmacro on-tick
+  [name binding & body]
+  (let [sort (or (:sort (meta name)) 0)]
+    `(let [f# (fn ~binding ~@body)]
+       (assoc-tickfn! (quote ~name) f# ~sort))))
+
+(defonce ^:private debug-ref (atom {}))
+
+(on-tick ^{:sort Long/MAX_VALUE} draw-debug-info
+  [{:keys [keys-hit config] :as tick}]
+  (when (contains? keys-hit (:show-debug-key config Input$Keys/F1))
+    (swap! debug-ref update :show? (comp boolean not)))
+  (when (:show? @debug-ref)
+    (with-color
+      Color/GREEN
+      (draw! (with-out-str
+               (pprint tick))
+             0 0))))
