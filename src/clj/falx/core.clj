@@ -196,6 +196,19 @@
       st)))
 
 (defn rows
+  [& els]
+  (let [els (vec els)]
+    (if (empty? els)
+      nil-elem
+      (reify IScreenObject
+        (-handle! [this frame x y w h]
+          (let [row-height (long (/ h (count els)))]
+            (loop [row 0]
+              (when (< row (count els))
+                (handle! (els row) frame x (+ y (* row row-height)) w row-height)
+                (recur (inc row))))))))))
+
+(defn fixed-rows
   [row-height & els]
   (let [els (vec els)]
     (reify IScreenObject
@@ -205,6 +218,29 @@
             (handle! (els row) frame x (+ y (* row row-height)) w row-height)
             (recur (inc row))))))))
 
+(defn cols
+  [& els]
+  (let [els (vec els)]
+    (if (empty? els)
+      nil-elem
+      (reify IScreenObject
+        (-handle! [this frame x y w h]
+          (let [col-width (long (/ w (count els)))]
+            (loop [col 0]
+              (when (< col (count els))
+                (handle! (els col) frame  (+ x (* col col-width)) y col-width h)
+                (recur (inc col))))))))))
+
+(defn fixed-cols
+  [col-width & els]
+  (let [els (vec els)]
+    (reify IScreenObject
+      (-handle! [this frame x y w h]
+        (loop [cols 0]
+          (when (< cols (count els))
+            (handle! (els cols) frame (+ x (* cols col-width)) y col-width h)
+            (recur (inc cols))))))))
+
 (gdx/on-tick tick
   [tick]
   (let [frame (current-frame tick)
@@ -213,8 +249,10 @@
       (translate
         32 32
         (rows
-          64
-          (center (resize 64 64 (button "bar")))
+          (cols
+            (button "fred")
+            (center (resize 64 64 (button "bar")))
+            (button "ethel"))
           (button "foo")))
       frame)))
 
