@@ -39,14 +39,14 @@
   (reify IScreenObject
     (-handle! [this frame x y w h]
       (gdx/with-color color
-                      (-handle! el frame x y w h)))))
+        (-handle! el frame x y w h)))))
 
 (defn tint
   [color el]
   (reify IScreenObject
     (-handle! [this frame x y w h]
       (gdx/with-tint color
-                     (-handle! el frame x y w h)))))
+        (-handle! el frame x y w h)))))
 
 (defn switch-elem
   [f m]
@@ -73,8 +73,8 @@
 
 (defn gs-pred
   ([f]
-    (fn [frame _ _ _ _]
-      (f (:game frame))))
+   (fn [frame _ _ _ _]
+     (f (:game frame))))
   ([f & args]
    (gs-pred #(apply f % args))))
 
@@ -99,7 +99,7 @@
    (if-hovering then nil-elem))
   ([then else]
    (if-elem mouse-in?
-            then else)))
+     then else)))
 
 (defn resize
   ([loc el]
@@ -190,8 +190,8 @@
      (gdx/draw-pixel! x y w t)
      (gdx/draw-pixel! x y t h)
      (gdx/with-tint Color/DARK_GRAY
-                    (gdx/draw-pixel! x (+ y h (- t)) w t)
-                    (gdx/draw-pixel! (+ x w (- t)) y t h)))))
+       (gdx/draw-pixel! x (+ y h (- t)) w t)
+       (gdx/draw-pixel! (+ x w (- t)) y t h)))))
 
 (defn fancy-box
   [n]
@@ -213,7 +213,7 @@
      (-handle! [this frame x y w h]
        (-handle! el frame (+ x x2) (+ y y2) (- w x2 x2) (- h y2 y2)))))
   ([x2 y2 el & els]
-    (translate x2 y2 (apply stack el els))))
+   (translate x2 y2 (apply stack el els))))
 
 (def black
   (gdx/blank Color/BLACK))
@@ -275,25 +275,10 @@
 (defn click-handler
   ([f]
    (if-elem clicked?
-            (behaviour f)
-            nil-elem))
+     (behaviour f)
+     nil-elem))
   ([f & args]
    (click-handler #(apply f % args))))
-
-(defn button
-  ([el]
-   (let [st (stack black (fancy-box 2) (center el))]
-     (if-hovering
-       (tint Color/YELLOW st)
-       st)))
-  ([el & {:as opts}]
-   (cond-> (button el)
-           (:on-click! opts) (stack (click-handler (:on-click! opts)))
-           (:on-click opts) (stack (click-handler (let [f (:on-click opts)
-                                                        f (if (sequential? f)
-                                                            #(apply (first f) % (rest f))
-                                                            f)]
-                                                    (fn [_] (swap! state/game f))))))))
 
 (defn frame-text
   ([f]
@@ -310,13 +295,36 @@
   ([f]
    (frame-text (comp f :game)))
   ([f & args]
-    (gs-text #(apply f % args))))
+   (gs-text #(apply f % args))))
 
 (defmulti scene (comp :scene :game))
 
+(defn hug
+  [edges el]
+  (let [edges (set edges)]
+    (reify IScreenObject
+      (-handle! [this frame x y w h]
+        (let [[w2 h2] (measure el frame w h)]
+          (-handle! el frame
+                    (if (edges :right)
+                      (+ x w (- w2))
+                      x)
+                    (if (edges :bottom)
+                      (+ y h (- h2))
+                      y)
+                    w2
+                    h2))))))
+
+(defn min-size
+  [w2 h2 el]
+  (reify IScreenObject
+    (-handle! [this frame x y w h]
+      (-handle! el frame x y (max w2 w) (max h h2)))))
+
 (defmacro defscene
   [k & els]
-  `(defmethod scene ~k [_#] (stack ~@els)))
+  `(let [el# (min-size 640 480 (stack ~@els))]
+     (defmethod scene ~k [_#] el#)))
 
 (defn goto
   [gs scene]
@@ -338,16 +346,40 @@
       (when (-> frame :tick :keys-hit (contains? Input$Keys/ESCAPE))
         (swap! state/game back)))))
 
+(defn wrap-opts
+  [el opts]
+  (let [append (cond-> []
+                       (:on-click! opts) (conj (click-handler (:on-click! opts)))
+                       (:on-click opts) (conj (click-handler (let [f (:on-click opts)
+                                                                   f (if (sequential? f)
+                                                                       #(apply (first f) % (rest f))
+                                                                       f)]
+                                                               (fn [_] (swap! state/game f))))))]
+    (if (seq append)
+      (apply stack el append)
+      el)))
+
+(defn button
+  ([el]
+   (let [st (stack black (fancy-box 2) (center el))]
+     (if-hovering
+       (tint Color/YELLOW st)
+       st)))
+  ([el & {:as opts}]
+   (wrap-opts (button el) opts)))
+
 (defn disabled-button
   [el]
   (tint Color/GRAY (stack black (fancy-box 2) (center el))))
 
 (defn selected-button
-  [el]
-  (let [st (stack black (fancy-box 2) (center el))]
-    (if-hovering
-      (tint Color/YELLOW st)
-      (tint Color/GREEN st))))
+  ([el]
+   (let [st (stack black (fancy-box 2) (center el))]
+     (if-hovering
+       (tint Color/YELLOW st)
+       (tint Color/GREEN st))))
+  ([el & {:as opts}]
+   (wrap-opts (selected-button el) opts)))
 
 (def misc
   (gdx/texture (io/resource "tiles/misc.png")))
@@ -360,19 +392,3 @@
 
 (def block
   (gdx/texture-region gui 0 0 32 32))
-
-(defn hug
-  [edges el]
-  (let [edges (set edges)]
-    (reify IScreenObject
-      (-handle! [this frame x y w h]
-        (let [[w2 h2] (measure el frame w h)]
-          (-handle! el frame
-                    (if (edges :right)
-                      (+ x w (- w2))
-                      x)
-                    (if (edges :bottom)
-                      (+ y h (- h2))
-                      y)
-                    w2
-                    h2))))))
