@@ -4,4 +4,4 @@
   (-handle! [this frame x y w h]))
 
 (defprotocol IMeasure
-  (measure [this frame w h]))
+  (measure [this frame x y w h]))
