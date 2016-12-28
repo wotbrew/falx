@@ -2,19 +2,8 @@
   (:require [falx.gdx :as gdx]
             [falx.state :as state]
             [falx.ui :as ui]
-            [falx.options]))
-
-(ui/defscene :roster
-  ui/back-handler
-  ui/breadcrumbs
-  (ui/center
-    (ui/resize
-      320 280
-      (ui/stack
-        (ui/fancy-box 2)
-        (ui/center "roster")))))
-
-(defmethod ui/scene-name :roster [_] "Roster")
+            [falx.options]
+            [falx.roster]))
 
 (ui/defscene :continue
   ui/back-handler

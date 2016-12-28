@@ -258,9 +258,10 @@
       (ui/center
         (ui/gs-text (comp resolution-str selected-cell-size))))
     (ui/hug #{:right}
-      (ui/restrict-width 24 (ui/if-elem (ui/gs-pred next-cell-size)
-                              (ui/button ">" :on-click cell-size-up)
-                              (ui/disabled-button ">"))))))
+      (ui/restrict-width 24
+        (ui/if-elem (ui/gs-pred next-cell-size)
+          (ui/button ">" :on-click cell-size-up)
+          (ui/disabled-button ">"))))))
 
 (def graphics-options-pane
   (ui/stack

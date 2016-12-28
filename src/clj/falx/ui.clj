@@ -65,8 +65,9 @@
     IMeasure
     (measure [this frame x y w h]
       (let [k (f frame x y w h)]
-        (when-some [o (get m k)]
-          (measure o frame x y w h))))))
+        (if-some [o (get m k)]
+          (measure o frame x y w h)
+          [0 0])))))
 
 
 (def nil-elem
@@ -125,31 +126,33 @@
   ([loc el]
    (let [[w h] loc]
      (resize w h el)))
-  ([w h el]
+  ([w2 h2 el]
    (reify IScreenObject
      (-handle! [this frame x y _ _]
-       (-handle! el frame x y w h))
+       (-handle! el frame x y w2 h2))
      IMeasure
      (measure [this frame _ _ _ _]
-       [w h]))))
+       [w2 h2]))))
 
 (defn restrict-width
-  ([w el]
+  ([w2 el]
    (reify IScreenObject
      (-handle! [this frame x y _ h]
-       (-handle! el frame x y w h))
+       (-handle! el frame x y w2 h))
      IMeasure
-     (measure [this frame _ _ _ h]
-       [w h]))))
+     (measure [this frame x y _ h]
+       (let [[_ h2] (measure el frame x y w2 h)]
+         [w2 h2])))))
 
 (defn restrict-height
-  ([h el]
+  ([h2 el]
    (reify IScreenObject
      (-handle! [this frame x y w _]
-       (-handle! el frame x y w h))
+       (-handle! el frame x y w h2))
      IMeasure
-     (measure [this frame _ _ w _]
-       [w h]))))
+     (measure [this frame x y w _]
+       (let [[w2 _] (measure el frame x y w h2)]
+         [w2 h2])))))
 
 (defn stack
   ([] nil-elem)
@@ -266,15 +269,29 @@
        (-handle! el frame (+ x x2) (+ y y2) (- w x2 x2) (- h y2 y2)))
      IMeasure
      (measure [this frame x y w h]
-       [(- w x2 x2) (- h y2 y2)])))
+       (measure el frame (+ x x2) (+ y y2) (- w x2 x2) (- h y2 y2)))))
   ([x2 y2 el & els]
    (pad x2 y2 (apply stack el els))))
+
+(defn shift
+  ([x2 y2 el]
+   (reify IScreenObject
+     (-handle! [this frame x y w h]
+       (-handle! el frame (+ x x2) (+ y y2) (- w x2) (- h y2)))
+     IMeasure
+     (measure [this frame x y w h]
+       (measure el frame (+ x x2) (+ y y2) (- w x2) (- h y2)))))
+  ([x2 y2 el & els]
+   (shift x2 y2 (apply stack el els))))
 
 (defn translate
   ([x2 y2 el]
    (reify IScreenObject
      (-handle! [this frame x y w h]
-       (-handle! el frame (+ x x2) (+ y y2) w h))))
+       (-handle! el frame (+ x x2) (+ y y2) w h))
+     IMeasure
+     (measure [this frame x y w h]
+       (measure el frame (+ x x2) (+ y y2) w h))))
   ([x2 y2 el & els]
    (translate x2 y2 (apply stack el els))))
 
@@ -333,56 +350,67 @@
       nil-elem
       (reify IScreenObject
         (-handle! [this frame x y w h]
-          (let [col-width (long (/ w (count els)))]
-            (loop [i 0
-                   mh 0
-                   xoff 0
-                   yoff 0]
-              (when (< i (count els))
-                (let [[w2 h2] (measure (els i) frame
-                                       (+ x xoff)
-                                       (+ y yoff)
-                                       w h)
-                      xoff2 (+ xoff w2)
-                      mh2 (max mh h2)
-                      yoff2 (if (< xoff2 w) yoff (+ yoff mh2))]
-                  (handle! (els i) frame (+ x xoff) (+ y yoff) w2 h2)
-                  (recur (inc i)
-                         (if (= yoff2 yoff)
+          (loop [i 0
+                 mh 0
+                 xoff 0
+                 yoff 0]
+            (when (< i (count els))
+              (let [[w2 h2] (measure (els i) frame
+                                     (+ x xoff)
+                                     (+ y yoff)
+                                     w h)
+                    xoff2 (+ xoff w2)
+                    mh2 (max mh h2)
+                    yoff2 (if (<= xoff2 w) yoff (+ yoff mh2))]
+                (cond
+                  (= yoff2 yoff)
+                  (do
+                    (handle! (els i) frame (+ x xoff) (+ y yoff) w2 h2)
+                    (recur (inc i)
                            mh2
-                           0)
-                         (if (= yoff2 yoff)
                            xoff2
-                           0)
-                         yoff2))))))
+                           yoff2))
+                  (<= (+ yoff2 h2) h)
+                  (do
+                    (handle! (els i) frame x (+ y yoff2) w2 h2)
+                    (recur (inc i)
+                           w2
+                           h2
+                           yoff2))
+                  :else nil)))))
         IMeasure
         (measure [this frame x y w h]
-          (let [col-width (long (/ w (count els)))]
-            (loop [i 0
-                   mh 0
-                   xoff 0
-                   yoff 0
-                   wz 0
-                   hz 0]
-              (if (= i (count els))
-                [wz hz]
-                (let [[w2 h2] (measure (els i) frame
-                                       (+ x xoff)
-                                       (+ y yoff)
-                                       w h)
-                      mh2 (max mh h2)
-                      xoff2 (+ xoff w2)
-                      yoff2 (if (< xoff2 w) yoff (+ yoff mh2))]
+          (loop [i 0
+                 mh 0
+                 xoff 0
+                 yoff 0
+                 wz 0
+                 hz 0]
+            (if-not (< i (count els))
+              [wz hz]
+              (let [[w2 h2] (measure (els i) frame
+                                     (+ x xoff)
+                                     (+ y yoff)
+                                     w h)
+                    mh2 (max mh h2)
+                    xoff2 (+ xoff w2)
+                    yoff2 (if (<= xoff2 w) yoff (+ yoff mh2))]
+                (cond
+                  (= yoff2 yoff)
                   (recur (inc i)
-                         (if (= yoff2 yoff)
-                           mh2
-                           0)
-                         (if (= yoff2 yoff)
-                           xoff2
-                           0)
+                         mh2
+                         xoff2
                          yoff2
                          (max wz xoff2)
-                         (max hz yoff2)))))))))))
+                         (max hz yoff2))
+                  (<= (+ yoff2 h2) h)
+                  (recur (inc i)
+                         w2
+                         h2
+                         yoff2
+                         (max wz xoff2)
+                         (max hz yoff2))
+                  :else [wz hz])))))))))
 
 (defn fixed-cols
   [col-width & els]
@@ -440,13 +468,16 @@
         (let [[w2 h2] (measure el frame x y w h)]
           (-handle! el frame
                     (if (edges :right)
-                      (+ x w (- w2))
+                      (+ x (- w w2))
                       x)
                     (if (edges :bottom)
-                      (+ y h (- h2))
+                      (+ y (- h h2))
                       y)
-                    w2
-                    h2))))))
+                    w
+                    h)))
+      IMeasure
+      (measure [this frame x y w h]
+        (measure el frame x y w h)))))
 
 (defn min-size
   [w2 h2 el]
@@ -563,11 +594,14 @@
   ([el & {:as opts}]
    (wrap-opts (selected-button el) opts)))
 
+(def vlight-gray
+  (Color. 0.9 0.9 0.9 1.0))
+
 (defn link
   ([el]
    (if-hovering
      (tint Color/YELLOW el)
-     el))
+     (tint vlight-gray el)))
   ([el & {:as opts}]
     (wrap-opts (link el) opts)))
 
