@@ -92,18 +92,29 @@
 (defn ^FileHandle file-handle
   [x]
   (if (instance? URL x)
-    (.classpath Gdx/files (.getPath ^URL x))
-    (.classpath Gdx/files (str x))))
+    (if (= "jar" (.getProtocol ^URL x))
+      (.classpath Gdx/files (.getPath ^URL x))
+      (.absolute Gdx/files (.getPath ^URL x)))
+    (.internal Gdx/files (str x))))
 
 (defonce texture
   (memoize (fn [file] (run (Texture. (file-handle file))))))
 
+(def blank*
+  (memoize
+    (fn [color]
+      (run
+        (let [pm (doto (Pixmap. 1 1 Pixmap$Format/RGBA8888)
+                   (.setColor ^Color color)
+                   (.fill))]
+          (Texture. ^Pixmap pm))))))
+
+(defn blank
+  [color]
+  (blank* color))
+
 (defonce ^Texture pixel
-  (run
-    (let [pm (doto (Pixmap. 1 1 Pixmap$Format/RGBA8888)
-               (.setColor Color/WHITE)
-               (.fill))]
-      (Texture. ^Pixmap pm))))
+  (blank Color/WHITE))
 
 (defn texture-region
   [^Texture tex x y w h]

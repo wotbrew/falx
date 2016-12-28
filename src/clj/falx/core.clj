@@ -1,259 +1,171 @@
 (ns falx.core
-  (:require [falx.gdx :as gdx])
-  (:import (com.badlogic.gdx.graphics Color)))
+  (:require [falx.gdx :as gdx]
+            [falx.state :as state]
+            [falx.ui :as ui]
+            [clojure.set :as set]))
 
-(def game-state-ref
-  (atom {}))
+(ui/defscene :roster
+  ui/back-handler
+  (ui/center
+    (ui/resize
+      320 280
+      (ui/stack
+        (ui/fancy-box 2)
+        (ui/center "roster")))))
 
-(defn current-frame
-  ([]
-   (current-frame (gdx/current-tick)))
-  ([tick]
-   {:game @game-state-ref
-    :tick tick}))
+(ui/defscene :new
+  ui/back-handler
+  (ui/center
+    (ui/resize
+      320 280
+      (ui/stack
+        (ui/fancy-box 2)
+        (ui/center "new")))))
 
-(defprotocol IScreenObject
-  (-handle! [this frame x y w h]))
+(ui/defscene :continue
+  ui/back-handler
+  (ui/center
+    (ui/resize
+      320 280
+      (ui/stack
+        (ui/fancy-box 2)
+        (ui/center "continue")))))
 
-(extend-protocol IScreenObject
-  Object
-  (-handle! [this frame x y w h]
-    (gdx/draw-in! this x y w h)))
+(def default-resolution
+  [640 480])
 
-(defprotocol IMeasure
-  (measure [this w h]))
+(def available-resolutions
+  (sorted-set [640 480]
+              [800 600]
+              [1024 768]))
 
-(extend-protocol IMeasure
-  Object
-  (measure [this w h]
-    [w h])
-  String
-  (measure [this w h]
-    (gdx/measure this w h)))
+(defn active-resolution
+  [gs]
+  (-> gs :settings :resolution (or default-resolution)))
 
-(defn contains-loc?
-  ([x y w h loc]
-   (let [[x2 y2] loc]
-     (contains-loc? x y w h x2 y2)))
-  ([x y w h x2 y2]
-   (and (<= x x2 (+ x w -1))
-        (<= y y2 (+ y h -1)))))
+(defn selected-resolution
+  [gs]
+  (or (-> gs :ui :options :resolution)
+      (active-resolution gs)))
 
-(defn handle!
-  ([obj frame]
-   (let [[w h] (-> frame :tick :config :size)]
-     (handle! obj frame 0 0 w h)))
-  ([obj frame x y w h]
-   (-handle! obj frame x y w h)))
+(defn options-changed?
+  [gs]
+  (some? (-> gs :ui :options)))
 
-(defn recolor
-  [el color]
-  (reify IScreenObject
-    (-handle! [this frame x y w h]
-      (gdx/with-color color
-        (-handle! el frame x y w h)))))
+(defn dissoc-in
+  "Dissociate a value in a nested assocative structure, identified by a sequence
+  of keys. Any collections left empty by the operation will be dissociated from
+  their containing structures."
+  [m ks]
+  (if-let [[k & ks] (seq ks)]
+    (if (seq ks)
+      (let [v (dissoc-in (get m k) ks)]
+        (if (empty? v)
+          (dissoc m k)
+          (assoc m k v)))
+      (dissoc m k))
+    m))
 
-(defn tint
-  [el color]
-  (reify IScreenObject
-    (-handle! [this frame x y w h]
-      (gdx/with-tint color
-                     (-handle! el frame x y w h)))))
+(defn select-resolution
+  [gs size]
+  (if (= size (active-resolution gs))
+    (dissoc-in gs [:ui :options :resolution])
+    (assoc-in gs [:ui :options :resolution] size)))
 
-(defn switch-elem
-  [f m]
-  (reify IScreenObject
-    (-handle! [this frame x y w h]
-      (let [k (f frame x y w h)]
-        (when-some [o (get m k)]
-          (-handle! o frame x y w h))))))
+(defn prev-resolution
+  [gs]
+  (first (rsubseq available-resolutions < (selected-resolution gs))))
 
+(defn next-resolution
+  [gs]
+  (first (subseq available-resolutions > (selected-resolution gs))))
 
-(def nil-elem
-  (reify IScreenObject
-    (-handle! [this frame x y w h])))
+(defn resolution-down
+  [gs]
+  (if-some [s (prev-resolution gs)]
+    (select-resolution gs s)
+    gs))
 
-(defn if-elem
-  ([pred then]
-   (if-elem pred then nil-elem))
-  ([pred then else]
-   (reify IScreenObject
-     (-handle! [this frame x y w h]
-       (if (pred frame x y w h)
-         (-handle! then frame x y w h)
-         (-handle! else frame x y w h))))))
+(defn resolution-up
+  [gs]
+  (if-some [s (next-resolution gs)]
+    (select-resolution gs s)
+    gs))
 
-(defn mouse-in?
-  [frame x y w h]
-  (contains-loc? x y w h (-> frame :tick :mouse-loc)))
+(defn apply-options!
+  []
+  (let [opts (-> @state/game :ui :options)]
+    (swap! state/game #(-> %
+                           (dissoc-in [:ui :options])
+                           (update :settings merge opts)))
+    (apply
+      gdx/configure!
+      (apply concat (set/rename-keys opts {:resolution :size})))))
 
-(defn if-hovering
-  ([then]
-    (if-hovering then nil-elem))
-  ([then else]
-    (if-elem mouse-in?
-      then else)))
+(defn resolution-str
+  [[w h]]
+  (str w " x " h))
 
-(defn resize
-  ([loc el]
-   (let [[w h] loc]
-     (resize w h el)))
-  ([w h el]
-   (reify IScreenObject
-     (-handle! [this frame x y _ _]
-       (-handle! el frame x y w h))
-     IMeasure
-     (measure [this _ _]
-       [w h]))))
+(def resolution-cycler
+  (ui/stack
+    (ui/restrict-width 24 (ui/if-elem
+                            (fn [frame _ _ _ _]
+                              (some? (prev-resolution (:game frame))))
+                            (ui/button "<" :on-click resolution-down)
+                            (ui/disabled-button "<")))
+    (ui/stack
+      (ui/fancy-box 2)
+      (ui/center
+        (ui/gs-text (comp resolution-str selected-resolution))))
+    (ui/hug #{:right}
+      (ui/restrict-width 24 (ui/if-elem
+                              (fn [frame _ _ _ _]
+                                (some? (next-resolution (:game frame))))
+                              (ui/button ">" :on-click resolution-up)
+                              (ui/disabled-button ">"))))))
 
-(defn stack
-  ([] nil-elem)
-  ([a] a)
-  ([a b]
-   (reify IScreenObject
-     (-handle! [this frame x y w h]
-       (-handle! a frame x y w h)
-       (-handle! b frame x y w h))))
-  ([a b c]
-   (reify IScreenObject
-     (-handle! [this frame x y w h]
-       (-handle! a frame x y w h)
-       (-handle! b frame x y w h)
-       (-handle! c frame x y w h))))
-  ([a b c d]
-   (reify IScreenObject
-     (-handle! [this frame x y w h]
-       (-handle! a frame x y w h)
-       (-handle! b frame x y w h)
-       (-handle! c frame x y w h)
-       (-handle! d frame x y w h))))
-  ([a b c d & more]
-   (reify IScreenObject
-     (-handle! [this frame x y w h]
-       (-handle! a frame x y w h)
-       (-handle! b frame x y w h)
-       (-handle! c frame x y w h)
-       (-handle! d frame x y w h)
-       (run! #(-handle! % frame x y w h) more)))))
+(ui/defscene :options
+  ui/back-handler
+  (ui/translate
+    32 32
+    (ui/center
+      (ui/restrict-width
+        320
+        (ui/rows
+          (ui/restrict-height
+            64
+            (ui/rows
+              (ui/center "Resolution")
+              resolution-cycler)))))
+    (ui/hug #{:bottom :right}
+      (ui/resize 96 64
+        (ui/rows
+          (ui/if-elem (ui/gs-pred options-changed?)
+            (ui/button "Apply" :on-click! (fn [_]
+                                            (apply-options!)))
+            (ui/disabled-button "Apply"))
+          (ui/button "Cancel" :on-click ui/back))))))
 
+(def main-menu
+  (ui/center
+    (ui/resize
+      320 280
+      (ui/rows
+        (ui/button "Roster" :on-click [ui/goto :roster])
+        (ui/button "New Adventure" :on-click [ui/goto :new])
+        (ui/button "Continue Adventure" :on-click [ui/goto :continue])
+        (ui/button "Options" :on-click [ui/goto :options])
+        (ui/button "Quit" :on-click! (fn [_] (println "clicked quit...")))))))
 
-(defn center-rect
-  ([size rect]
-   (let [[x2 y2 w2 h2] rect]
-     (center-rect size x2 y2 w2 h2)))
-  ([size x2 y2 w2 h2]
-   (center-rect (nth size 0) (nth size 1) x2 y2 w2 h2))
-  ([w1 h1 x2 y2 w2 h2]
-   (let [nw (min w1 w2)
-         nh (min h1 h2)
-         wdiff (- w2 nw)
-         hdiff (- h2 nh)]
-     [(long (+ x2 (/ wdiff 2)))
-      (long (+ y2 (/ hdiff 2)))
-      nw
-      nh])))
-
-(defn draw-fancy-box!
-  ([x y w h]
-   (draw-fancy-box! x y w h 1))
-  ([x y w h t]
-   (let [x (float x)
-         y (float y)
-         w (float w)
-         h (float h)
-         t (float t)]
-     (gdx/draw-pixel! x y w t)
-     (gdx/draw-pixel! x y t h)
-     (gdx/with-tint Color/DARK_GRAY
-       (gdx/draw-pixel! x (+ y h (- t)) w t)
-       (gdx/draw-pixel! (+ x w (- t)) y t h)))))
-
-(defn fancy-box
-  [n]
-  (reify gdx/IDrawIn
-    (draw-in! [this x y w h]
-      (draw-fancy-box! x y w h n))))
-
-(defn center
-  ([el]
-    (reify IScreenObject
-      (-handle! [this frame x y w h]
-        (let [[w2 h2] (measure el w h)
-              [x y w h] (center-rect w2 h2 x y w h)]
-          (-handle! el frame x y w h))))))
-
-(defn translate
-  ([x2 y2 el]
-    (reify IScreenObject
-      (-handle! [this frame x y w h]
-        (-handle! el frame (+ x x2) (+ y y2) (- w x2 x2) (- h y2 y2))))))
-
-(defn button
-  [el]
-  (let [st (stack (fancy-box 2) (center el))]
-    (if-hovering
-      (tint st Color/YELLOW)
-      st)))
-
-(defn rows
-  [& els]
-  (let [els (vec els)]
-    (if (empty? els)
-      nil-elem
-      (reify IScreenObject
-        (-handle! [this frame x y w h]
-          (let [row-height (long (/ h (count els)))]
-            (loop [row 0]
-              (when (< row (count els))
-                (handle! (els row) frame x (+ y (* row row-height)) w row-height)
-                (recur (inc row))))))))))
-
-(defn fixed-rows
-  [row-height & els]
-  (let [els (vec els)]
-    (reify IScreenObject
-      (-handle! [this frame x y w _]
-        (loop [row 0]
-          (when (< row (count els))
-            (handle! (els row) frame x (+ y (* row row-height)) w row-height)
-            (recur (inc row))))))))
-
-(defn cols
-  [& els]
-  (let [els (vec els)]
-    (if (empty? els)
-      nil-elem
-      (reify IScreenObject
-        (-handle! [this frame x y w h]
-          (let [col-width (long (/ w (count els)))]
-            (loop [col 0]
-              (when (< col (count els))
-                (handle! (els col) frame  (+ x (* col col-width)) y col-width h)
-                (recur (inc col))))))))))
-
-(defn fixed-cols
-  [col-width & els]
-  (let [els (vec els)]
-    (reify IScreenObject
-      (-handle! [this frame x y w h]
-        (loop [cols 0]
-          (when (< cols (count els))
-            (handle! (els cols) frame (+ x (* cols col-width)) y col-width h)
-            (recur (inc cols))))))))
+(ui/defscene :main-menu
+  main-menu)
 
 (gdx/on-tick tick
   [tick]
-  (let [frame (current-frame tick)
+  (let [frame (state/current-frame tick)
         [w h] (:size (:config tick))]
-    (handle!
-      (translate
-        32 32
-        (rows
-          (cols
-            (button "fred")
-            (center (resize 64 64 (button "bar")))
-            (button "ethel"))
-          (button "foo")))
+    (ui/handle!
+      (ui/scene frame)
       frame)))
 
 (defn init!
