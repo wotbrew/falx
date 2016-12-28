@@ -308,4 +308,5 @@
         (ui/resize 96 64
           (ui/rows
             apply-button
-            cancel-button))))))
+            cancel-button)))))
+  ui/hover-over)

@@ -489,15 +489,54 @@
       (when (-> frame :tick :keys-hit (contains? Input$Keys/ESCAPE))
         (swap! state/game back)))))
 
+(def hover-over-ref (atom "fred"))
+
+(def translucent
+  (Color. 0 0 0 0.8))
+
+(def hover-over
+  (reify IScreenObject
+    (-handle! [this frame _ _ _ _]
+      (when-some [contents @hover-over-ref]
+        (let [[x y] (:mouse-loc (:tick frame))
+              [w2 h2] (gdx/measure contents 256 256)
+              bx (+ x 6)
+              by (+ y 6)]
+          (gdx/with-color
+            translucent
+            (gdx/draw! gdx/pixel x y (+ w2 12) (+ h2 12)))
+          (gdx/with-color
+            Color/YELLOW
+            (draw-fancy-box! x y (+ w2 12) (+ h2 12)))
+          (handle! contents frame bx by w2 h2))
+        (reset! hover-over-ref nil)))))
+
 (defn wrap-opts
   [el opts]
   (let [append (cond-> []
-                       (:on-click! opts) (conj (click-handler (:on-click! opts)))
-                       (:on-click opts) (conj (click-handler (let [f (:on-click opts)
-                                                                   f (if (sequential? f)
-                                                                       #(apply (first f) % (rest f))
-                                                                       f)]
-                                                               (fn [_] (swap! state/game f))))))]
+                       (:hover-over opts)
+                       (conj
+                         (let [hovering-for (volatile! 0.0)]
+                           (if-hovering
+                             (behaviour
+                               (fn [frame]
+                                 (vswap! hovering-for + (:delta (:tick frame)))
+                                 (when (< 0.5 @hovering-for)
+                                   (reset! hover-over-ref
+                                           (:hover-over opts)))))
+                             (behaviour
+                               (fn [_]
+                                 (vreset! hovering-for 0.0))))))
+                       (:on-click! opts)
+                       (conj (click-handler
+                               (:on-click! opts)))
+                       (:on-click opts)
+                       (conj (click-handler
+                               (let [f (:on-click opts)
+                                     f (if (sequential? f)
+                                         #(apply (first f) % (rest f))
+                                         f)]
+                                 (fn [_] (swap! state/game f))))))]
     (if (seq append)
       (apply stack el append)
       el)))
@@ -561,22 +600,20 @@
 
 (def breadcrumbs
   (restrict-height 55
-    (pad
-      0 6
-      (rows
-        (center
-          (gs-dynamic
-            #(apply flow
-                    (interpose (resize 12 0
-                                 (center "/"))
-                               (conj (mapv (fn [s]
-                                             (link
-                                               (scene-name s)
-                                               :on-click [goto-no-follow s]))
-                                           (pop (:scene-stack %)))
-                                     (selected-link (scene-name (:scene % :main-menu))))))))
-        (pad 0 6
-             (restrict-height 1 gdx/box1))))))
+    (rows
+      (center
+        (gs-dynamic
+          #(apply flow
+                  (interpose (resize 12 0
+                               (center "/"))
+                             (conj (mapv (fn [s]
+                                           (link
+                                             (scene-name s)
+                                             :on-click [goto-no-follow s]))
+                                         (pop (:scene-stack %)))
+                                   (selected-link (scene-name (:scene % :main-menu))))))))
+      (pad 0 12
+           (restrict-height 1 gdx/box1)))))
 
 (def misc
   (gdx/texture (io/resource "tiles/misc.png")))
