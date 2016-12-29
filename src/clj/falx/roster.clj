@@ -3,34 +3,93 @@
             [falx.gdx :as gdx]
             [clojure.java.io :as io]
             [falx.util :as util]
-            [falx.state :as state])
-  (:import (java.util UUID)
-           (com.badlogic.gdx.graphics Color)))
+            [falx.state :as state]
+            [falx.character :as char]
+            [falx.inventory :as inv])
+  (:import (com.badlogic.gdx.graphics Color)
+           (com.badlogic.gdx Input$Keys)))
 
 (defmethod ui/scene-name :roster [_] "Roster")
 
-(def human (gdx/texture (io/resource "tiles/human.png")))
-(def human-female (gdx/texture-region human 0 0 32 32))
-(def human-male (gdx/texture-region human 32 0 32 32))
+(def in-play-icon
+  (gdx/texture-region ui/misc 64 0 32 32))
+
+(defn selected-id
+  [gs]
+  (-> gs :ui :roster :selected))
 
 (defn selected
   [gs]
-  (or (-> gs :ui :roster :selected)
-      (peek (:roster gs))))
+  (->> gs selected-id (util/entity gs)))
 
 (def cscale 64)
+
+(defn select
+  [gs id]
+  (assoc-in gs [:ui :roster :selected] id))
+
+(defn select-last
+  [gs]
+  (if-some [e (peek (:roster gs))]
+    (select gs e)
+    gs))
+
+(def can-delete? (complement :in-play?))
+
+(defn can-delete-id?
+  [gs id]
+  (when-some [e (util/entity gs id)]
+    (can-delete? e)))
+
+(defn delete
+  [gs id]
+  (let [selected (selected-id gs)]
+    (if-not (can-delete-id? gs id)
+      gs
+      (-> gs
+          (update :roster (partial into [] (remove #{id})))
+          (cond->
+            (= selected id)
+            (-> (util/dissoc-in [:entities selected])
+                (util/dissoc-in [:ui :roster :selected])))))))
+
+(defn delete-selected
+  [gs]
+  (if-some [selected (selected-id gs)]
+    (-> gs
+        (update :roster (partial into [] (remove #{selected})))
+        (util/dissoc-in [:entities selected])
+        (util/dissoc-in [:ui :roster :selected]))
+    gs))
+
+(defn delete-handler
+  [id]
+  (ui/if-elem (ui/key-combo-pred
+                Input$Keys/D
+                (ui/down Input$Keys/SHIFT_LEFT))
+    (ui/gs-behaviour delete id)))
 
 (defn character-el
   [m]
   (->
-    (ui/resize
-      cscale cscale
-      (ui/stack
-        (ui/if-elem (ui/gs-pred (comp #{(:id m)} selected))
-          (ui/tint Color/GREEN ui/selection-circle))
-        human-male))
+    (ui/stack
+      (ui/if-elem (ui/gs-pred (comp #{(:id m)} selected-id))
+        (ui/tint Color/GREEN ui/selection-circle))
+      (let [img (ui/stack (char/body-drawable m)
+                          (if (:in-play? m)
+                            (ui/translate 48 3
+                              (ui/resize 32 32 in-play-icon))
+                            ui/nil-elem))]
+        (ui/if-hovering
+          (ui/stack
+            (delete-handler (:id m))
+            img)
+          (ui/if-elem (ui/gs-pred (comp #{(:id m)} selected-id))
+            (ui/tint ui/vlight-gray img)
+            (ui/tint Color/GRAY img))))
+      (ui/if-debug (str (:id m))))
     (ui/wrap-opts
-      {:on-click [assoc-in [:ui :roster :selected] (:id m)]})))
+      {:on-click [select (:id m)]})))
 
 (def up-arrow
   (gdx/texture-region ui/gui 0 32 32 32))
@@ -39,22 +98,11 @@
   (gdx/texture-region ui/gui 32 32 32 32))
 
 (def character-array
-  (let [scroll-pos (volatile! 0)]
+  (let [scroll-pos (volatile! 0)
+        click-handled? (volatile! false)]
     (ui/stack
       (ui/fancy-box 1)
-      (ui/hug #{:right}
-        (ui/pad -6 4 (ui/resize 28 28
-                       (ui/link up-arrow
-                                :on-click!
-                                (fn [_]
-                                  (vswap! scroll-pos (fn [n] (max 0 (dec n)))))))))
-      (ui/hug #{:bottom :right}
-        (ui/pad -6 0 (ui/resize 28 28
-                       (ui/link down-arrow
-                                :on-click!
-                                (fn [{{:keys [roster]} :game}]
-                                  (vswap! scroll-pos inc))))))
-      (ui/pad 3 3
+      (ui/pad 28 3
         (ui/dynamic
           (fn [{{:keys [entities roster]} :game} x y w h]
             (let [spos @scroll-pos
@@ -69,11 +117,36 @@
                            (drop skip)
                            (take max-ids)
                            (map (or entities {})))
-                         (map character-el)
+                         (map #(ui/resize
+                                cscale cscale
+                                (ui/stack
+                                  (character-el %)
+                                  (ui/click-handler
+                                    (fn [_]
+                                      (vreset! click-handled? true))))))
                          roster)]
               (when (not= spos2 spos)
                 (vreset! scroll-pos spos2))
-              (apply ui/flow ents))))))))
+              (apply ui/flow ents)))))
+      (ui/hug #{:right}
+        (ui/pad -6 4 (ui/resize 28 28
+                       (ui/link up-arrow
+                                :on-click!
+                                (fn [_]
+                                  (vreset! click-handled? true)
+                                  (vswap! scroll-pos (fn [n] (max 0 (dec n)))))))))
+      (ui/hug #{:bottom :right}
+        (ui/pad -6 0 (ui/resize 28 28
+                       (ui/link down-arrow
+                                :on-click!
+                                (fn [{{:keys [roster]} :game}]
+                                  (vreset! click-handled? true)
+                                  (vswap! scroll-pos inc))))))
+      (ui/click-handler
+        (fn [_]
+          (when-not @click-handled?
+            (swap! state/game util/dissoc-in [:ui :roster :selected]))
+          (vreset! click-handled? false))))))
 
 (defn sort-str
   [x]
@@ -89,27 +162,16 @@
   [gs]
   "Name (ASC)")
 
-(defn sort-type-up
-  [gs]
-  gs)
-
-(defn sort-type-down
+(defn select-sort-type
   [gs]
   gs)
 
 (def sort-cycler
-  (ui/stack
-    (ui/restrict-width 24 (ui/if-elem (ui/gs-pred prev-sort-type)
-                            (ui/button "<" :on-click sort-type-down)
-                            (ui/disabled-button "<")))
-    (ui/stack
-      (ui/fancy-box 2)
-      (ui/center
-        (ui/gs-text (comp sort-str selected-sort-type))))
-    (ui/hug #{:right}
-      (ui/restrict-width 24 (ui/if-elem (ui/gs-pred next-sort-type)
-                              (ui/button ">" :on-click sort-type-up)
-                              (ui/disabled-button ">"))))))
+  (ui/cycler
+    (comp sort-str selected-sort-type)
+    select-sort-type
+    prev-sort-type
+    next-sort-type))
 
 (def controls
   (ui/stack
@@ -125,59 +187,62 @@
           (ui/button "Back" :on-click ui/back))))))
 
 (def continue-button
-  (ui/disabled-button "Continue"))
-
-(defn delete-selected
-  [gs]
-  (if-some [selected (selected gs)]
-    (-> gs
-        (update :roster (partial into [] (remove #{selected})))
-        (util/dissoc-in [:entities selected])
-        (util/dissoc-in [:ui :roster :selected]))
-    gs))
+  (ui/if-elem (ui/gs-pred
+                (fn [gs]
+                  (when-some [e (selected gs)]
+                    (:in-play? e))))
+    (ui/button "Continue")
+    (ui/disabled-button "Continue")))
 
 (def delete-button
-  (ui/if-elem (ui/gs-pred selected)
+  (ui/if-elem (ui/gs-pred
+                (fn [gs]
+                  (when-some [e (selected gs)]
+                    (can-delete? e))))
     (ui/button "Delete" :on-click delete-selected)
     (ui/disabled-button "Delete")))
 
-(def edit-button
-  (ui/if-elem (ui/gs-pred selected)
-    (ui/button "Edit")
-    (ui/disabled-button "Edit")))
+(def stats-button
+  (let [bcontents (ui/stack
+                    (ui/translate 3 0 (ui/resize 32 32 char/icon))
+                    (ui/center (ui/translate 8 0 "Stats")))]
+    (ui/if-elem (ui/gs-pred selected-id)
+      (ui/button bcontents :on-click [ui/goto :stats])
+      (ui/disabled-button bcontents))))
 
-(defn copy-selected
-  [gs]
-  (let [id (state/entid)
-        selected (selected gs)
-        entities (:entities gs)]
-    (-> gs
-        (assoc-in [:ui :roster :selected] id)
-        (update :roster (fnil conj []) id)
-        (assoc-in [:entities id] (merge (get entities selected) {:id id})))))
-
-(def copy-button
-  (ui/if-elem (ui/gs-pred selected)
-    (ui/button "Copy" :on-click copy-selected)
-    (ui/disabled-button "Copy")))
+(def inventory-button
+  (let [bcontents (ui/stack
+                    (ui/translate 3 0 (ui/resize 32 32 inv/icon))
+                    (ui/center (ui/translate 8 0 "Inventory")))]
+    (ui/if-elem (ui/gs-pred selected-id)
+      (ui/button bcontents :on-click [ui/goto :stats])
+      (ui/disabled-button bcontents))))
 
 (defn create
   [gs]
-  (let [id (state/entid)]
+  (let [id (state/entid)
+        body (char/genbody)]
     (-> gs
         (assoc-in [:ui :roster :selected] id)
         (update :roster (fnil conj []) id)
-        (assoc-in [:entities id] {:id id
-                                  :player? true}))))
+        (assoc-in [:entities id]
+                  (merge body
+                         {:id      id
+                          :player? true})))))
 
 (def character-opts
   (ui/cols
     (ui/button "Create"
       :on-click create)
-    copy-button
     continue-button
-    edit-button
+    stats-button
+    inventory-button
     delete-button))
+
+(def character-details
+  (ui/center
+    (ui/gs-dynamic
+      (comp util/pprint-str selected))))
 
 (ui/defscene :roster
   ui/back-handler
@@ -186,7 +251,11 @@
     (ui/stack
       (ui/restrict-height 32 controls)
       (ui/pad 0 48
-        character-array)
+        (ui/rows
+          character-array
+          (ui/pad 0 3
+            (ui/fancy-box 1)
+            character-details)))
       (ui/hug #{:bottom}
         (ui/restrict-height 32
           character-opts)))))

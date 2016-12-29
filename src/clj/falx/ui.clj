@@ -8,11 +8,16 @@
            (com.badlogic.gdx Input$Buttons Input$Keys)))
 
 (extend-protocol IScreenObject
+  nil
+  (-handle! [this frame x y w h])
   Object
   (-handle! [this frame x y w h]
     (gdx/draw-in! this x y w h)))
 
 (extend-protocol IMeasure
+  nil
+  (measure [this frame x y w h]
+    [0 0])
   Object
   (measure [this frame x y w h]
     [w h])
@@ -355,10 +360,12 @@
                  xoff 0
                  yoff 0]
             (when (< i (count els))
-              (let [[w2 h2] (measure (els i) frame
+              (let [wl (- w xoff)
+                    hl (- h yoff)
+                    [w2 h2] (measure (els i) frame
                                      (+ x xoff)
                                      (+ y yoff)
-                                     w h)
+                                     wl hl)
                     xoff2 (+ xoff w2)
                     mh2 (max mh h2)
                     yoff2 (if (<= xoff2 w) yoff (+ yoff mh2))]
@@ -374,8 +381,8 @@
                   (do
                     (handle! (els i) frame x (+ y yoff2) w2 h2)
                     (recur (inc i)
-                           w2
-                           h2
+                           0
+                           0
                            yoff2))
                   :else nil)))))
         IMeasure
@@ -388,10 +395,12 @@
                  hz 0]
             (if-not (< i (count els))
               [wz hz]
-              (let [[w2 h2] (measure (els i) frame
+              (let [wl (- w xoff)
+                    hl (- h yoff)
+                    [w2 h2] (measure (els i) frame
                                      (+ x xoff)
                                      (+ y yoff)
-                                     w h)
+                                     wl hl)
                     mh2 (max mh h2)
                     xoff2 (+ xoff w2)
                     yoff2 (if (<= xoff2 w) yoff (+ yoff mh2))]
@@ -402,14 +411,14 @@
                          xoff2
                          yoff2
                          (max wz xoff2)
-                         (max hz yoff2))
+                         (max hz (+ yoff h2)))
                   (<= (+ yoff2 h2) h)
                   (recur (inc i)
-                         w2
-                         h2
+                         0
+                         0
                          yoff2
                          (max wz xoff2)
-                         (max hz yoff2))
+                         (max hz (+ yoff2 h2)))
                   :else [wz hz])))))))))
 
 (defn fixed-cols
@@ -432,6 +441,12 @@
        [0 0])))
   ([f & args]
    (behaviour #(apply f % args))))
+
+(defn gs-behaviour
+  ([f]
+   (behaviour (fn [_] (swap! state/game f))))
+  ([f & args]
+   (gs-behaviour #(apply f % args))))
 
 (defn click-handler
   ([f]
@@ -505,6 +520,17 @@
   (assoc gs :scene scene
             :scene-stack [scene]))
 
+(defn goto-pop
+  [gs scene]
+  (loop [gs gs
+         s (:scene gs)
+         st (:scene-stack gs)]
+    (if (= s scene)
+      (assoc gs :scene s :scene-stack (conj st s))
+      (if-some [s2 (peek st)]
+        (recur gs s2 (pop st))
+        (goto gs scene)))))
+
 (defn back
   [gs]
   (let [scene-stack (pop (:scene-stack gs))
@@ -514,11 +540,25 @@
                 :scene-stack scene-stack)
       (goto-no-follow gs :main-menu))))
 
+(defrecord Down [k])
+
+(defn down
+  [k]
+  (->Down k))
+
+(defn key-combo-pred
+  [& ks]
+  (fn [frame _ _ _ _]
+    (every? (fn ! [k] (cond
+                      (vector? k) (every? ! k)
+                      (set? k) (some ! k)
+                      (instance? Down k) (-> frame :tick :keys-down (contains? (:k k)))
+                      :else (-> frame :tick :keys-hit (contains? k))))
+            ks)))
+
 (def back-handler
-  (behaviour
-    (fn [frame]
-      (when (-> frame :tick :keys-hit (contains? Input$Keys/ESCAPE))
-        (swap! state/game back)))))
+  (if-elem (key-combo-pred Input$Keys/ESCAPE)
+    (gs-behaviour back)))
 
 (def hover-over-ref (atom "fred"))
 
@@ -643,11 +683,40 @@
                              (conj (mapv (fn [s]
                                            (link
                                              (scene-name s)
-                                             :on-click [goto-no-follow s]))
+                                             :on-click [goto-pop s]))
                                          (pop (:scene-stack %)))
                                    (selected-link (scene-name (:scene % :main-menu))))))))
       (pad 0 12
            (restrict-height 1 gdx/box1)))))
+
+(defn cycler
+  [getfn setfn left right]
+  (stack
+    (restrict-width
+      24
+      (if-elem (gs-pred left)
+        (button "<"
+          :on-click (fn [gs] (setfn gs (left gs))))
+        (disabled-button "<")))
+    (stack
+      (fancy-box 2)
+      (center
+        (gs-text (comp str getfn))))
+    (hug #{:right}
+      (restrict-width 24
+        (if-elem (gs-pred right)
+          (button ">"
+            :on-click
+            (fn [gs] (setfn gs (right gs))))
+          (disabled-button ">"))))))
+
+(defn if-debug
+  ([then]
+    (if-debug then nil-elem))
+  ([then else]
+   (if-elem (key-combo-pred (down Input$Keys/F2))
+     then
+     else)))
 
 (def misc
   (gdx/texture (io/resource "tiles/misc.png")))

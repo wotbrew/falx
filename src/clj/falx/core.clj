@@ -3,7 +3,9 @@
             [falx.state :as state]
             [falx.ui :as ui]
             [falx.options]
-            [falx.roster]))
+            [falx.roster]
+            [falx.character]
+            [falx.inventory]))
 
 (ui/defscene :continue
   ui/back-handler

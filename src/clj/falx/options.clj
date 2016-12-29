@@ -79,36 +79,18 @@
 (defn select-aspect-ratio
   [gs ratio]
   (->
-    (if (= ratio (active-aspect-ratio gs))
+    (if (or (nil? ratio)
+            (= ratio (active-aspect-ratio gs)))
       (util/dissoc-in gs [:ui :options :aspect-ratio])
       (assoc-in gs [:ui :options :aspect-ratio] ratio))
     (select-resolution (first (get resolutions ratio)))))
 
-(defn aspect-ratio-up
-  [gs]
-  (if-some [r (next-aspect-ratio gs)]
-    (select-aspect-ratio gs r)
-    gs))
-
-(defn aspect-ratio-down
-  [gs]
-  (if-some [r (prev-aspect-ratio gs)]
-    (select-aspect-ratio gs r)
-    gs))
-
 (def aspect-ratio-cycler
-  (ui/stack
-    (ui/restrict-width 24 (ui/if-elem (ui/gs-pred prev-aspect-ratio)
-                            (ui/button "<" :on-click aspect-ratio-down)
-                            (ui/disabled-button "<")))
-    (ui/stack
-      (ui/fancy-box 2)
-      (ui/center
-        (ui/gs-text (comp aspect-ratio-str selected-aspect-ratio))))
-    (ui/hug #{:right}
-      (ui/restrict-width 24 (ui/if-elem (ui/gs-pred next-aspect-ratio)
-                              (ui/button ">" :on-click aspect-ratio-up)
-                              (ui/disabled-button ">"))))))
+  (ui/cycler
+    (comp aspect-ratio-str selected-aspect-ratio)
+    select-aspect-ratio
+    prev-aspect-ratio
+    next-aspect-ratio))
 
 (defn active-resolution
   [gs]
@@ -121,7 +103,8 @@
 
 (defn select-resolution
   [gs size]
-  (if (= size (active-resolution gs))
+  (if (or (nil? size)
+          (= size (active-resolution gs)))
     (util/dissoc-in gs [:ui :options :resolution])
     (assoc-in gs [:ui :options :resolution] size)))
 
@@ -133,37 +116,16 @@
   [gs]
   (first (subseq (get resolutions (selected-aspect-ratio gs)) > (selected-resolution gs))))
 
-(defn resolution-down
-  [gs]
-  (if-some [s (prev-resolution gs)]
-    (select-resolution gs s)
-    gs))
-
-(defn resolution-up
-  [gs]
-  (if-some [s (next-resolution gs)]
-    (select-resolution gs s)
-    gs))
-
 (defn resolution-str
   [[w h]]
   (str w " x " h))
 
 (def resolution-cycler
-  (ui/stack
-    (ui/restrict-width 24 (ui/if-elem
-                            (ui/gs-pred prev-resolution)
-                            (ui/button "<" :on-click resolution-down)
-                            (ui/disabled-button "<")))
-    (ui/stack
-      (ui/fancy-box 2)
-      (ui/center
-        (ui/gs-text (comp resolution-str selected-resolution))))
-    (ui/hug #{:right}
-      (ui/restrict-width 24 (ui/if-elem
-                              (ui/gs-pred next-resolution)
-                              (ui/button ">" :on-click resolution-up)
-                              (ui/disabled-button ">"))))))
+  (ui/cycler
+    (comp resolution-str selected-resolution)
+    select-resolution
+    prev-resolution
+    next-resolution))
 
 (def apply-button
   (ui/if-elem (ui/gs-pred options-changed?)
@@ -185,7 +147,7 @@
 
 (defn set-fullscreen
   [gs x]
-  (if (= x (active-fullscreen gs))
+  (if (or (nil? x) (= x (active-fullscreen gs)))
     (util/dissoc-in gs [:ui :options :fullscreen?])
     (assoc-in gs [:ui :options :fullscreen?] x)))
 
@@ -232,36 +194,16 @@
 
 (defn select-cell-size
   [gs size]
-  (if (= size (active-cell-size gs))
+  (if (or (nil? size) (= size (active-cell-size gs)))
     (util/dissoc-in gs [:ui :options :cell-size])
     (assoc-in gs [:ui :options :cell-size] size)))
 
-(defn cell-size-up
-  [gs]
-  (if-some [s (next-cell-size gs)]
-    (select-cell-size gs s)
-    gs))
-
-(defn cell-size-down
-  [gs]
-  (if-some [s (prev-cell-size gs)]
-    (select-cell-size gs s)
-    gs))
-
 (def cell-size-cycler
-  (ui/stack
-    (ui/restrict-width 24 (ui/if-elem (ui/gs-pred prev-cell-size)
-                            (ui/button "<" :on-click cell-size-down)
-                            (ui/disabled-button "<")))
-    (ui/stack
-      (ui/fancy-box 2)
-      (ui/center
-        (ui/gs-text (comp resolution-str selected-cell-size))))
-    (ui/hug #{:right}
-      (ui/restrict-width 24
-        (ui/if-elem (ui/gs-pred next-cell-size)
-          (ui/button ">" :on-click cell-size-up)
-          (ui/disabled-button ">"))))))
+  (ui/cycler
+    (comp resolution-str selected-cell-size)
+    select-cell-size
+    prev-cell-size
+    next-cell-size))
 
 (def graphics-options-pane
   (ui/stack

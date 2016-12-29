@@ -10,6 +10,11 @@
 
 (def game
   (atom {:scene :main-menu
+         :roster [-1]
+         :entities {-1 {:id -1
+                        :gender :female
+                        :player? true
+                        :in-play? true}}
          :scene-stack [:main-menu]}))
 
 (defn current-frame
