@@ -56,3 +56,9 @@
       (add gs id (f e))))
   ([gs id f & args]
     (modify gs id #(apply f % args))))
+
+(defn setting
+  ([gs k]
+    (setting gs k nil))
+  ([gs k default]
+    (-> gs :settings (get k default))))

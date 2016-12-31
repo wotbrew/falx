@@ -3,7 +3,8 @@
             [clojure.java.io :as io]
             [falx.ui.protocols :refer :all]
             [clojure.string :as str]
-            [falx.game :as g])
+            [falx.game :as g]
+            [falx.frame :as frame])
   (:import (com.badlogic.gdx.graphics Color)
            (com.badlogic.gdx Input$Buttons Input$Keys)))
 
@@ -25,17 +26,9 @@
   (measure [this frame x y w h]
     (gdx/measure this w h)))
 
-(defn contains-loc?
-  ([x y w h loc]
-   (let [[x2 y2] loc]
-     (contains-loc? x y w h x2 y2)))
-  ([x y w h x2 y2]
-   (and (<= x x2 (+ x w -1))
-        (<= y y2 (+ y h -1)))))
-
 (defn handle!
   ([obj frame]
-   (let [[w h] (-> frame :tick :config :size)]
+   (let [[w h] (-> frame frame/screen-size)]
      (handle! obj frame 0 0 w h)))
   ([obj frame x y w h]
    (-handle! obj frame x y w h)))
@@ -104,27 +97,11 @@
   ([f & args]
    (gs-pred #(apply f % args))))
 
-(defn mouse-in?
-  [frame x y w h]
-  (contains-loc? x y w h (-> frame :tick :mouse-loc)))
-
-(defn clicked?
-  [frame x y w h]
-  (and (mouse-in? frame x y w h)
-       (let [click-button (-> frame :game-state :settings :click-button (or Input$Buttons/LEFT))]
-         (-> frame :tick :buttons-hit (contains? click-button)))))
-
-(defn alt-clicked?
-  [frame x y w h]
-  (and (mouse-in? frame x y w h)
-       (let [click-button (-> frame :game-state :settings :alt-click-button (or Input$Buttons/LEFT))]
-         (-> frame :tick :buttons-hit (contains? click-button)))))
-
 (defn if-hovering
   ([then]
    (if-hovering then nil-elem))
   ([then else]
-   (if-elem mouse-in?
+   (if-elem frame/mouse-in?
      then else)))
 
 (defn resize
@@ -450,7 +427,7 @@
 
 (defn click-handler
   ([f]
-   (if-elem clicked?
+   (if-elem frame/clicked?
      (behaviour f)
      nil-elem))
   ([f & args]

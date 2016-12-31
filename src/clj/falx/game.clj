@@ -31,15 +31,18 @@
   (atom {}))
 
 (defn game
-  []
-  (let [id (UUID/randomUUID)]
-    (get (swap! registry assoc id
-                (->Game
-                  id
-                  (atom {})
-                  (atom 0)
-                  (atom {})))
-         id)))
+  ([]
+   (game (UUID/randomUUID)))
+  ([id]
+    (if-some [g (get @registry id)]
+      g
+      (get (swap! registry assoc id
+                  (->Game
+                    id
+                    (atom {})
+                    (atom 0)
+                    (atom {})))
+           id))))
 
 (extend-protocol IGame
   UUID
