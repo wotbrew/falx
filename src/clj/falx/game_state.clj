@@ -1,6 +1,11 @@
 (ns falx.game-state
   (:require [falx.util :as util]))
 
+(defn next-id
+  [gs]
+  (let [id (inc (:id-seed gs 0))]
+    [id (assoc gs :id-seed id)]))
+
 (defn entity
   [gs id]
   (-> gs :eav (get id)))

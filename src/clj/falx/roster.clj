@@ -4,9 +4,9 @@
             [clojure.java.io :as io]
             [falx.util :as util]
             [falx.game-state :as gs]
-            [falx.state :as state]
             [falx.character :as char]
-            [falx.inventory :as inv])
+            [falx.inventory :as inv]
+            [falx.game :as g])
   (:import (com.badlogic.gdx.graphics Color)
            (com.badlogic.gdx Input$Keys)))
 
@@ -102,7 +102,7 @@
       (ui/fancy-box 1)
       (ui/pad 28 3
         (ui/dynamic
-          (fn [{{:keys [roster] :as gs} :game} x y w h]
+          (fn [{{:keys [roster] :as gs} :state} x y w h]
             (let [spos @scroll-pos
                   cols (long (/ w cscale))
                   spos2 (if (< (count roster) (* cols spos))
@@ -137,13 +137,13 @@
         (ui/pad -6 0 (ui/resize 28 28
                        (ui/link down-arrow
                                 :on-click!
-                                (fn [{{:keys [roster]} :game}]
+                                (fn [{{:keys [roster]} :state}]
                                   (vreset! click-handled? true)
                                   (vswap! scroll-pos inc))))))
       (ui/click-handler
-        (fn [_]
+        (fn [frame]
           (when-not @click-handled?
-            (swap! state/game util/dissoc-in [:ui :roster :selected]))
+            (g/update-state! (:game frame) util/dissoc-in [:ui :roster :selected]))
           (vreset! click-handled? false))))))
 
 (defn sort-str
@@ -226,7 +226,7 @@
 
 (defn create
   [gs]
-  (let [id (state/entid)
+  (let [[id gs] (gs/next-id gs)
         body (char/genbody)]
     (-> gs
         (assoc-in [:ui :roster :selected] id)

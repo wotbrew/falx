@@ -3,7 +3,7 @@
             [clojure.set :as set]
             [falx.gdx :as gdx]
             [falx.util :as util]
-            [falx.state :as state]))
+            [falx.game :as g]))
 
 (defn options-changed?
   [gs]
@@ -18,9 +18,9 @@
   (update gs :settings merge (-> gs :ui :options)) )
 
 (defn apply-options!
-  []
-  (let [opts (-> @state/game :ui :options)]
-    (swap! state/game (comp discard-changes apply-changes))
+  [frame]
+  (let [opts (-> frame :state :ui :options)]
+    (g/update-state! (:game frame) (comp discard-changes apply-changes))
     (apply
       gdx/configure!
       (apply concat (set/rename-keys opts {:resolution :size})))))
@@ -129,7 +129,7 @@
 
 (def apply-button
   (ui/if-elem (ui/gs-pred options-changed?)
-    (ui/button "Apply" :on-click! (fn [_] (apply-options!)))
+    (ui/button "Apply" :on-click! apply-options!)
     (ui/disabled-button "Apply")))
 
 (def cancel-button

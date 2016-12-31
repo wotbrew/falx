@@ -2,8 +2,8 @@
   (:require [falx.gdx :as gdx]
             [clojure.java.io :as io]
             [falx.ui.protocols :refer :all]
-            [falx.state :as state]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [falx.game :as g])
   (:import (com.badlogic.gdx.graphics Color)
            (com.badlogic.gdx Input$Buttons Input$Keys)))
 
@@ -100,7 +100,7 @@
 (defn gs-pred
   ([f]
    (fn [frame _ _ _ _]
-     (f (:game frame))))
+     (f (:state frame))))
   ([f & args]
    (gs-pred #(apply f % args))))
 
@@ -444,7 +444,7 @@
 
 (defn gs-behaviour
   ([f]
-   (behaviour (fn [_] (swap! state/game f))))
+   (behaviour (fn [frame] (g/update-state! (:game frame) f))))
   ([f & args]
    (gs-behaviour #(apply f % args))))
 
@@ -469,11 +469,11 @@
 
 (defn gs-text
   ([f]
-   (frame-text (comp f :game)))
+   (frame-text (comp f :state)))
   ([f & args]
    (gs-text #(apply f % args))))
 
-(defmulti scene (comp :scene :game))
+(defmulti scene (comp :scene :state))
 
 (defn hug
   [edges el]
@@ -607,7 +607,8 @@
                                      f (if (sequential? f)
                                          #(apply (first f) % (rest f))
                                          f)]
-                                 (fn [_] (swap! state/game f))))))]
+                                 (fn [frame]
+                                   (g/update-state! (:game frame) f))))))]
     (if (seq append)
       (apply stack el append)
       el)))
@@ -668,7 +669,7 @@
 
 (defn gs-dynamic
   ([f]
-   (dynamic (fn [frame x y w h] (f (:game frame)))))
+   (dynamic (fn [frame x y w h] (f (:state frame)))))
   ([f & args]
    (gs-dynamic #(apply f % args))))
 

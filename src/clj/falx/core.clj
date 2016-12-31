@@ -1,6 +1,6 @@
 (ns falx.core
   (:require [falx.gdx :as gdx]
-            [falx.state :as state]
+            [falx.game :as g]
             [falx.ui :as ui]
             [falx.options]
             [falx.roster]
@@ -44,13 +44,25 @@
 
 (defmethod ui/scene-name :main-menu [_] "Menu")
 
+(ui/defscene :default
+  main-menu)
+
+(defmethod ui/scene-name :default [_] "Menu")
+
+(defonce playing
+  (g/game))
+
 (gdx/on-tick tick
   [tick]
-  (let [frame (state/current-frame tick)
+  (let [frame (g/next-frame playing tick)
         [w h] (:size (:config tick))]
     (ui/handle!
       (ui/scene frame)
       frame)))
 
 (defn init!
-  [])
+  []
+  (g/set-state! playing {}))
+
+(comment
+  (init!))
