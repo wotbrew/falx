@@ -9,12 +9,7 @@
   (swap! id-seed inc))
 
 (def game
-  (atom {:scene :main-menu
-         :roster [-1]
-         :entities {-1 {:id -1
-                        :gender :female
-                        :player? true
-                        :in-play? true}}
+  (atom {:scene       :main-menu
          :scene-stack [:main-menu]}))
 
 (defn current-frame

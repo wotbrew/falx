@@ -3,6 +3,7 @@
             [falx.gdx :as gdx]
             [clojure.java.io :as io]
             [falx.util :as util]
+            [falx.game-state :as gs]
             [falx.state :as state]
             [falx.character :as char]
             [falx.inventory :as inv])
@@ -20,7 +21,7 @@
 
 (defn selected
   [gs]
-  (->> gs selected-id (util/entity gs)))
+  (->> gs selected-id (gs/entity gs)))
 
 (def cscale 64)
 
@@ -38,7 +39,7 @@
 
 (defn can-delete-id?
   [gs id]
-  (when-some [e (util/entity gs id)]
+  (when-some [e (gs/entity gs id)]
     (can-delete? e)))
 
 (defn delete
@@ -50,16 +51,13 @@
           (update :roster (partial into [] (remove #{id})))
           (cond->
             (= selected id)
-            (-> (util/dissoc-in [:entities selected])
+            (-> (gs/del id)
                 (util/dissoc-in [:ui :roster :selected])))))))
 
 (defn delete-selected
   [gs]
   (if-some [selected (selected-id gs)]
-    (-> gs
-        (update :roster (partial into [] (remove #{selected})))
-        (util/dissoc-in [:entities selected])
-        (util/dissoc-in [:ui :roster :selected]))
+    (delete gs selected)
     gs))
 
 (defn delete-handler
@@ -104,7 +102,7 @@
       (ui/fancy-box 1)
       (ui/pad 28 3
         (ui/dynamic
-          (fn [{{:keys [entities roster]} :game} x y w h]
+          (fn [{{:keys [roster] :as gs} :game} x y w h]
             (let [spos @scroll-pos
                   cols (long (/ w cscale))
                   spos2 (if (< (count roster) (* cols spos))
@@ -116,7 +114,7 @@
                          (comp
                            (drop skip)
                            (take max-ids)
-                           (map (or entities {})))
+                           (map (partial gs/entity gs)))
                          (map #(ui/resize
                                 cscale cscale
                                 (ui/stack
@@ -202,6 +200,14 @@
     (ui/button "Delete" :on-click delete-selected)
     (ui/disabled-button "Delete")))
 
+(def edit-button
+  (let [bcontents (ui/stack
+                    (ui/translate 3 0 (ui/resize 32 32 char/icon))
+                    (ui/center (ui/translate 8 0 "Edit")))]
+    (ui/if-elem (ui/gs-pred selected-id)
+      (ui/button bcontents :on-click [ui/goto :stats])
+      (ui/disabled-button bcontents))))
+
 (def stats-button
   (let [bcontents (ui/stack
                     (ui/translate 3 0 (ui/resize 32 32 char/icon))
@@ -215,7 +221,7 @@
                     (ui/translate 3 0 (ui/resize 32 32 inv/icon))
                     (ui/center (ui/translate 8 0 "Inventory")))]
     (ui/if-elem (ui/gs-pred selected-id)
-      (ui/button bcontents :on-click [ui/goto :stats])
+      (ui/button bcontents :on-click [ui/goto :inventory])
       (ui/disabled-button bcontents))))
 
 (defn create
@@ -225,24 +231,28 @@
     (-> gs
         (assoc-in [:ui :roster :selected] id)
         (update :roster (fnil conj []) id)
-        (assoc-in [:entities id]
-                  (merge body
-                         {:id      id
-                          :player? true})))))
+        (gs/add id (merge body
+                          {:id      id
+                           :editable? true
+                           :player? true}))
+        (select id))))
 
 (def character-opts
   (ui/cols
     (ui/button "Create"
       :on-click create)
     continue-button
-    stats-button
+    (ui/if-elem (ui/gs-pred (comp :editable? selected))
+      edit-button
+      stats-button)
     inventory-button
     delete-button))
 
 (def character-details
   (ui/center
-    (ui/gs-dynamic
-      (comp util/pprint-str selected))))
+    (ui/if-debug
+      (ui/gs-dynamic
+        (comp util/pprint-str selected)))))
 
 (ui/defscene :roster
   ui/back-handler
@@ -251,11 +261,13 @@
     (ui/stack
       (ui/restrict-height 32 controls)
       (ui/pad 0 48
-        (ui/rows
-          character-array
-          (ui/pad 0 3
-            (ui/fancy-box 1)
-            character-details)))
+        (ui/if-elem (ui/gs-pred selected-id)
+          (ui/rows
+            character-array
+            (ui/pad 0 3
+              (ui/fancy-box 1)
+              character-details))
+          character-array))
       (ui/hug #{:bottom}
         (ui/restrict-height 32
           character-opts)))))

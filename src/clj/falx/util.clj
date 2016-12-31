@@ -1,6 +1,21 @@
 (ns falx.util
   (:require [clojure.pprint :refer [pprint]]))
 
+(defn disjoc
+  [m k v]
+  (let [s (get m k)]
+    (if-some [new (not-empty (disj s v))]
+      (assoc m k new)
+      (dissoc m k))))
+
+(defn disjoc-in
+  [m [k & ks] v]
+  (if (seq ks)
+    (if-some [m2 (not-empty (disjoc-in (get m k) ks v))]
+      (assoc m k m2)
+      (dissoc m k))
+    (disjoc m k v)))
+
 (defn dissoc-in
   "Dissociate a value in a nested assocative structure, identified by a sequence
   of keys. Any collections left empty by the operation will be dissociated from
@@ -14,10 +29,6 @@
           (assoc m k v)))
       (dissoc m k))
     m))
-
-(defn entity
-  [gs id]
-  (-> gs :entities (get id)))
 
 (defn pprint-str
   [x]

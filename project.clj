@@ -7,8 +7,6 @@
                  [org.clojure/tools.logging "0.3.1"]
                  [org.clojure/core.async "0.2.385"]
                  [org.clojure/test.check "0.9.0"]
-                 [medley "0.8.3"]
-                 [com.stuartsierra/component "0.3.1"]
                  [com.badlogicgames.gdx/gdx "1.5.0"]
                  [com.badlogicgames.gdx/gdx-backend-lwjgl "1.5.0"]
                  [com.badlogicgames.gdx/gdx-platform "1.5.0"
