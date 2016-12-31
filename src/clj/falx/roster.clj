@@ -1,7 +1,6 @@
 (ns falx.roster
   (:require [falx.ui :as ui]
             [falx.gdx :as gdx]
-            [clojure.java.io :as io]
             [falx.util :as util]
             [falx.game-state :as gs]
             [falx.character :as char]
@@ -28,12 +27,6 @@
 (defn select
   [gs id]
   (assoc-in gs [:ui :roster :selected] id))
-
-(defn select-last
-  [gs]
-  (if-some [e (peek (:roster gs))]
-    (select gs e)
-    gs))
 
 (def can-delete? (complement :in-play?))
 
@@ -200,14 +193,6 @@
     (ui/button "Delete" :on-click delete-selected)
     (ui/disabled-button "Delete")))
 
-(def edit-button
-  (let [bcontents (ui/stack
-                    (ui/translate 3 0 (ui/resize 32 32 char/icon))
-                    (ui/center (ui/translate 8 0 "Edit")))]
-    (ui/if-elem (ui/gs-pred selected-id)
-      (ui/button bcontents :on-click [ui/goto :stats])
-      (ui/disabled-button bcontents))))
-
 (def stats-button
   (let [bcontents (ui/stack
                     (ui/translate 3 0 (ui/resize 32 32 char/icon))
@@ -242,9 +227,7 @@
     (ui/button "Create"
       :on-click create)
     continue-button
-    (ui/if-elem (ui/gs-pred (comp :editable? selected))
-      edit-button
-      stats-button)
+    stats-button
     inventory-button
     delete-button))
 

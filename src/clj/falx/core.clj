@@ -3,7 +3,7 @@
             [falx.game :as g]
             [falx.ui :as ui]
             [falx.options]
-            [falx.roster]
+            [falx.roster :as roster]
             [falx.character]
             [falx.inventory]))
 
@@ -19,6 +19,32 @@
 
 (defmethod ui/scene-name :continue [_] "Continue")
 
+(ui/defscene :play
+  ui/back-handler
+  ui/breadcrumbs
+  (ui/pad 32 50
+    (ui/stack
+      (ui/restrict-height 32
+        (ui/cols
+          (ui/button "Roster"
+            :on-click [ui/goto :roster])
+          roster/stats-button
+          roster/inventory-button
+          (ui/button "Back")))
+      (ui/pad 0 48
+        (ui/cols
+          (ui/pad 3 0
+            (ui/rows
+              (ui/fancy-box 1)
+              (ui/pad 0 3
+                (ui/fancy-box 1))))
+          (ui/rows roster/character-array
+            (ui/pad 0 3
+              (ui/fancy-box 1)
+              roster/character-details)))))))
+
+(defmethod ui/scene-name :play [_] "Play")
+
 (def main-menu
   (ui/stack
     ui/breadcrumbs
@@ -26,9 +52,12 @@
       (ui/resize
         320 280
         (ui/rows
+          (ui/button "Play"
+            :on-click [ui/goto :play]
+            :hover-over "Start here")
           (ui/button "Roster"
                      :on-click [ui/goto :roster]
-                     :hover-over "Start here")
+                     :hover-over "Manage your characters, load games and more")
           (ui/button "Continue"
                      :on-click [ui/goto :continue]
                      :hover-over "Continue from where you last left off")

@@ -358,8 +358,8 @@
                   (do
                     (handle! (els i) frame x (+ y yoff2) w2 h2)
                     (recur (inc i)
-                           0
-                           0
+                           w2
+                           h2
                            yoff2))
                   :else nil)))))
         IMeasure
@@ -388,11 +388,11 @@
                          xoff2
                          yoff2
                          (max wz xoff2)
-                         (max hz (+ yoff h2)))
+                         (max hz (+ yoff mh2)))
                   (<= (+ yoff2 h2) h)
                   (recur (inc i)
-                         0
-                         0
+                         w2
+                         h2
                          yoff2
                          (max wz xoff2)
                          (max hz (+ yoff2 h2)))
