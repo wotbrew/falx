@@ -1,7 +1,7 @@
 (ns falx.gdx
   (:require [clojure.set :as set]
             [clojure.pprint :refer [pprint]])
-  (:import (com.badlogic.gdx Gdx ApplicationListener Application Input$Keys Input$Buttons)
+  (:import (com.badlogic.gdx Gdx ApplicationListener Application Input$Keys Input$Buttons InputProcessor)
            (java.net URL)
            (com.badlogic.gdx.backends.lwjgl LwjglApplication)
            (com.badlogic.gdx.graphics Texture Pixmap Pixmap$Format Color OrthographicCamera)
@@ -470,6 +470,36 @@
   []
   @tick-ref)
 
+
+(def ^:private scrolled-amount
+  (let [scrolled (atom 0)
+        d (delay
+            (let [ip
+                  (reify InputProcessor
+                    (keyDown [this keycode]
+                      false)
+                    (keyUp [this keycode]
+                      false)
+                    (keyTyped [this character]
+                      false)
+                    (touchDown [this screenX screenY pointer button]
+                      false)
+                    (touchUp [this screenX screenY pointer button]
+                      false)
+                    (touchDragged [this screenX screenY pointer]
+                      false)
+                    (mouseMoved [this screenX screenY]
+                      false)
+                    (scrolled [this amount]
+                      (reset! scrolled amount)
+                      false))]
+              (.setInputProcessor Gdx/input ip)))]
+    (fn []
+      @d
+      (let [n @scrolled]
+        (reset! scrolled 0)
+        n))))
+
 (defn- set-tick!
   []
   (let [{:keys [keys-down buttons-down]} @tick-ref
@@ -487,6 +517,7 @@
               :keys-hit     keys-hit
               :buttons-down buttons-down2
               :buttons-hit  buttons-hit
+              :scroll-delta (scrolled-amount)
               :fps          fps
               :delta        delta
               :frame-id     frame-id

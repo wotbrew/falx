@@ -27,6 +27,14 @@
   [frame btn]
   (-> frame :tick :buttons-hit (contains? btn)))
 
+(defn key-hit?
+  [frame key]
+  (-> frame :tick :keys-hit (contains? key)))
+
+(defn key-down?
+  [frame key]
+  (-> frame :tick :keys-down (contains? key)))
+
 (defn contains-loc?
   ([x y w h loc]
    (let [[x2 y2] loc]

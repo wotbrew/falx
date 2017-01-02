@@ -118,7 +118,7 @@
 
 (defn resolution-str
   [[w h]]
-  (str w " x " h))
+  (str (long w) " x " (long h)))
 
 (def resolution-cycler
   (ui/cycler

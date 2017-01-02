@@ -5,7 +5,9 @@
             [falx.game-state :as gs]
             [falx.character :as char]
             [falx.inventory :as inv]
-            [falx.game :as g])
+            [falx.game :as g]
+            [clojure.java.io :as io]
+            [clojure.core.memoize :as memo])
   (:import (com.badlogic.gdx.graphics Color)
            (com.badlogic.gdx Input$Keys)))
 
@@ -60,7 +62,7 @@
                 (ui/down Input$Keys/SHIFT_LEFT))
     (ui/gs-behaviour delete id)))
 
-(defn character-el
+(defn character-el*
   [m]
   (->
     (ui/stack
@@ -80,7 +82,11 @@
             (ui/tint Color/GRAY img))))
       (ui/if-debug (str (:id m))))
     (ui/wrap-opts
-      {:on-click [select (:id m)]})))
+      {:on-click   [select (:id m)]
+       :hover-over (:name m)})))
+
+(def character-el
+  (memo/lru character-el* :lru/threshold 256))
 
 (def up-arrow
   (gdx/texture-region ui/gui 0 32 32 32))
@@ -209,6 +215,10 @@
       (ui/button bcontents :on-click [ui/goto :inventory])
       (ui/disabled-button bcontents))))
 
+(def names
+  (with-open [rdr (io/reader (io/resource "names.txt"))]
+    (vec (line-seq rdr))))
+
 (defn create
   [gs]
   (let [[id gs] (gs/next-id gs)
@@ -218,6 +228,7 @@
         (update :roster (fnil conj []) id)
         (gs/add id (merge body
                           {:id      id
+                           :name (rand-nth names)
                            :editable? true
                            :player? true}))
         (select id))))
@@ -225,7 +236,8 @@
 (def character-opts
   (ui/cols
     (ui/button "Create"
-      :on-click create)
+      :on-click create
+      :hover-over "Create a new character")
     continue-button
     stats-button
     inventory-button
@@ -253,4 +265,7 @@
           character-array))
       (ui/hug #{:bottom}
         (ui/restrict-height 32
-          character-opts)))))
+          character-opts))))
+  ui/hover-over
+  (ui/at-mouse
+    (ui/resize  32 32 ui/mouse-pointer)))

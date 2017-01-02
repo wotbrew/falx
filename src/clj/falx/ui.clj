@@ -547,6 +547,8 @@
     (-handle! [this frame _ _ _ _]
       (when-some [contents @hover-over-ref]
         (let [[x y] (:mouse-loc (:tick frame))
+              x (+ x 20)
+              y (+ y 20)
               [w2 h2] (gdx/measure contents 256 256)
               bx (+ x 6)
               by (+ y 6)]
@@ -556,8 +558,11 @@
           (gdx/with-color
             Color/YELLOW
             (draw-fancy-box! x y (+ w2 12) (+ h2 12)))
-          (handle! contents frame bx by w2 h2))
-        (reset! hover-over-ref nil)))))
+          (handle! contents frame bx by w2 h2)))
+      (reset! hover-over-ref nil))
+    IMeasure
+    (measure [this frame x y w h]
+      [w h])))
 
 (defn wrap-opts
   [el opts]
@@ -696,6 +701,17 @@
      then
      else)))
 
+(defn at-mouse
+  [el]
+  (reify IScreenObject
+    (-handle! [this frame _ _ w h]
+      (let [[x y] (frame/mouse-loc frame)]
+        (handle! el frame x y w h)))
+    IMeasure
+    (measure [this frame _ _ w h]
+      (let [[x y] (frame/mouse-loc frame)]
+        (measure el frame x y w h)))))
+
 (def misc
   (gdx/texture (io/resource "tiles/misc.png")))
 
@@ -704,6 +720,12 @@
 
 (def gui
   (gdx/texture (io/resource "tiles/gui.png")))
+
+(def mouse
+  (gdx/texture (io/resource "tiles/mouse.png")))
+
+(def mouse-pointer
+  (gdx/texture-region mouse 0 0 32 32))
 
 (def block
   (gdx/texture-region gui 0 0 32 32))

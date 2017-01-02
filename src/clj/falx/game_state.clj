@@ -57,6 +57,10 @@
   ([gs id f & args]
     (modify gs id #(apply f % args))))
 
+(defn q
+  ([gs k v]
+    (-> gs :ave (get k) (get v) (or #{}))))
+
 (defn setting
   ([gs k]
     (setting gs k nil))

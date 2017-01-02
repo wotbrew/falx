@@ -15,6 +15,12 @@
 (def human-male
   (gdx/texture-region human 32 0 32 32))
 
+(def goblins
+  (gdx/texture (io/resource "tiles/goblins.png")))
+
+(def goblin-worker
+  (gdx/texture-region goblins 0 0 32 32))
+
 (def hairs
   {:human {:male
            (sorted-map
@@ -34,10 +40,11 @@
              1 (gdx/texture-region human 96 0 32 32))}})
 
 (def races
-  (sorted-set :human))
+  (sorted-set :human :goblin))
 
 (def genders
-  {:human (sorted-set :male :female)})
+  {:human (sorted-set :male :female)
+   :goblin (sorted-set :male :female)})
 
 (defn draw-body!
   [{:keys [gender race hair beard]} x y w h]
@@ -45,9 +52,14 @@
         btr (-> beards (get race) (get gender) (get beard))]
     (case (or race :human)
       :human
-      (do (case gender
-            :male (gdx/draw! human-male x y w h)
-            (gdx/draw! human-female x y w h)))
+      (case gender
+        :male (gdx/draw! human-male x y w h)
+        (gdx/draw! human-female x y w h))
+      :goblin
+      (case gender
+        :male (gdx/draw! goblin-worker x y w h)
+        (gdx/draw! goblin-worker x y w h))
+
       nil)
     (when btr
       (gdx/draw! btr x y w h))
@@ -62,7 +74,7 @@
 
 (defn genbody
   []
-  (let [race (rand-nth (vec races))
+  (let [race (rand-nth (vec (disj races :goblin)))
         gender (rand-nth (vec (genders race)))
         hair (rand-nth (some-> hairs race gender keys))
         beard (rand-nth (some-> beards race gender keys))]
