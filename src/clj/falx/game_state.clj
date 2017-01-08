@@ -30,19 +30,9 @@
   ([gs event & more]
    (reduce publish gs (cons event more))))
 
-(defn transact*
-  [gs tx-data]
-  (let [{:keys [db]} gs
-        {:keys [db-after tempids]} (db/transact db tx-data)]
-    {:gs-before gs
-     :gs-after (assoc gs :db db-after)
-     :tempids tempids}))
-
 (defn transact
   [gs tx-data]
-  (let [{:keys [db]} gs
-        {:keys [db-after tempids]} (db/transact db tx-data)]
-    (assoc gs :db db-after)))
+  (update gs :db db/transact tx-data))
 
 (defn set-setting
   [gs k v]
@@ -93,40 +83,10 @@
   ([gs k v & kvs]
     (apply db/query (:db gs) k v kvs)))
 
-(defn del
-  [gs id]
-  (update
-    gs
-    :db
-    (comp :db-after db/transact)
-    [[:db/retract-entity id]]))
-
-(defn add
-  [gs id m]
-  (update
-    gs
-    :db
-    (comp :db-after db/transact)
-    [(assoc m :db/id id)]))
-
-(defn spawn
-  [gs m]
-  (add gs (db/tempid) m))
-
-(let [tmpidseed (atom 0)]
-  (defn next-id
-    [gs]
-    [(swap! tmpidseed dec) gs]))
-
-(defn modify
-  ([gs id f]
-   (update
-     gs
-     :db
-     (comp :db-after db/transact)
-     [[:db/update-entity id f]]))
-  ([gs id f & args]
-    (modify gs id #(apply f % args))))
+(defn next-id
+  [gs]
+  (let [[id db] (db/next-id (:db gs))]
+    [id (assoc gs :db db)]))
 
 (defn active-party
   [gs]
@@ -160,16 +120,18 @@
         dents (equery gs :party defender)
         cell (:cell dparty)]
     (if (seq dents)
-      (-> (del gs (:db/id (rand-nth (vec dents))))
-          (spawn {:type :corpse
-                  :cell cell
-                  :pt (:pt cell)
-                  :offset [(rand) (rand)]
-                  :slice {:level (:level cell)
-                          :layer :corpse}
-                  :level (:level cell)
-                  :layer :corpse}))
-      (del gs defender))))
+      (transact
+        gs
+        [[:db/delete-entity (:db/id (rand-nth (vec dents)))]
+         {:type :corpse
+          :cell cell
+          :pt (:pt cell)
+          :offset [(rand) (rand)]
+          :slice {:level (:level cell)
+                  :layer :corpse}
+          :level (:level cell)
+          :layer :corpse}])
+      gs)))
 
 (defn move-party
   [gs id cell]
@@ -179,15 +141,15 @@
         (attack gs id opposing-party)
         gs)
       (let [{:keys [level pt]} cell]
-        (modify
-          gs id
-          assoc
-          :cell cell
-          :level level
-          :pt pt
-          :layer :creature
-          :slice {:layer :creature
-                  :level level})))
+        (transact
+          gs
+          [{:db/id id
+            :cell cell
+            :level level
+            :pt pt
+            :layer :creature
+            :slice {:layer :creature
+                    :level level}}])))
     (assoc :ai-turn? true)))
 
 (defn move-active-party

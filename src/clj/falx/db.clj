@@ -59,52 +59,45 @@
   ([]
    (UUID/randomUUID)))
 
+(defn next-id
+  [db]
+  [(inc (:id-seed db 0))
+   (update db :id-seed (fnil inc 0))])
+
 (defmulti eval-txfn (fn [db tx] (nth tx 0)))
 
 (defn transact
   [db tx-data]
   (let [id-seed (volatile! (:id-seed db 0))
-        tempids (volatile! {})
-        resolve-id (fn [id]
-                     (cond
-                       (nil? id)
-                       (recur (tempid))
-                       (and (number? id) (neg? id))
-                       (or (get @tempids id)
-                           (let [rid (vswap! id-seed inc)]
-                             (vswap! tempids assoc id rid)
-                             rid))
-                       :else id))]
-    {:tempids   @tempids
-     :db-before db
-     :db-after (->
-                 (reduce
-                   (fn ! [db tx]
-                     (if (map? tx)
-                       (let [id (resolve-id (:db/id tx))
-                             tx (assoc tx :db/id id)]
-                         (reduce-kv #(assert %1 id %2 %3) db tx))
-                       (case (nth tx 0)
-                         :db/add (assert db (resolve-id (nth tx 1)) (nth tx 2) (nth tx 3))
-                         :db/retract (retract db (resolve-id (nth tx 1)) (nth tx 2))
-                         :db/update (let [id (resolve-id (nth tx 1))
-                                          k (nth tx 2)
-                                          f (nth tx 3)
-                                          args (subvec tx 4)
-                                          ev (get (entity db id) k)]
-                                      (assert db id k (apply f ev args)))
-                         :db/update-entity (let [id (resolve-id (nth tx 1))
-                                                 f (nth tx 2)
-                                                 args (subvec tx 3)
-                                                 e (assoc (entity db id) :db/id id)]
-                                             (! db (apply f e args)))
-                         :db/retract-entity (let [id (resolve-id (nth tx 1))
-                                                  m (entity db id)]
-                                              (reduce-kv (fn [db k _] (retract db id k)) db m))
-                         (reduce ! db (eval-txfn db tx)))))
-                   db
-                   tx-data)
-                 (assoc :id-seed @id-seed))}))
+        resolve-id (fn [id] (or id (vswap! id-seed inc)))]
+    (->
+      (reduce
+        (fn ! [db tx]
+          (if (map? tx)
+            (let [id (resolve-id (:db/id tx))
+                  tx (assoc tx :db/id id)]
+              (reduce-kv #(assert %1 id %2 %3) db tx))
+            (case (nth tx 0)
+              :db/add (assert db (resolve-id (nth tx 1)) (nth tx 2) (nth tx 3))
+              :db/retract (retract db (resolve-id (nth tx 1)) (nth tx 2))
+              :db/update (let [id (resolve-id (nth tx 1))
+                               k (nth tx 2)
+                               f (nth tx 3)
+                               args (subvec tx 4)
+                               ev (get (entity db id) k)]
+                           (assert db id k (apply f ev args)))
+              :db/update-entity (let [id (resolve-id (nth tx 1))
+                                      f (nth tx 2)
+                                      args (subvec tx 3)
+                                      e (assoc (entity db id) :db/id id)]
+                                  (! db (apply f e args)))
+              :db/retract-entity (let [id (resolve-id (nth tx 1))
+                                       m (entity db id)]
+                                   (reduce-kv (fn [db k _] (retract db id k)) db m))
+              (reduce ! db (eval-txfn db tx)))))
+        db
+        tx-data)
+      (assoc :id-seed @id-seed))))
 
 (defn resolve-tempid
   [tx-result id]

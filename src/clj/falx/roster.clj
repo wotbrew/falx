@@ -46,7 +46,7 @@
           (update :roster (partial into [] (remove #{id})))
           (cond->
             (= selected id)
-            (-> (gs/del id)
+            (-> (gs/transact [[:db/delete-entity id]])
                 (util/dissoc-in [:ui :roster :selected])))))))
 
 (defn delete-selected
@@ -66,7 +66,7 @@
   [m]
   (->
     (ui/stack
-      (ui/if-elem (ui/gs-pred (comp #{(:id m)} selected-id))
+      (ui/if-elem (ui/gs-pred (comp #{(:db/id m)} selected-id))
         (ui/tint Color/GREEN ui/selection-circle))
       (let [img (ui/stack (char/body-drawable m)
                           (if (:in-play? m)
@@ -75,14 +75,14 @@
                             ui/nil-elem))]
         (ui/if-hovering
           (ui/stack
-            (delete-handler (:id m))
+            (delete-handler (:db/id m))
             img)
-          (ui/if-elem (ui/gs-pred (comp #{(:id m)} selected-id))
+          (ui/if-elem (ui/gs-pred (comp #{(:db/id m)} selected-id))
             (ui/tint ui/vlight-gray img)
             (ui/tint Color/GRAY img))))
-      (ui/if-debug (str (:id m))))
+      (ui/if-debug (str (:db/id m))))
     (ui/wrap-opts
-      {:on-click   [select (:id m)]
+      {:on-click   [select (:db/id m)]
        :hover-over (:name m)})))
 
 (def character-el
@@ -224,11 +224,13 @@
   (let [[id gs] (gs/next-id gs)
         body (char/genbody)]
     (-> gs
-        (gs/add id (merge body
-                          {:id      id
-                           :name (rand-nth names)
-                           :editable? true
-                           :player? true}))
+        (gs/transact
+          [(merge body
+                  {:db/id id
+                   :name (rand-nth names)
+                   :editable? true
+                   :player? true})])
+        (update-in [:roster] (fnil conj []) id)
         (select id))))
 
 (def character-opts
