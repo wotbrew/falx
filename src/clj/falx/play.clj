@@ -6,7 +6,8 @@
             [falx.frame :as frame]
             [falx.game :as g]
             [clojure.java.io :as io]
-            [falx.character :as char])
+            [falx.character :as char]
+            [falx.point :as pt])
   (:import (com.badlogic.gdx Input$Keys)))
 
 (def tmpfloor
@@ -25,7 +26,7 @@
     :party (party/draw! gs e x y w h)
     :floor (gdx/draw! tmpfloor x y w h)
     :corpse (let [[ox oy] (:offset e [0.0 0.0])
-                  [cw ch] (gs/setting gs :cell-size)
+                  [cw ch] (gs/cell-size gs)
                   x (+ x (- cw) (* ox cw))
                   y (+ y (- ch) (* oy ch))]
               (gdx/draw! tmpcorpse x y w h))
@@ -33,7 +34,7 @@
 
 (defn draw-slice!
   [gs slice]
-  (let [[cw ch] (gs/setting gs :cell-size)
+  (let [[cw ch] (gs/cell-size gs)
         cw (long cw)
         ch (long ch)]
     (doseq [eid (gs/query gs :slice slice)
@@ -72,23 +73,16 @@
             delta-z (:scroll-delta (:tick frame) 0)
             delta (:delta (:tick frame))]
         (when (neg? delta-z)
-          (g/update-state! (:game frame)
-                           gs/update-setting :cell-size
-                           (partial mapv (comp double /))
-                           [0.9 0.9]))
+          (g/update-state! (:game frame) gs/update-cell-size (comp pt/dpoint pt/div) 0.9))
         (when (pos? delta-z)
-          (g/update-state! (:game frame)
-                           gs/update-setting :cell-size
-                           (partial mapv (comp double *))
-                           [0.9 0.9]))
+          (g/update-state! (:game frame) gs/update-cell-size pt/mul 0.9))
         (when (or (not= 0 delta-x)
                   (not= 0 delta-y))
-          (g/update-state! (:game frame)
-                           update :camera
-                           (fnil (partial mapv +) [0 0])
-                           [(* 250 delta-x mod delta)
-                            (* 250 delta-y mod delta)]))))))
-
+          (g/update-state!
+            (:game frame)
+            gs/update-camera pt/add
+            [(* 250 delta-x mod delta)
+             (* 250 delta-y mod delta)]))))))
 
 (def move-party-handler
   (reify falx.ui.protocols/IScreenObject

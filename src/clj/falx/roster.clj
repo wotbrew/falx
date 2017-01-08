@@ -16,42 +16,27 @@
 (def in-play-icon
   (gdx/texture-region ui/misc 64 0 32 32))
 
-(defn selected-id
-  [gs]
-  (-> gs :ui :roster :selected))
-
-(defn selected
-  [gs]
-  (->> gs selected-id (gs/entity gs)))
-
-(def cscale 64)
-
-(defn select
-  [gs id]
-  (assoc-in gs [:ui :roster :selected] id))
-
+(def roster (util/lens :ui :roster))
+(def selected (util/lens roster :selected))
+(def selected-entity (gs/entity-lens selected))
+(def select (util/setter selected))
 (def can-delete? (complement :in-play?))
-
-(defn can-delete-id?
-  [gs id]
-  (when-some [e (gs/entity gs id)]
-    (can-delete? e)))
 
 (defn delete
   [gs id]
-  (let [selected (selected-id gs)]
-    (if-not (can-delete-id? gs id)
+  (let [selected (selected gs)]
+    (if-not (can-delete? gs (gs/entity gs id))
       gs
       (-> gs
           (update :roster (partial into [] (remove #{id})))
           (cond->
             (= selected id)
             (-> (gs/retract-entity id)
-                (util/dissoc-in [:ui :roster :selected])))))))
+                (util/lset selected nil)))))))
 
 (defn delete-selected
   [gs]
-  (if-some [selected (selected-id gs)]
+  (if-some [selected (selected gs)]
     (delete gs selected)
     gs))
 
@@ -66,7 +51,7 @@
   [m]
   (->
     (ui/stack
-      (ui/if-elem (ui/gs-pred (comp #{(:id m)} selected-id))
+      (ui/if-elem (ui/gs-pred (comp #{(:id m)} selected))
         (ui/tint Color/GREEN ui/selection-circle))
       (let [img (ui/stack (char/body-drawable m)
                           (if (:in-play? m)
@@ -77,7 +62,7 @@
           (ui/stack
             (delete-handler (:id m))
             img)
-          (ui/if-elem (ui/gs-pred (comp #{(:id m)} selected-id))
+          (ui/if-elem (ui/gs-pred (comp #{(:id m)} selected))
             (ui/tint ui/vlight-gray img)
             (ui/tint Color/GRAY img))))
       (ui/if-debug (str (:id m))))
@@ -95,7 +80,8 @@
   (gdx/texture-region ui/gui 32 32 32 32))
 
 (def character-array
-  (let [scroll-pos (volatile! 0)
+  (let [cscale 64
+        scroll-pos (volatile! 0)
         click-handled? (volatile! false)]
     (ui/stack
       (ui/fancy-box 1)
@@ -186,7 +172,7 @@
 (def continue-button
   (ui/if-elem (ui/gs-pred
                 (fn [gs]
-                  (when-some [e (selected gs)]
+                  (when-some [e (selected-entity gs)]
                     (:in-play? e))))
     (ui/button "Continue")
     (ui/disabled-button "Continue")))
@@ -194,7 +180,7 @@
 (def delete-button
   (ui/if-elem (ui/gs-pred
                 (fn [gs]
-                  (when-some [e (selected gs)]
+                  (when-some [e (selected-entity gs)]
                     (can-delete? e))))
     (ui/button "Delete" :on-click delete-selected)
     (ui/disabled-button "Delete")))
@@ -203,7 +189,7 @@
   (let [bcontents (ui/stack
                     (ui/translate 3 0 (ui/resize 32 32 char/icon))
                     (ui/center (ui/translate 8 0 "Stats")))]
-    (ui/if-elem (ui/gs-pred selected-id)
+    (ui/if-elem (ui/gs-pred selected)
       (ui/button bcontents :on-click [ui/goto :stats])
       (ui/disabled-button bcontents))))
 
@@ -211,7 +197,7 @@
   (let [bcontents (ui/stack
                     (ui/translate 3 0 (ui/resize 32 32 inv/icon))
                     (ui/center (ui/translate 8 0 "Inventory")))]
-    (ui/if-elem (ui/gs-pred selected-id)
+    (ui/if-elem (ui/gs-pred selected)
       (ui/button bcontents :on-click [ui/goto :inventory])
       (ui/disabled-button bcontents))))
 
@@ -247,7 +233,7 @@
   (ui/center
     (ui/if-debug
       (ui/gs-dynamic
-        (comp util/pprint-str selected)))))
+        (comp util/pprint-str selected-entity)))))
 
 (ui/defscene :roster
   ui/back-handler
@@ -256,7 +242,7 @@
     (ui/stack
       (ui/restrict-height 32 controls)
       (ui/pad 0 48
-        (ui/if-elem (ui/gs-pred selected-id)
+        (ui/if-elem (ui/gs-pred selected)
           (ui/rows
             character-array
             (ui/pad 0 3

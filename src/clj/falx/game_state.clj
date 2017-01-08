@@ -2,12 +2,39 @@
   (:refer-clojure :exclude [empty assert alter])
   (:require [falx.util :as util]
             [clojure.set :as set])
-  (:import (java.util UUID)))
+  (:import (java.util UUID)
+           (clojure.lang IFn)
+           (com.badlogic.gdx Input$Buttons)))
 
 (def empty
-  {:eav {}
-   :ave {}
-   :id-seed 0})
+  {:eav      {}
+   :ave      {}
+   :id-seed  0
+   :camera [0 0]
+   :settings {:aspect-ratio 4/3
+              :resolution       [640 480]
+              :cell-size        [64 64]
+              :click-button     Input$Buttons/LEFT
+              :alt-click-button Input$Buttons/RIGHT}})
+
+(def settings :settings)
+
+(def aspect-ratio (util/lens settings :aspect-ratio))
+(def set-aspect-ratio (util/setter aspect-ratio))
+
+(def resolution (util/lens settings :resolution))
+(def set-resolution (util/setter resolution))
+
+(def cell-size (util/lens settings :cell-size))
+(def set-cell-size (util/setter cell-size))
+(def update-cell-size (util/updater cell-size))
+
+(def click-button (util/lens settings :click-button))
+(def alt-click-button (util/lens settings :alt-click-button))
+
+(def camera :camera)
+(def set-camera (util/setter camera))
+(def update-camera (util/updater camera))
 
 (defonce event-handler-registry
   (atom {}))
@@ -87,11 +114,11 @@
    (update gs :id-seed (fnil inc 0))])
 
 (defn add
-  [gs m]
-  (if-some [id (:id m)]
-    (reduce-kv #(assert %1 id %2 %3) gs m)
+  [gs e]
+  (if-some [id (:id e)]
+    (reduce-kv #(assert %1 id %2 %3) gs e)
     (let [[id gs] (next-id gs)]
-      (recur gs (assoc m :id id)))))
+      (recur gs (assoc e :id id)))))
 
 (defn alter-entity
   ([gs id f]
@@ -102,6 +129,31 @@
 (defn retract-entity
   ([gs id]
    (reduce-kv (fn [gs k _] (retract gs id k)) gs (entity gs id))))
+
+(defn replace-entity
+  ([gs e]
+   (if-some [id (:id e)]
+     (-> (retract-entity gs id)
+         (add e))
+     (add gs e))))
+
+(defn id-lens
+  [id]
+  (reify util/ILens
+    (-lget [this gs] (entity gs id))
+    (-lset [this gs v] (replace-entity gs (assoc v :id id)))
+    IFn
+    (invoke [this x]
+      (util/-lget this x))))
+
+(defn entity-lens
+  [lens]
+  (reify util/ILens
+    (-lget [this gs] (entity gs (lens gs)))
+    (-lset [this gs v] (replace-entity gs (assoc v :id (lens gs))))
+    IFn
+    (invoke [this x]
+      (util/-lget this x))))
 
 (defn tempid
   ([]
@@ -123,46 +175,28 @@
   [gs k v]
   (assoc-in gs [:settings k] v))
 
-(defonce setting-defaults
-  (atom {}))
-
-(defn setting
-  ([gs k]
-   (setting gs k (or (get @setting-defaults k))))
-  ([gs k default]
-   (-> gs :settings (get k default))))
-
-(defn update-setting
-  ([gs k f]
-   (set-setting gs k (f (setting gs k))))
-  ([gs k f & args]
-   (update-setting gs k #(apply f % args))))
-
-(defmacro defsetting
-  [k v]
-  `(do
-     (swap! setting-defaults assoc ~k ~v)
-     nil))
-
-(defn center-camera
+(defn center-camera-on-pt
   ([gs pt]
    (let [[x y] pt]
-     (center-camera gs x y)))
+     (center-camera-on-pt gs x y)))
   ([gs x y]
-   (let [[cw ch] (setting gs :cell-size)
-         [sw sh] (setting gs :resolution)]
-     (assoc gs :camera [(double (+ (/ sw 2) (* x (- cw))))
-                        (double (+ (/ sh 2) (* y (- ch))))]))))
+   (let [[cw ch] (cell-size gs)
+         [sw sh] (resolution gs)]
+     (set-camera gs [(double (+ (/ sw 2) (* x (- cw)) (/ (- cw) 2)))
+                     (double (+ (/ sh 2) (* y (- ch)) (/ (- ch) 2)))]))))
 
-(defn active-party
-  [gs]
-  (entity gs (:active-party gs)))
+(defn center-camera-on
+  [gs id]
+  (if-some [pt (:pt (entity gs id))]
+    (center-camera-on-pt gs pt)
+    gs))
+
+(def active-party :active-party)
+(def active-party-entity (entity-lens active-party))
 
 (defn center-camera-on-active-party
-  ([gs]
-   (if-some [pt (:pt (active-party gs))]
-     (center-camera gs pt)
-     gs)))
+  [gs]
+  (center-camera-on gs (active-party gs)))
 
 (defn solid?
   [gs cell]
@@ -223,11 +257,11 @@
   [gs direction]
   (if (= direction [0 0])
     gs
-    (if-some [e (active-party gs)]
+    (if-some [e (active-party-entity gs)]
       (if-some [{:keys [level pt]} (:cell e)]
-        (cond-> (move-party gs (:id e) {:level level
-                                        :pt    (mapv + pt direction)})
-                (:player-party? e) center-camera-on-active-party)
+        (-> (move-party gs (:id e) {:level level
+                                    :pt    (mapv + pt direction)})
+            center-camera-on-active-party)
         gs)
       gs)))
 
@@ -240,7 +274,7 @@
   [gs]
   (if-some [id (peek (:ai-turn-sequence gs))]
     (-> (update gs :ai-turn-sequence pop)
-        (wait 0.3))
+        (wait 0.1))
     (dissoc gs
             :ai-turn-sequence
             :ai-turn?)))

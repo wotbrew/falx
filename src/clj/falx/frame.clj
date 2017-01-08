@@ -1,7 +1,6 @@
 (ns falx.frame
   (:require [falx.game :as g]
-            [falx.game-state :as gs])
-  (:import (com.badlogic.gdx Input$Buttons)))
+            [falx.game-state :as gs]))
 
 (defn game
   [frame]
@@ -18,10 +17,6 @@
 (defn screen-size
   [frame]
   (-> frame config :size))
-
-(defn setting
-  ([frame k default]
-   (gs/setting frame k default)))
 
 (defn button-hit?
   [frame btn]
@@ -50,11 +45,11 @@
 (defn clicked?
   [frame x y w h]
   (and (mouse-in? frame x y w h)
-       (let [btn (setting frame :click-button Input$Buttons/LEFT)]
+       (let [btn (gs/click-button (:state frame))]
          (button-hit? frame btn))))
 
 (defn alt-clicked?
   [frame x y w h]
   (and (mouse-in? frame x y w h)
-       (let [btn (setting frame :alt-click-button Input$Buttons/LEFT)]
+       (let [btn (gs/click-button (:state frame))]
          (button-hit? frame btn))))

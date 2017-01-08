@@ -9,9 +9,6 @@
             [falx.game-state :as gs])
   (:import (java.util UUID)))
 
-(gs/defsetting :resolution [640 480])
-(gs/defsetting :cell-size [32 32])
-
 (ui/defscene :load
   ui/back-handler
   ui/breadcrumbs
@@ -94,14 +91,15 @@
 (gdx/on-tick tick
   [tick]
   (let [frame (g/next-frame playing tick)
+        g (g/game (:game frame))
         gs (:state frame)
         [w h :as size] (:size (:config tick))]
-    (when (not= size (gs/setting gs :resolution))
-      (g/update-state! playing gs/set-setting :resolution size))
+    (when (not= size (gs/resolution gs))
+      (g/update-state! g gs/set-setting :resolution size))
     (ui/handle!
       (ui/scene frame)
       frame)
-    (g/update-state! playing gs/simulate (:delta tick))))
+    (g/update-state! g gs/simulate (:delta tick))))
 
 (defn goblins-tx-data
   [pt]
@@ -143,11 +141,7 @@
   playing
   (let [p  (gs/tempid)
         players (vec (repeatedly 6 gs/tempid))]
-    (-> {:scene       :play
-         :scene-stack [:main-menu :play]
-         :active-party p
-         :players players
-         :settings {:cell-size [64 64]}}
+    (-> gs/empty
         (gs/transact
           (concat
             (floor-tx-data)
@@ -177,7 +171,13 @@
                  :type :creature
                  :party p
                  :solid? true
-                 :player? true})))))))
+                 :player? true}))))
+        (merge
+          {:scene        :play
+           :scene-stack  [:main-menu :play]
+           :active-party p
+           :players      players})
+        (gs/center-camera-on-pt [3 4]))))
 
 (defn gs
   []

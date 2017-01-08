@@ -13,7 +13,8 @@
                   :classifier "natives-desktop"]
                  [log4j/log4j "1.2.17"]
                  [org.clojure/data.priority-map "0.0.7"]
-                 [ubergraph "0.3.0"]]
+                 [ubergraph "0.3.0"]
+                 [com.rpl/specter "0.13.2"]]
   :repositories [["sonatype"
                   "https://oss.sonatype.org/content/repositories/releases/"]]
   :source-paths ["src/clj"

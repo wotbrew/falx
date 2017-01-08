@@ -16,7 +16,8 @@
 
 (defn apply-changes
   [gs]
-  (update gs :settings merge (-> gs :ui :options)) )
+  (-> (update gs :settings merge (-> gs :ui :options))
+      gs/center-camera-on-active-party))
 
 (defn apply-options!
   [frame]
@@ -58,14 +59,11 @@
 (def aspect-ratios
   (into (sorted-set) (keys resolutions)))
 
-(defn active-aspect-ratio
-  [gs]
-  (-> gs :settings :aspect-ratio (or 4/3)))
 
 (defn selected-aspect-ratio
   [gs]
   (or (-> gs :ui :options :aspect-ratio)
-      (active-aspect-ratio gs)))
+      (gs/aspect-ratio gs)))
 
 (defn prev-aspect-ratio
   [gs]
@@ -81,7 +79,7 @@
   [gs ratio]
   (->
     (if (or (nil? ratio)
-            (= ratio (active-aspect-ratio gs)))
+            (= ratio (gs/aspect-ratio gs)))
       (util/dissoc-in gs [:ui :options :aspect-ratio])
       (assoc-in gs [:ui :options :aspect-ratio] ratio))
     (select-resolution (first (get resolutions ratio)))))
@@ -93,19 +91,15 @@
     prev-aspect-ratio
     next-aspect-ratio))
 
-(defn active-resolution
-  [gs]
-  (gs/setting gs :resolution))
-
 (defn selected-resolution
   [gs]
   (or (-> gs :ui :options :resolution)
-      (active-resolution gs)))
+      (gs/resolution gs)))
 
 (defn select-resolution
   [gs size]
   (if (or (nil? size)
-          (= size (active-resolution gs)))
+          (= size (gs/resolution gs)))
     (util/dissoc-in gs [:ui :options :resolution])
     (assoc-in gs [:ui :options :resolution] size)))
 
@@ -176,14 +170,10 @@
     [80 80]
     [96 96]))
 
-(defn active-cell-size
-  [gs]
-  (gs/setting gs :cell-size))
-
 (defn selected-cell-size
   [gs]
   (or (-> gs :ui :options :cell-size)
-      (active-cell-size gs)))
+      (gs/cell-size gs)))
 
 (defn prev-cell-size
   [gs]
@@ -195,7 +185,7 @@
 
 (defn select-cell-size
   [gs size]
-  (if (or (nil? size) (= size (active-cell-size gs)))
+  (if (or (nil? size) (= size (gs/cell-size gs)))
     (util/dissoc-in gs [:ui :options :cell-size])
     (assoc-in gs [:ui :options :cell-size] size)))
 
