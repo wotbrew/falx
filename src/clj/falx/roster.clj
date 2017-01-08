@@ -7,8 +7,7 @@
             [falx.inventory :as inv]
             [falx.game :as g]
             [clojure.java.io :as io]
-            [clojure.core.memoize :as memo]
-            [falx.db :as db])
+            [clojure.core.memoize :as memo])
   (:import (com.badlogic.gdx.graphics Color)
            (com.badlogic.gdx Input$Keys)))
 
@@ -47,7 +46,7 @@
           (update :roster (partial into [] (remove #{id})))
           (cond->
             (= selected id)
-            (-> (gs/db-transact [[db/retract-entity id]])
+            (-> (gs/retract-entity id)
                 (util/dissoc-in [:ui :roster :selected])))))))
 
 (defn delete-selected
@@ -67,7 +66,7 @@
   [m]
   (->
     (ui/stack
-      (ui/if-elem (ui/gs-pred (comp #{(:db/id m)} selected-id))
+      (ui/if-elem (ui/gs-pred (comp #{(:id m)} selected-id))
         (ui/tint Color/GREEN ui/selection-circle))
       (let [img (ui/stack (char/body-drawable m)
                           (if (:in-play? m)
@@ -76,14 +75,14 @@
                             ui/nil-elem))]
         (ui/if-hovering
           (ui/stack
-            (delete-handler (:db/id m))
+            (delete-handler (:id m))
             img)
-          (ui/if-elem (ui/gs-pred (comp #{(:db/id m)} selected-id))
+          (ui/if-elem (ui/gs-pred (comp #{(:id m)} selected-id))
             (ui/tint ui/vlight-gray img)
             (ui/tint Color/GRAY img))))
-      (ui/if-debug (str (:db/id m))))
+      (ui/if-debug (str (:id m))))
     (ui/wrap-opts
-      {:on-click   [select (:db/id m)]
+      {:on-click   [select (:id m)]
        :hover-over (:name m)})))
 
 (def character-el
@@ -227,11 +226,11 @@
     (-> gs
         (gs/transact
           [(merge body
-                  {:db/id id
+                  {:id id
                    :name (rand-nth names)
                    :editable? true
                    :player? true})])
-        (update-in [:roster] (fnil conj []) id)
+        (update :roster (fnil conj []) id)
         (select id))))
 
 (def character-opts

@@ -34,5 +34,5 @@
   (when-some [ents (seq (map (partial gs/entity gs)
                              (if (:player-party? e)
                                (:players gs)
-                               (gs/query gs :party (:db/id e)))))]
+                               (gs/query gs :party (:id e)))))]
     (draw-models! gs x y w h ents)))

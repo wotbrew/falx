@@ -2,7 +2,6 @@
   (:import (java.util UUID)))
 
 (defprotocol IGame
-  (-gen-id [this])
   (-state [this])
   (-set-state [this gs])
   (-update-state! [this f])
@@ -11,8 +10,6 @@
 
 (deftype Game [id state-ref frame-ref]
   IGame
-  (-gen-id [this]
-    (UUID/randomUUID))
   (-state [this]
     @state-ref)
   (-set-state [this gs]
@@ -45,8 +42,6 @@
 
 (extend-protocol IGame
   UUID
-  (-gen-id [this]
-    (-gen-id (get @registry this)))
   (-state [this]
     (-state (get @registry this)))
   (-set-state [this gs]
@@ -79,7 +74,3 @@
 (defn state
   [g]
   (-state g))
-
-(defn gen-id
-  [g]
-  (-gen-id g))

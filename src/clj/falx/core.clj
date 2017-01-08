@@ -6,11 +6,8 @@
             [falx.roster :as roster]
             [falx.play :as play]
             [falx.inventory]
-            [falx.game-state :as gs]
-            [falx.db :as db])
-  (:import (com.badlogic.gdx Input$Keys)
-           (com.badlogic.gdx.graphics Color)
-           (java.util UUID)))
+            [falx.game-state :as gs])
+  (:import (java.util UUID)))
 
 (gs/defsetting :resolution [640 480])
 (gs/defsetting :cell-size [32 32])
@@ -110,7 +107,7 @@
   [pt]
   (let [ep (UUID/randomUUID)]
     (cons
-      {:db/id  ep
+      {:id  ep
        :type   :party
        :enemy? true
        :solid? true
@@ -144,8 +141,8 @@
 
 (g/set-state!
   playing
-  (let [p  (g/gen-id playing)
-        players (vec (repeatedly 6 (partial g/gen-id playing)))]
+  (let [p  (gs/tempid)
+        players (vec (repeatedly 6 gs/tempid))]
     (-> {:scene       :play
          :scene-stack [:main-menu :play]
          :active-party p
@@ -162,7 +159,7 @@
             (goblins-tx-data [2 5])
             (goblins-tx-data [3 5])
             (goblins-tx-data [3 6])
-            [{:db/id            p
+            [{:id            p
               :type          :party
               :player-party? true
               :solid?        true
@@ -176,7 +173,7 @@
             (for [pl players]
               (merge
                 (falx.character/genbody)
-                {:db/id pl
+                {:id pl
                  :type :creature
                  :party p
                  :solid? true

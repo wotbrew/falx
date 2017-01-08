@@ -1,13 +1,13 @@
 (ns falx.game-state
-  (:refer-clojure :exclude [empty])
+  (:refer-clojure :exclude [empty assert alter])
   (:require [falx.util :as util]
-            [falx.db :as db]
-            [clojure.set :as set]))
-
-(defrecord GameState [db scene scene-stack active-party players camera settings events])
+            [clojure.set :as set])
+  (:import (java.util UUID)))
 
 (def empty
-  (->GameState :main-menu [:main-menu] nil [] db/empty [0 0] {} []))
+  {:eav {}
+   :ave {}
+   :id-seed 0})
 
 (defonce event-handler-registry
   (atom {}))
@@ -23,23 +23,101 @@
           hm (get @event-handler-registry t)]
       (reduce-kv f gs hm))))
 
-(defmulti eval-txfn (fn [gs tx] (nth tx 0)))
+(defn publish
+  [gs event]
+  (-> (update gs :events (fnil conj []) event)
+      (apply-event event)))
 
-(defn db-transact
-  [gs tx-data]
-  (update gs :db db/transact tx-data))
+(defn entity
+  [gs id]
+  (-> gs :eav (get id)))
+
+(defn query
+  ([gs k v]
+   (-> gs :ave (get k) (get v) (or #{})))
+  ([gs k v & kvs]
+   (loop [ret (query gs k v)
+          kvs kvs]
+     (if-some [[k v & kvs] (seq kvs)]
+       (recur (set/intersection ret (query gs k v)) kvs)
+       ret))))
+
+(defn equery
+  ([gs k v]
+   (map (:eav gs) (query gs k v)))
+  ([gs k v & kvs]
+   (map (:eav gs) (apply query gs k v kvs))))
+
+(defn with
+  ([gs k]
+   (query gs k true))
+  ([gs k & ks]
+   (apply query gs k (mapcat vector ks (repeat true)))))
+
+(defn ewith
+  ([gs k]
+   (equery gs k true))
+  ([gs k & ks]
+   (apply equery gs k (mapcat vector ks (repeat true)))))
+
+(defn retract
+  [gs id k]
+  (-> gs
+      (update :eav util/dissoc-in [id k])
+      (update :ave util/disjoc-in [k (get (entity gs id) k)] id)))
+
+(defn assert
+  [gs id k v]
+  (let [gs (retract gs id k)]
+    (-> gs
+        (assoc-in [:eav id k] v)
+        (assoc-in [:eav id :id] id)
+        (update-in [:ave k v] (fnil conj #{}) id))))
+
+(defn alter
+  ([gs id k f]
+   (let [ev (get (entity gs id) k)]
+     (assert gs id k (f ev))))
+  ([gs id k f & args]
+   (alter gs id k #(apply f % args))))
+
+(defn next-id
+  [gs]
+  [(inc (:id-seed gs 0))
+   (update gs :id-seed (fnil inc 0))])
+
+(defn add
+  [gs m]
+  (if-some [id (:id m)]
+    (reduce-kv #(assert %1 id %2 %3) gs m)
+    (let [[id gs] (next-id gs)]
+      (recur gs (assoc m :id id)))))
+
+(defn alter-entity
+  ([gs id f]
+   (add gs (f (assoc (entity gs id) :id id))))
+  ([gs id f & args]
+   (alter-entity gs id #(apply f % args))))
+
+(defn retract-entity
+  ([gs id]
+   (reduce-kv (fn [gs k _] (retract gs id k)) gs (entity gs id))))
+
+(defn tempid
+  ([]
+   (UUID/randomUUID)))
 
 (defn transact
   [gs tx-data]
   (reduce
-    (fn ! [gs tx]
+    (fn ! [db tx]
       (if (map? tx)
-        (db-transact gs [tx])
+        (add db tx)
         (let [f (first tx)
               args (rest tx)]
-          (apply f gs args))))
+          (apply f db args))))
     gs
-    tx-data) )
+    tx-data))
 
 (defn set-setting
   [gs k v]
@@ -76,25 +154,6 @@
      (assoc gs :camera [(double (+ (/ sw 2) (* x (- cw))))
                         (double (+ (/ sh 2) (* y (- ch))))]))))
 
-(defn entity
-  [gs id]
-  (db/entity (:db gs) id))
-
-(defn equery
-  [gs k v]
-  (db/equery (:db gs) k v))
-
-(defn query
-  ([gs k v]
-   (db/query (:db gs) k v))
-  ([gs k v & kvs]
-    (apply db/query (:db gs) k v kvs)))
-
-(defn next-id
-  [gs]
-  (let [[id db] (db/next-id (:db gs))]
-    [id (assoc gs :db db)]))
-
 (defn active-party
   [gs]
   (entity gs (:active-party gs)))
@@ -127,20 +186,18 @@
         dents (equery gs :party defender)
         cell (:cell dparty)]
     (if (seq dents)
-      (db-transact
-        gs
-        (concat
-          [[db/retract-entity (:db/id (rand-nth (vec dents)))]
-           {:type   :corpse
-            :cell   cell
-            :pt     (:pt cell)
-            :offset [(rand) (rand)]
-            :slice  {:level (:level cell)
-                     :layer :corpse}
-            :level  (:level cell)
-            :layer  :corpse}]
-          (when (empty? (rest dents))
-            [[db/retract-entity defender]])))
+      (-> gs
+          (retract-entity (:id (rand-nth (vec dents))))
+          (add {:type   :corpse
+                :cell   cell
+                :pt     (:pt cell)
+                :offset [(rand) (rand)]
+                :slice  {:level (:level cell)
+                         :layer :corpse}
+                :level  (:level cell)
+                :layer  :corpse})
+          (cond->
+            (empty? (rest dents)) (retract-entity defender)))
       gs)))
 
 (defn move-party
@@ -151,15 +208,15 @@
         (attack gs id opposing-party)
         gs)
       (let [{:keys [level pt]} cell]
-        (transact
+        (add
           gs
-          [{:db/id id
-            :cell cell
-            :level level
-            :pt pt
-            :layer :creature
-            :slice {:layer :creature
-                    :level level}}])))
+          {:id id
+           :cell  cell
+           :level level
+           :pt    pt
+           :layer :creature
+           :slice {:layer :creature
+                   :level level}})))
     (assoc :ai-turn? true)))
 
 (defn move-active-party
@@ -168,7 +225,7 @@
     gs
     (if-some [e (active-party gs)]
       (if-some [{:keys [level pt]} (:cell e)]
-        (cond-> (move-party gs (:db/id e) {:level level
+        (cond-> (move-party gs (:id e) {:level level
                                         :pt    (mapv + pt direction)})
                 (:player-party? e) center-camera-on-active-party)
         gs)
