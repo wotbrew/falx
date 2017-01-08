@@ -9,10 +9,10 @@
   (-frame [this])
   (-next-frame [this tick]))
 
-(deftype Game [id state-ref id-counter frame-ref]
+(deftype Game [id state-ref frame-ref]
   IGame
   (-gen-id [this]
-    (swap! id-counter dec))
+    (UUID/randomUUID))
   (-state [this]
     @state-ref)
   (-set-state [this gs]
@@ -40,7 +40,6 @@
                   (->Game
                     id
                     (atom {})
-                    (atom 0)
                     (atom {})))
            id))))
 

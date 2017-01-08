@@ -3,7 +3,8 @@
             [clojure.set :as set]
             [falx.gdx :as gdx]
             [falx.util :as util]
-            [falx.game :as g]))
+            [falx.game :as g]
+            [falx.game-state :as gs]))
 
 (defn options-changed?
   [gs]
@@ -94,7 +95,7 @@
 
 (defn active-resolution
   [gs]
-  (-> gs :settings :resolution (or [640 480])))
+  (gs/setting gs :resolution))
 
 (defn selected-resolution
   [gs]
@@ -177,7 +178,7 @@
 
 (defn active-cell-size
   [gs]
-  (-> gs :settings :cell-size (or [32 32])))
+  (gs/setting gs :cell-size))
 
 (defn selected-cell-size
   [gs]

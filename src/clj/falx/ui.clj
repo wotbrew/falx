@@ -90,6 +90,13 @@
          (measure then frame x y w h)
          (measure else frame x y w h))))))
 
+(defmacro cond-elem
+  ([& pairs]
+    `(if-elem ~(first pairs)
+       ~(second pairs)
+       ~(when (seq (nnext pairs))
+          `(cond-elem ~@(nnext pairs))))))
+
 (defn gs-pred
   ([f]
    (fn [frame _ _ _ _]

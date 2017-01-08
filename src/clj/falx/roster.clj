@@ -224,8 +224,6 @@
   (let [[id gs] (gs/next-id gs)
         body (char/genbody)]
     (-> gs
-        (assoc-in [:ui :roster :selected] id)
-        (update :roster (fnil conj []) id)
         (gs/add id (merge body
                           {:id      id
                            :name (rand-nth names)
