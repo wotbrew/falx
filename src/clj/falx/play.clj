@@ -28,7 +28,8 @@
                   [cw ch] (gs/setting gs :cell-size)
                   x (+ x (- cw) (* ox cw))
                   y (+ y (- ch) (* oy ch))]
-              (gdx/draw! tmpcorpse x y w h))))
+              (gdx/draw! tmpcorpse x y w h))
+    (gdx/draw! "?" x y w h)))
 
 (defn draw-slice!
   [gs slice]

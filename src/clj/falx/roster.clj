@@ -7,7 +7,8 @@
             [falx.inventory :as inv]
             [falx.game :as g]
             [clojure.java.io :as io]
-            [clojure.core.memoize :as memo])
+            [clojure.core.memoize :as memo]
+            [falx.db :as db])
   (:import (com.badlogic.gdx.graphics Color)
            (com.badlogic.gdx Input$Keys)))
 
@@ -46,7 +47,7 @@
           (update :roster (partial into [] (remove #{id})))
           (cond->
             (= selected id)
-            (-> (gs/transact [[:db/delete-entity id]])
+            (-> (gs/db-transact [[db/retract-entity id]])
                 (util/dissoc-in [:ui :roster :selected])))))))
 
 (defn delete-selected

@@ -121,7 +121,7 @@
        :slice  {:level :test
                 :layer :creature}
        :layer  :creature}
-      (for [_ (range (rand-int 6))]
+      (for [_ (range (inc (rand-int 6)))]
         {:type   :creature
          :party  ep
          :race   :goblin

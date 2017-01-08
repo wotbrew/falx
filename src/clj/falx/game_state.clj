@@ -23,16 +23,23 @@
           hm (get @event-handler-registry t)]
       (reduce-kv f gs hm))))
 
-(defn publish
-  ([gs event]
-   (-> (update gs :events conj event)
-       (apply-event event)))
-  ([gs event & more]
-   (reduce publish gs (cons event more))))
+(defmulti eval-txfn (fn [gs tx] (nth tx 0)))
+
+(defn db-transact
+  [gs tx-data]
+  (update gs :db db/transact tx-data))
 
 (defn transact
   [gs tx-data]
-  (update gs :db db/transact tx-data))
+  (reduce
+    (fn ! [gs tx]
+      (if (map? tx)
+        (db-transact gs [tx])
+        (let [f (first tx)
+              args (rest tx)]
+          (apply f gs args))))
+    gs
+    tx-data) )
 
 (defn set-setting
   [gs k v]
@@ -120,17 +127,20 @@
         dents (equery gs :party defender)
         cell (:cell dparty)]
     (if (seq dents)
-      (transact
+      (db-transact
         gs
-        [[:db/delete-entity (:db/id (rand-nth (vec dents)))]
-         {:type :corpse
-          :cell cell
-          :pt (:pt cell)
-          :offset [(rand) (rand)]
-          :slice {:level (:level cell)
-                  :layer :corpse}
-          :level (:level cell)
-          :layer :corpse}])
+        (concat
+          [[db/retract-entity (:db/id (rand-nth (vec dents)))]
+           {:type   :corpse
+            :cell   cell
+            :pt     (:pt cell)
+            :offset [(rand) (rand)]
+            :slice  {:level (:level cell)
+                     :layer :corpse}
+            :level  (:level cell)
+            :layer  :corpse}]
+          (when (empty? (rest dents))
+            [[db/retract-entity defender]])))
       gs)))
 
 (defn move-party

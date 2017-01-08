@@ -1,5 +1,5 @@
 (ns falx.db
-  (:refer-clojure :exclude [empty assert])
+  (:refer-clojure :exclude [empty assert alter])
   (:require [clojure.set :as set]
             [falx.util :as util])
   (:import (java.util UUID)))
@@ -41,13 +41,13 @@
   ([db k & ks]
    (apply equery db k (mapcat vector ks (repeat true)))))
 
-(defn- retract
+(defn retract
   [db id k]
   (-> db
       (update :eav util/dissoc-in [id k])
       (update :ave util/disjoc-in [k (get (entity db id) k)] id)))
 
-(defn- assert
+(defn assert
   [db id k v]
   (let [db (retract db id k)]
     (-> db
@@ -55,50 +55,47 @@
         (assoc-in [:eav id :db/id] id)
         (update-in [:ave k v] (fnil conj #{}) id))))
 
-(defn tempid
-  ([]
-   (UUID/randomUUID)))
+(defn alter
+  ([db id k f]
+   (let [ev (get (entity db id) k)]
+     (assert db id k (f ev))))
+  ([db id k f & args]
+    (alter db id k #(apply f % args))))
 
 (defn next-id
   [db]
   [(inc (:id-seed db 0))
    (update db :id-seed (fnil inc 0))])
 
-(defmulti eval-txfn (fn [db tx] (nth tx 0)))
+(defn add
+  [db m]
+  (if-some [id (:db/id m)]
+    (reduce-kv #(assert %1 id %2 %3) db m)
+    (let [[id db] (next-id db)]
+      (recur db (assoc m :db/id id)))))
+
+(defn alter-entity
+  ([db id f]
+    (add db (f (assoc (entity db id) :db/id id))))
+  ([db id f & args]
+    (alter-entity db id #(apply f % args))))
+
+(defn retract-entity
+  ([db id]
+   (reduce-kv (fn [db k _] (retract db id k)) db (entity db id))))
+
+(defn tempid
+  ([]
+   (UUID/randomUUID)))
 
 (defn transact
   [db tx-data]
-  (let [id-seed (volatile! (:id-seed db 0))
-        resolve-id (fn [id] (or id (vswap! id-seed inc)))]
-    (->
-      (reduce
-        (fn ! [db tx]
-          (if (map? tx)
-            (let [id (resolve-id (:db/id tx))
-                  tx (assoc tx :db/id id)]
-              (reduce-kv #(assert %1 id %2 %3) db tx))
-            (case (nth tx 0)
-              :db/add (assert db (resolve-id (nth tx 1)) (nth tx 2) (nth tx 3))
-              :db/retract (retract db (resolve-id (nth tx 1)) (nth tx 2))
-              :db/update (let [id (resolve-id (nth tx 1))
-                               k (nth tx 2)
-                               f (nth tx 3)
-                               args (subvec tx 4)
-                               ev (get (entity db id) k)]
-                           (assert db id k (apply f ev args)))
-              :db/update-entity (let [id (resolve-id (nth tx 1))
-                                      f (nth tx 2)
-                                      args (subvec tx 3)
-                                      e (assoc (entity db id) :db/id id)]
-                                  (! db (apply f e args)))
-              :db/retract-entity (let [id (resolve-id (nth tx 1))
-                                       m (entity db id)]
-                                   (reduce-kv (fn [db k _] (retract db id k)) db m))
-              (reduce ! db (eval-txfn db tx)))))
-        db
-        tx-data)
-      (assoc :id-seed @id-seed))))
-
-(defn resolve-tempid
-  [tx-result id]
-  (-> tx-result :tempids (get id)))
+  (reduce
+    (fn ! [db tx]
+      (if (map? tx)
+        (add db tx)
+        (let [f (first tx)
+              args (rest tx)]
+          (apply f db args))))
+    db
+    tx-data))
