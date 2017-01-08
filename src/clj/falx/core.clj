@@ -93,9 +93,9 @@
   (let [frame (g/next-frame playing tick)
         g (g/game (:game frame))
         gs (:state frame)
-        [w h :as size] (:size (:config tick))]
+        size (:size (:config tick))]
     (when (not= size (gs/resolution gs))
-      (g/update-state! g gs/set-setting :resolution size))
+      (g/update-state! g gs/set-resolution size))
     (ui/handle!
       (ui/scene frame)
       frame)
@@ -178,10 +178,6 @@
            :active-party p
            :players      players})
         (gs/center-camera-on-pt [3 4]))))
-
-(defn gs
-  []
-  (g/state playing))
 
 (defn init!
   []

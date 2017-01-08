@@ -16,8 +16,7 @@
 
 (defn apply-changes
   [gs]
-  (-> (update gs :settings merge (-> gs :ui :options))
-      gs/center-camera-on-active-party))
+  (update gs :settings merge (-> gs :ui :options)))
 
 (defn apply-options!
   [frame]

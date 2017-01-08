@@ -17,8 +17,8 @@
         m1 (long (/ w 3))
         m2 (long (/ h 3.3))
         idx (volatile! -1)
-        x (+ x (* m1 0.6))
-        y (+ y (* m2 0.6))]
+        x (+ x (* m1 0.55))
+        y (+ y (* m2 0.1))]
     (doseq [e ents]
       (case (vswap! idx inc)
         0 (draw-model! gs e (+ x m1) (- y m2) w h)

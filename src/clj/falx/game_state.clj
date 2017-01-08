@@ -3,7 +3,7 @@
   (:require [falx.util :as util]
             [clojure.set :as set])
   (:import (java.util UUID)
-           (clojure.lang IFn)
+           (clojure.lang IFn PersistentQueue)
            (com.badlogic.gdx Input$Buttons)))
 
 (def empty
@@ -171,10 +171,6 @@
     gs
     tx-data))
 
-(defn set-setting
-  [gs k v]
-  (assoc-in gs [:settings k] v))
-
 (defn center-camera-on-pt
   ([gs pt]
    (let [[x y] pt]
@@ -212,34 +208,46 @@
   [gs cell]
   (first (filter (partial party? gs) (query gs :cell cell))))
 
-(defn attack
+(defn corpse-of
+  [e]
+  (let [cell (:cell e)]
+    {:type   :corpse
+     :cell   cell
+     :pt     (:pt cell)
+     :offset [(rand) (rand)]
+     :slice  {:level (:level cell)
+              :layer :corpse}
+     :level  (:level cell)
+     :layer  :corpse}))
+
+(defn melee-attack
   [gs attacker defender]
   (let [aparty (entity gs attacker)
         dparty (entity gs defender)
         aents (equery gs :party attacker)
-        dents (equery gs :party defender)
-        cell (:cell dparty)]
+        dents (equery gs :party defender)]
     (if (seq dents)
       (-> gs
           (retract-entity (:id (rand-nth (vec dents))))
-          (add {:type   :corpse
-                :cell   cell
-                :pt     (:pt cell)
-                :offset [(rand) (rand)]
-                :slice  {:level (:level cell)
-                         :layer :corpse}
-                :level  (:level cell)
-                :layer  :corpse})
+          (add (corpse-of dparty))
           (cond->
             (empty? (rest dents)) (retract-entity defender)))
       gs)))
 
-(defn move-party
+(defn turn-of?
+  [gs id]
+  (= id (peek (:turn-queue gs))))
+
+(defn end-turn
+  [gs]
+  (update gs :turn-queue (fnil pop PersistentQueue/EMPTY)))
+
+(defn- move-party*
   [gs id cell]
   (->
     (if (solid? gs cell)
       (if-some [opposing-party (party-at gs cell)]
-        (attack gs id opposing-party)
+        (melee-attack gs id opposing-party)
         gs)
       (let [{:keys [level pt]} cell]
         (add
@@ -250,8 +258,13 @@
            :pt    pt
            :layer :creature
            :slice {:layer :creature
-                   :level level}})))
-    (assoc :ai-turn? true)))
+                   :level level}})))))
+
+(defn move-party
+  [gs id cell]
+  (if (turn-of? gs id)
+    (-> (move-party* gs id cell) end-turn)
+    gs))
 
 (defn move-active-party
   [gs direction]
@@ -270,19 +283,6 @@
   (assoc gs :wait-seconds seconds
             :waiting-for 0.0))
 
-(defn play-ai-turn
-  [gs]
-  (if-some [id (peek (:ai-turn-sequence gs))]
-    (-> (update gs :ai-turn-sequence pop)
-        (wait 0.1))
-    (dissoc gs
-            :ai-turn-sequence
-            :ai-turn?)))
-
-(defn create-turn-sequence
-  [gs]
-  (assoc gs :ai-turn-sequence (vec (query gs :enemy? true :type :party))))
-
 (defn await-timeout
   [gs seconds delta]
   (if-some [waiting-for (:waiting-for gs)]
@@ -295,6 +295,4 @@
   [gs delta]
   (cond
     (:wait-seconds gs) (await-timeout gs (:wait-seconds gs) delta)
-    (:ai-turn-sequence gs) (play-ai-turn gs)
-    (:ai-turn? gs) (create-turn-sequence gs)
     :else gs))

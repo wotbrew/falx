@@ -160,3 +160,11 @@
       [(inc x) y]
       [x (inc y)]
       [(dec x) y]])))
+
+(defn cadj?
+  ([p p2]
+   (let [x1 (x p)
+         y1 (y p)
+         x2 (x p2)
+         y2 (y p2)]
+     (= 1 (Math/abs (+ (long (- x1 x2)) (long (- y1 y2))))))))
