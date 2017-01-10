@@ -6,6 +6,54 @@
            (clojure.lang IFn PersistentQueue)
            (com.badlogic.gdx Input$Buttons)))
 
+;; requests
+{:reqid #uuid "balbla"
+ :type     :spawn
+ :template :fred
+ :cell {:level :testing
+        :point [3 4]}
+ ;; optional
+ :add      {}
+ ;; optional
+ :id       0}
+
+{:type :step
+ :id 0
+ :direction :left}
+
+{:type :click
+ :point [3 4]}
+
+(comment
+  ;; request, returns {:request, :response, :events} response
+  (request gs req)
+  ;; apply event to return a new state
+  (apply-event gs event)
+  ;; apply response
+  (apply-response gs resp)
+
+  ;; send request and ignore responses, applying events immediately
+  (submit gs req)
+
+  ;; a request for a side effect from the engine
+  (perform gs effect))
+
+;; events
+{:type :spawned
+ :success? true
+ :template :fred
+ :add {}
+ :id 0
+ :entity {}}
+
+{:type :put
+ :success? true
+ :id 0
+ :old  {:level :testing
+        :point [3 4]}
+ :new  {:level :testing
+        :point [5 6]}}
+
 (def empty
   {:entity   {}
    :ave      {}
@@ -137,24 +185,6 @@
          (add e))
      (add gs e))))
 
-(defn id-lens
-  [id]
-  (reify util/ILens
-    (-lget [this gs] (entity gs id))
-    (-lset [this gs v] (replace-entity gs (assoc v :id id)))
-    IFn
-    (invoke [this x]
-      (util/-lget this x))))
-
-(defn entity-lens
-  [lens]
-  (reify util/ILens
-    (-lget [this gs] (entity gs (lens gs)))
-    (-lset [this gs v] (replace-entity gs (assoc v :id (lens gs))))
-    IFn
-    (invoke [this x]
-      (util/-lget this x))))
-
 (defn tempid
   ([]
    (UUID/randomUUID)))
@@ -188,7 +218,9 @@
     gs))
 
 (def active-party :active-party)
-(def active-party-entity (entity-lens active-party))
+(def active-party-entity
+  (fn [gs]
+    (entity gs (:active-party gs))))
 
 (defn center-camera-on-active-party
   [gs]

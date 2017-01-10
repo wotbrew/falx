@@ -29,6 +29,7 @@
 (def select
   (fn [gs id]
     (assoc-in gs [:ui :roster :selected] id)))
+
 (def can-delete? (complement :in-play?))
 
 (defn delete
