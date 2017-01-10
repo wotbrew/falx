@@ -17,22 +17,30 @@
   (gdx/texture-region ui/misc 64 0 32 32))
 
 (def roster (util/lens :ui :roster))
-(def selected (util/lens roster :selected))
-(def selected-entity (gs/entity-lens selected))
-(def select (util/setter selected))
+
+(defn selected
+  [gs]
+  (-> gs :ui :roster :selected))
+
+(defn selected-entity
+  [gs]
+  (gs/entity gs (selected gs)))
+
+(def select
+  (fn [gs id]
+    (assoc-in gs [:ui :roster :selected] id)))
 (def can-delete? (complement :in-play?))
 
 (defn delete
   [gs id]
   (let [selected (selected gs)]
-    (if-not (can-delete? gs (gs/entity gs id))
+    (if-not (can-delete? (gs/entity gs id))
       gs
       (-> gs
           (update :roster (partial into [] (remove #{id})))
+          (gs/retract-entity id)
           (cond->
-            (= selected id)
-            (-> (gs/retract-entity id)
-                (util/lset selected nil)))))))
+            (= selected id) (util/dissoc-in [:ui :roster :selected]))))))
 
 (defn delete-selected
   [gs]

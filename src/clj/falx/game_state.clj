@@ -7,7 +7,7 @@
            (com.badlogic.gdx Input$Buttons)))
 
 (def empty
-  {:eav      {}
+  {:entity   {}
    :ave      {}
    :id-seed  0
    :camera [0 0]
@@ -57,7 +57,7 @@
 
 (defn entity
   [gs id]
-  (-> gs :eav (get id)))
+  (-> gs :entity (get id)))
 
 (defn query
   ([gs k v]
@@ -71,9 +71,9 @@
 
 (defn equery
   ([gs k v]
-   (map (:eav gs) (query gs k v)))
+   (map (:entity gs) (query gs k v)))
   ([gs k v & kvs]
-   (map (:eav gs) (apply query gs k v kvs))))
+   (map (:entity gs) (apply query gs k v kvs))))
 
 (defn with
   ([gs k]
@@ -90,15 +90,15 @@
 (defn retract
   [gs id k]
   (-> gs
-      (update :eav util/dissoc-in [id k])
+      (update :entity util/dissoc-in [id k])
       (update :ave util/disjoc-in [k (get (entity gs id) k)] id)))
 
 (defn assert
   [gs id k v]
   (let [gs (retract gs id k)]
     (-> gs
-        (assoc-in [:eav id k] v)
-        (assoc-in [:eav id :id] id)
+        (assoc-in [:entity id k] v)
+        (assoc-in [:entity id :id] id)
         (update-in [:ave k v] (fnil conj #{}) id))))
 
 (defn alter
@@ -214,7 +214,9 @@
     {:type   :corpse
      :cell   cell
      :pt     (:pt cell)
-     :offset [(rand) (rand)]
+     :offset (let [x (+ (rand 2) -1)
+                   y (+ (rand 2) -1)]
+               [x y])
      :slice  {:level (:level cell)
               :layer :corpse}
      :level  (:level cell)
@@ -236,6 +238,8 @@
 
 (defn turn-of?
   [gs id]
+  true
+  #_
   (= id (peek (:turn-queue gs))))
 
 (defn end-turn
@@ -244,21 +248,20 @@
 
 (defn- move-party*
   [gs id cell]
-  (->
-    (if (solid? gs cell)
-      (if-some [opposing-party (party-at gs cell)]
-        (melee-attack gs id opposing-party)
-        gs)
-      (let [{:keys [level pt]} cell]
-        (add
-          gs
-          {:id id
-           :cell  cell
-           :level level
-           :pt    pt
-           :layer :creature
-           :slice {:layer :creature
-                   :level level}})))))
+  (if (solid? gs cell)
+    (if-some [opposing-party (party-at gs cell)]
+      (melee-attack gs id opposing-party)
+      gs)
+    (let [{:keys [level pt]} cell]
+      (add
+        gs
+        {:id    id
+         :cell  cell
+         :level level
+         :pt    pt
+         :layer :creature
+         :slice {:layer :creature
+                 :level level}}))))
 
 (defn move-party
   [gs id cell]

@@ -27,8 +27,8 @@
     :floor (gdx/draw! tmpfloor x y w h)
     :corpse (let [[ox oy] (:offset e [0.0 0.0])
                   [cw ch] (gs/cell-size gs)
-                  x (+ x (- cw) (* ox cw))
-                  y (+ y (- ch) (* oy ch))]
+                  x (+ x (* ox cw))
+                  y (+ y (* oy ch))]
               (gdx/draw! tmpcorpse x y w h))
     (gdx/draw! "?" x y w h)))
 

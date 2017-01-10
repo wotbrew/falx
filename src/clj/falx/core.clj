@@ -139,7 +139,7 @@
 
 (g/set-state!
   playing
-  (let [p  (gs/tempid)
+  (let [p (gs/tempid)
         players (vec (repeatedly 6 gs/tempid))]
     (-> gs/empty
         (gs/transact
@@ -167,10 +167,10 @@
             (for [pl players]
               (merge
                 (falx.character/genbody)
-                {:id pl
-                 :type :creature
-                 :party p
-                 :solid? true
+                {:id      pl
+                 :type    :creature
+                 :party   p
+                 :solid?  true
                  :player? true}))))
         (merge
           {:scene        :play
@@ -178,6 +178,10 @@
            :active-party p
            :players      players})
         (gs/center-camera-on-pt [3 4]))))
+
+(defn gs
+  []
+  (g/state playing))
 
 (defn init!
   []
