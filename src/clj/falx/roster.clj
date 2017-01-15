@@ -37,7 +37,7 @@
       gs
       (-> gs
           (update :roster (partial into [] (remove #{id})))
-          (gs/retract-entity id)
+          (gs/del-entity id)
           (cond->
             (= selected id) (util/dissoc-in [:ui :roster :selected]))))))
 
@@ -214,7 +214,7 @@
 
 (defn create
   [gs]
-  (let [[id gs] (gs/next-id gs)
+  (let [id (gs/tempid)
         body (char/genbody)]
     (-> gs
         (gs/transact

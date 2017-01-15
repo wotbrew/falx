@@ -1,7 +1,8 @@
 (ns falx.game-state
   (:refer-clojure :exclude [empty assert alter])
   (:require [falx.util :as util]
-            [clojure.set :as set])
+            [clojure.set :as set]
+            [falx.point :as pt])
   (:import (java.util UUID)
            (clojure.lang PersistentQueue)
            (com.badlogic.gdx Input$Buttons)))
@@ -37,79 +38,62 @@
        (recur (set/intersection ret (query gs k v)) kvs)
        ret))))
 
-(defn equery
-  ([gs k v]
-   (map (:entity gs) (query gs k v)))
-  ([gs k v & kvs]
-   (map (:entity gs) (apply query gs k v kvs))))
-
-(defn with
-  ([gs k]
-   (query gs k true))
-  ([gs k & ks]
-   (apply query gs k (mapcat vector ks (repeat true)))))
-
-(defn retract
+(defn del-attr
   [gs id k]
   (-> gs
       (update :entity util/dissoc-in [id k])
       (update :ave util/disjoc-in [k (get (pull gs id) k)] id)))
 
-(defn assert
+(defn add-attr
   [gs id k v]
-  (let [gs (retract gs id k)]
+  (let [gs (del-attr gs id k)]
     (-> gs
         (assoc-in [:entity id k] v)
         (assoc-in [:entity id :id] id)
         (update-in [:ave k v] (fnil conj #{}) id))))
 
-(defn alter
+(defn alter-attr
   ([gs id k f]
    (let [ev (get (pull gs id) k)]
-     (assert gs id k (f ev))))
+     (add-attr gs id k (f ev))))
   ([gs id k f & args]
-   (alter gs id k #(apply f % args))))
+   (alter-attr gs id k #(apply f % args))))
 
-(defn next-id
-  [gs]
-  [(inc (:id-seed gs 0))
-   (update gs :id-seed (fnil inc 0))])
-
-(defn add
+(defn add-entity
   [gs e]
   (if-some [id (:id e)]
-    (reduce-kv #(assert %1 id %2 %3) gs e)
-    (let [[id gs] (next-id gs)]
-      (recur gs (assoc e :id id)))))
+    (reduce-kv #(add-attr %1 id %2 %3) gs e)
+    (recur gs (assoc e :id (tempid)))))
 
 (defn alter-entity
   ([gs id f]
-   (add gs (f (assoc (pull gs id) :id id))))
+   (add-entity gs (f (assoc (pull gs id) :id id))))
   ([gs id f & args]
    (alter-entity gs id #(apply f % args))))
 
-(defn retract-entity
+(defn del-entity
   ([gs id]
-   (reduce-kv (fn [gs k _] (retract gs id k)) gs (pull gs id))))
+   (reduce-kv (fn [gs k _] (del-attr gs id k)) gs (pull gs id))))
 
 (defn replace-entity
   ([gs e]
    (if-some [id (:id e)]
-     (-> (retract-entity gs id)
-         (add e))
-     (add gs e))))
+     (-> (del-entity gs id)
+         (add-entity e))
+     (add-entity gs e))))
 
 (defn transact
   [gs tx-data]
   (reduce
     (fn ! [db tx]
       (if (map? tx)
-        (add db tx)
+        (add-entity db tx)
         (let [f (first tx)
               args (rest tx)]
           (apply f db args))))
     gs
     tx-data))
+
 
 (defn center-camera-on-pt
   ([gs pt]
@@ -164,10 +148,10 @@
         dents (pull-many gs (query gs :party defender))]
     (if (seq dents)
       (-> gs
-          (retract-entity (:id (rand-nth (vec dents))))
-          (add (corpse-of dparty))
+          (del-entity (:id (rand-nth (vec dents))))
+          (add-entity (corpse-of dparty))
           (cond->
-            (empty? (rest dents)) (retract-entity defender)))
+            (empty? (rest dents)) (del-entity defender)))
       gs)))
 
 (defn turn-of?
@@ -187,7 +171,7 @@
       (melee-attack gs id opposing-party)
       gs)
     (let [{:keys [level pt]} cell]
-      (add
+      (add-entity
         gs
         {:id    id
          :cell  cell
@@ -212,7 +196,7 @@
           {:keys [level pt]} cell]
       (if (and cell id)
         (-> (move-party gs id {:level level
-                               :pt (mapv + pt direction)})
+                               :pt    (pt/add pt direction)})
             (center-camera-on id))
         gs))))
 

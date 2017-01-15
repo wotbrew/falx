@@ -75,7 +75,7 @@
         (when (neg? delta-z)
           (g/update-state! (:game frame) update-in [:settings :cell-size] (comp pt/dpoint pt/div) 0.9))
         (when (pos? delta-z)
-          (g/update-state! (:game frame) update-in [:settigns :cell-size] pt/mul 0.9))
+          (g/update-state! (:game frame) update-in [:settings :cell-size] pt/mul 0.9))
         (when (or (not= 0 delta-x)
                   (not= 0 delta-y))
           (g/update-state!
