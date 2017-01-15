@@ -16,15 +16,13 @@
 (def in-play-icon
   (gdx/texture-region ui/misc 64 0 32 32))
 
-(def roster (util/lens :ui :roster))
-
 (defn selected
   [gs]
   (-> gs :ui :roster :selected))
 
 (defn selected-entity
   [gs]
-  (gs/entity gs (selected gs)))
+  (gs/pull gs (selected gs)))
 
 (def select
   (fn [gs id]
@@ -35,7 +33,7 @@
 (defn delete
   [gs id]
   (let [selected (selected gs)]
-    (if-not (can-delete? (gs/entity gs id))
+    (if-not (can-delete? (gs/pull gs id))
       gs
       (-> gs
           (update :roster (partial into [] (remove #{id})))
@@ -108,7 +106,7 @@
                          (comp
                            (drop skip)
                            (take max-ids)
-                           (map (partial gs/entity gs)))
+                           (map (partial gs/pull gs)))
                          (map #(ui/resize
                                 cscale cscale
                                 (ui/stack

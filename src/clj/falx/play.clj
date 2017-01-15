@@ -26,7 +26,7 @@
     :party (party/draw! gs e x y w h)
     :floor (gdx/draw! tmpfloor x y w h)
     :corpse (let [[ox oy] (:offset e [0.0 0.0])
-                  [cw ch] (gs/cell-size gs)
+                  [cw ch] (-> gs :settings :cell-size)
                   x (+ x (* ox cw))
                   y (+ y (* oy ch))]
               (gdx/draw! tmpcorpse x y w h))
@@ -34,11 +34,11 @@
 
 (defn draw-slice!
   [gs slice]
-  (let [[cw ch] (gs/cell-size gs)
+  (let [[cw ch] (-> gs :settings :cell-size)
         cw (long cw)
         ch (long ch)]
     (doseq [eid (gs/query gs :slice slice)
-            :let [e (gs/entity gs eid)
+            :let [e (gs/pull gs eid)
                   [x y] (:pt e)]
             :when (some? x)]
       (draw-entity! gs e (* x cw) (* y ch) cw ch))))
@@ -73,14 +73,16 @@
             delta-z (:scroll-delta (:tick frame) 0)
             delta (:delta (:tick frame))]
         (when (neg? delta-z)
-          (g/update-state! (:game frame) gs/update-cell-size (comp pt/dpoint pt/div) 0.9))
+          (g/update-state! (:game frame) update-in [:settings :cell-size] (comp pt/dpoint pt/div) 0.9))
         (when (pos? delta-z)
-          (g/update-state! (:game frame) gs/update-cell-size pt/mul 0.9))
+          (g/update-state! (:game frame) update-in [:settigns :cell-size] pt/mul 0.9))
         (when (or (not= 0 delta-x)
                   (not= 0 delta-y))
           (g/update-state!
             (:game frame)
-            gs/update-camera pt/add
+            update
+            :camera
+            pt/add
             [(* 250 delta-x mod delta)
              (* 250 delta-y mod delta)]))))))
 

@@ -62,7 +62,7 @@
 (defn selected-aspect-ratio
   [gs]
   (or (-> gs :ui :options :aspect-ratio)
-      (gs/aspect-ratio gs)))
+      (-> gs :settings :aspect-ratio)))
 
 (defn prev-aspect-ratio
   [gs]
@@ -78,7 +78,7 @@
   [gs ratio]
   (->
     (if (or (nil? ratio)
-            (= ratio (gs/aspect-ratio gs)))
+            (= ratio (-> gs :settings :aspect-ratio)))
       (util/dissoc-in gs [:ui :options :aspect-ratio])
       (assoc-in gs [:ui :options :aspect-ratio] ratio))
     (select-resolution (first (get resolutions ratio)))))
@@ -93,12 +93,12 @@
 (defn selected-resolution
   [gs]
   (or (-> gs :ui :options :resolution)
-      (gs/resolution gs)))
+      (-> gs :settings :resolution)))
 
 (defn select-resolution
   [gs size]
   (if (or (nil? size)
-          (= size (gs/resolution gs)))
+          (= size (-> gs :settings :resolution)))
     (util/dissoc-in gs [:ui :options :resolution])
     (assoc-in gs [:ui :options :resolution] size)))
 
@@ -172,7 +172,7 @@
 (defn selected-cell-size
   [gs]
   (or (-> gs :ui :options :cell-size)
-      (gs/cell-size gs)))
+      (-> gs :settings :cell-size)))
 
 (defn prev-cell-size
   [gs]
@@ -184,7 +184,7 @@
 
 (defn select-cell-size
   [gs size]
-  (if (or (nil? size) (= size (gs/cell-size gs)))
+  (if (or (nil? size) (= size (-> gs :settings :cell-size)))
     (util/dissoc-in gs [:ui :options :cell-size])
     (assoc-in gs [:ui :options :cell-size] size)))
 

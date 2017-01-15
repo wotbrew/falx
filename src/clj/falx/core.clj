@@ -94,8 +94,8 @@
         g (g/game (:game frame))
         gs (:state frame)
         size (:size (:config tick))]
-    (when (not= size (gs/resolution gs))
-      (g/update-state! g gs/set-resolution size))
+    (when (not= size (-> gs :settings :resolution))
+      (g/update-state! g assoc-in [:settings :resolution] size))
     (ui/handle!
       (ui/scene frame)
       frame)

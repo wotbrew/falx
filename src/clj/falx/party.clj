@@ -31,7 +31,7 @@
 
 (defn draw!
   [gs e x y w h]
-  (when-some [ents (seq (map (partial gs/entity gs)
+  (when-some [ents (seq (map (partial gs/pull gs)
                              (if (:player-party? e)
                                (:players gs)
                                (gs/query gs :party (:id e)))))]

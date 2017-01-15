@@ -45,11 +45,11 @@
 (defn clicked?
   [frame x y w h]
   (and (mouse-in? frame x y w h)
-       (let [btn (gs/click-button (:state frame))]
+       (let [btn (-> frame :state :settings :click-button)]
          (button-hit? frame btn))))
 
 (defn alt-clicked?
   [frame x y w h]
   (and (mouse-in? frame x y w h)
-       (let [btn (gs/click-button (:state frame))]
+       (let [btn (-> frame :state :settings :alt-click-button)]
          (button-hit? frame btn))))
