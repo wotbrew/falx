@@ -97,7 +97,7 @@
                       (frame/key-hit? frame Input$Keys/W) [0 -1]
                       :else [0 0])]
           (when (not= delta [0 0])
-            (g/update-state! (:game frame) gs/move-active-party delta)))))))
+            (g/update-state! (:game frame) gs/step-active-party delta)))))))
 
 (ui/defscene :play
   camera-handler

@@ -8,7 +8,7 @@
            (com.badlogic.gdx Input$Buttons)))
 
 (def empty
-  {:entity   {}
+  {:entities   {}
    :ave      {}
    :id-seed  0
    :camera [0 0]
@@ -22,11 +22,11 @@
 
 (defn pull
   [gs id]
-  (-> gs :entity (get id)))
+  (-> gs :entities (get id)))
 
 (defn pull-many
   [gs ids]
-  (map (:entity gs) ids))
+  (map (:entities gs) ids))
 
 (defn query
   ([gs k v]
@@ -41,15 +41,15 @@
 (defn del-attr
   [gs id k]
   (-> gs
-      (update :entity util/dissoc-in [id k])
+      (update :entities util/dissoc-in [id k])
       (update :ave util/disjoc-in [k (get (pull gs id) k)] id)))
 
 (defn add-attr
   [gs id k v]
   (let [gs (del-attr gs id k)]
     (-> gs
-        (assoc-in [:entity id k] v)
-        (assoc-in [:entity id :id] id)
+        (assoc-in [:entities id k] v)
+        (assoc-in [:entities id :id] id)
         (update-in [:ave k v] (fnil conj #{}) id))))
 
 (defn alter-attr
@@ -126,6 +126,18 @@
   [gs cell]
   (first (filter (partial party? gs) (query gs :cell cell))))
 
+(defn turn-of?
+  [gs id]
+  (= id (peek (:turn-queue gs))))
+
+(defn end-turn
+  [gs]
+  (update gs :turn-queue (fnil pop PersistentQueue/EMPTY)))
+
+(defn fresh-turn-queue
+  [gs]
+  (into PersistentQueue/EMPTY (query gs :type :party)))
+
 (defn corpse-of
   [e]
   (let [cell (:cell e)]
@@ -154,16 +166,6 @@
             (empty? (rest dents)) (del-entity defender)))
       gs)))
 
-(defn turn-of?
-  [gs id]
-  true
-  #_
-  (= id (peek (:turn-queue gs))))
-
-(defn end-turn
-  [gs]
-  (update gs :turn-queue (fnil pop PersistentQueue/EMPTY)))
-
 (defn- move-party*
   [gs id cell]
   (if (solid? gs cell)
@@ -187,7 +189,7 @@
     (-> (move-party* gs id cell) end-turn)
     gs))
 
-(defn move-active-party
+(defn step-active-party
   [gs direction]
   (if (= direction [0 0])
     gs
@@ -213,8 +215,31 @@
       (dissoc gs :waiting-for :wait-seconds))
     gs))
 
+(defn tick-ai
+  [gs id]
+  (let [dir (rand-nth pt/cardinals)
+        {:keys [cell pt level]} (pull gs id)
+        newpt (some-> pt (pt/add dir))
+        newcell (when newpt {:level level :pt newpt})]
+    (if newcell
+      (-> (move-party gs id newcell)
+          (wait 0.2))
+      (end-turn gs))))
+
+(defn handle-turn
+  [gs]
+  (let [{:keys [active-party
+                turn-queue]} gs
+        acting (peek turn-queue)]
+    (if (= active-party acting)
+      gs
+      (tick-ai gs acting))))
+
 (defn simulate
   [gs delta]
   (cond
     (:wait-seconds gs) (await-timeout gs (:wait-seconds gs) delta)
-    :else gs))
+    (empty? (:turn-queue gs)) (if-some [tq (not-empty (fresh-turn-queue gs))]
+                                (recur (assoc gs :turn-queue tq) delta)
+                                gs)
+    :else (handle-turn gs)))
