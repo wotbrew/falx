@@ -1,6 +1,8 @@
 (ns falx.core
   (:require [falx.gdx :as gdx]
-            [falx.game-state :as gs]))
+            [falx.game-state :as gs]
+            [falx.input :as input]
+            [falx.util :as util]))
 
 (def temp
   (let [p (gs/generate-eid)]
@@ -18,4 +20,5 @@
 
 (gdx/on-tick render
   [tick]
-  )
+  (let [input (input/gdx-input tick)]
+    (gdx/draw! (util/pprint-str input) [0 0 640 480])))

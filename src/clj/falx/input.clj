@@ -1,4 +1,5 @@
-(ns falx.input)
+(ns falx.input
+  (:require [falx.game-state :as gs]))
 
 (def gdx-buttons
   {0 :button/left
@@ -146,3 +147,12 @@
    253 :key/f10
    254 :key/f11
    255 :key/f12})
+
+(defn gdx-input
+  [tick]
+  (gs/->Input
+    (into #{} cat [(map gdx-buttons (:buttons-hit tick))
+                   (map gdx-keys (:keys-hit tick))])
+    (into #{} cat [(map gdx-buttons (:buttons-down tick))
+                   (map gdx-keys (:keys-down tick))])
+    (:mouse-loc tick)))
