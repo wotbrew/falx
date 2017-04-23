@@ -1,245 +1,375 @@
 (ns falx.game-state
-  (:refer-clojure :exclude [empty assert alter])
-  (:require [falx.util :as util]
+  (:refer-clojure :exclude [assert])
+  (:require [clojure.tools.logging :refer [info warn error]]
+            [falx.point :as pt]
+            [falx.util :as util]
             [clojure.set :as set]
-            [falx.point :as pt])
+            [falx.gdx :as gdx])
   (:import (java.util UUID)
-           (clojure.lang PersistentQueue)
-           (com.badlogic.gdx Input$Buttons)))
+           (java.io Writer)))
 
-(def empty
-  {:entities   {}
-   :ave      {}
-   :id-seed  0
-   :camera [0 0]
-   :settings {:aspect-ratio 4/3
-              :resolution       [640 480]
-              :cell-size        [64 64]
-              :click-button     Input$Buttons/LEFT
-              :alt-click-button Input$Buttons/RIGHT}})
+(alias 'c 'clojure.core)
 
-(defn tempid [] (UUID/randomUUID))
+(defrecord Settings [cell-size resolution binding])
 
-(defn pull
-  [gs id]
-  (-> gs :entities (get id)))
+(def default-settings
+  (map->Settings
+    {:cell-size  [64 64]
+     :resolution {}
+     :bindin     {:bind/click        {:hit :button/left}
+                  :bind/alt-click    {:hit :button/right}
+                  :bind/camera-fast  {:pressed #{:key/shift-left :key/shift-right}}
+                  :bind/camera-up    {:pressed :key/w}
+                  :bind/camera-left  {:pressed :key/a}
+                  :bind/camera-down  {:pressed :key/s}
+                  :bind/camera-right {:pressed :key/d}
 
-(defn pull-many
-  [gs ids]
-  (map (:entities gs) ids))
+                  :bind/quick-save   {:pressed #{:key/control-left :key/control-right}
+                                      :hit     :key/s}}}))
+
+(defrecord Input [hit pressed mouse])
+
+(def empty-input
+  (map->Input
+    {:mouse   [0 0]
+     :pressed #{}
+     :hit     #{}}))
+
+(let [button {0 :button/left
+              1 :button/right
+              2 :button/middle}
+      key {}]
+  (defn get-input
+    []
+    ))
+
+(gdx/describe-button-code 1)
+(gdx/describe-button-code 0)
+(gdx/describe-button-code 2)
+
+(defrecord GameState [eav ave schedule events requests input binds settings])
+
+(defmethod print-method GameState
+  [o ^Writer w]
+  (.write w "#game-state [")
+  (print-method {:entities (count (:eav o))} w)
+  (.write w "]"))
+
+(defn game-state?
+  [x]
+  (instance? GameState x))
+
+(defn game-state
+  ([]
+   (map->GameState
+     {:eav      {}
+      :ave      {}
+      :events   []
+      :requests []
+      :input    empty-input
+      :binds #{}
+      :settings default-settings})))
+
+(defonce reactions (atom {}))
+
+(defn pub
+  ([gs event]
+   (let [gs (update gs :events (fnil conj []) event)
+         {:keys [:event/type]} event
+         reactions (-> reactions :event (get type))]
+     (reduce-kv (fn [gs k f] (or (f gs event) gs)) gs reactions)))
+  ([gs event & more]
+   (reduce gs (pub gs event) more)))
+
+(defn do-defreaction
+  [k event-type f]
+  (swap!
+    reactions
+    (fn [m]
+      (let [old (-> m :key (get k))]
+        (-> m
+            (util/dissoc-in [:event old k])
+            (assoc-in [:event event-type k] f)
+            (assoc-in [:key k] event-type)))))
+  nil)
+
+(defmacro defreaction
+  [name event-type binding & body]
+  (let [k (keyword (str *ns*) (str name))]
+    `(do-defreaction ~k ~event-type (fn ~name ~binding ~@body))))
+
+(defn request
+  ([gs req])
+  ([gs req & more]))
+
+(defmulti respond (fn [gs req resp] (:request/type req)))
+
+(defmulti do-command (fn [gs cmd] (:command/type cmd)))
+
+(defmethod do-command :default
+  [gs command]
+  (warn "Unknown command" (:command/type command))
+  {:gs gs})
+
+(defmulti legal-command? (fn [gs cmd] (:command/type cmd)))
+
+(defmethod legal-command? :default
+  [_ _]
+  true)
+
+(defn legal?
+  [gs command]
+  (legal-command? gs command))
+
+(defn command
+  ([gs cmd]
+   (if (legal? gs cmd)
+     (or (do-command gs cmd) gs)
+     gs))
+  ([gs cmd & more]
+   (reduce command (command gs cmd) more)))
+
+;; Entities
+
+(defrecord EntityId [uuid])
+
+(defn eid?
+  [x]
+  (instance? EntityId x))
+
+(defn entity?
+  [x]
+  (and (map? x) (eid? (:entity/id x))))
+
+(defn generate-eid
+  []
+  (->EntityId (str (UUID/randomUUID))))
+
+(defn exists?
+  [gs eid]
+  (let [{:keys [eav]} gs]
+    (contains? eav eid)))
+
+(defn entity
+  [gs eid]
+  (-> gs :eav (get eid)))
+
+(defn all-eids
+  [gs]
+  (keys (:eav gs)))
+
+(defn all-entities
+  [gs]
+  (map (:eav gs) (all-eids gs)))
+
+(defn eid-of
+  [gs x]
+  (cond
+    (eid? x) x
+    (entity? x) (:entity/id (entity gs (:entity/id x)))))
 
 (defn query
   ([gs k v]
-   (-> gs :ave (get k) (get v) (or #{})))
+   (or
+     (-> gs :ave (get k) (get v))
+     #{}))
   ([gs k v & kvs]
-   (loop [ret (query gs k v)
+   (loop [set (query gs k v)
           kvs kvs]
-     (if-some [[k v & kvs] (seq kvs)]
-       (recur (set/intersection ret (query gs k v)) kvs)
-       ret))))
+     (if (empty? set)
+       set
+       (if-some [[k v & rest] (seq kvs)]
+         (recur (set/intersection set (query gs k v))
+                rest)
+         set)))))
 
-(defn del-attr
-  [gs id k]
-  (-> gs
-      (update :entities util/dissoc-in [id k])
-      (update :ave util/disjoc-in [k (get (pull gs id) k)] id)))
+(defn where
+  ([gs k]
+   (query gs k true))
+  ([gs k & ks]
+   (loop [set (query gs k true)
+          ks ks]
+     (if (empty? set)
+       set
+       (if-some [[k & rest] (seq ks)]
+         (recur (set/intersection set (query gs k true))
+                rest)
+         set)))))
 
-(defn add-attr
-  [gs id k v]
-  (let [gs (del-attr gs id k)]
-    (-> gs
-        (assoc-in [:entities id k] v)
-        (assoc-in [:entities id :id] id)
-        (update-in [:ave k v] (fnil conj #{}) id))))
+(defn assert
+  ([gs eid k v]
+   (let [{:keys [eav ave]} gs
+         e (-> eav (get eid))
+         ne (assoc e k v)]
+     (assoc gs
+       :eav (assoc eav eid ne)
+       :ave (-> ave
+                (util/disjoc-in [k (get e k)] eid)
+                (update-in [k v] (fnil conj #{}) eid)))))
+  ([gs eid k v & kvs]
+   (loop [gs (assert gs eid k v)
+          kvs kvs]
+     (if-some [[k v & rest] (seq kvs)]
+       (recur (assert gs eid k v) rest)
+       gs))))
 
-(defn alter-attr
-  ([gs id k f]
-   (let [ev (get (pull gs id) k)]
-     (add-attr gs id k (f ev))))
-  ([gs id k f & args]
-   (alter-attr gs id k #(apply f % args))))
+(defn retract
+  ([gs eid k]
+   (let [{:keys [eav ave]} gs
+         v (-> eav (get eid) (get k))]
+     (assoc gs
+       :eav (util/dissoc-in eav [eid k])
+       :ave (util/disjoc-in ave [k v] eid))))
+  ([gs eid k & ks]
+   (loop [gs (retract gs eid k)
+          ks ks]
+     (if-some [[k & rest] (seq ks)]
+       (recur (retract gs eid k) rest)
+       gs))))
 
-(defn add-entity
-  [gs e]
-  (if-some [id (:id e)]
-    (reduce-kv #(add-attr %1 id %2 %3) gs e)
-    (recur gs (assoc e :id (tempid)))))
+(defn attribute
+  ([gs eid k]
+   (-> gs :eav (get eid) (get k)))
+  ([gs eid k not-found]
+   (-> gs :eav (get eid) (get k not-found))))
 
-(defn alter-entity
-  ([gs id f]
-   (add-entity gs (f (assoc (pull gs id) :id id))))
-  ([gs id f & args]
-   (alter-entity gs id #(apply f % args))))
+(defn delete
+  ([gs eid]
+   (reduce (fn [gs k] (retract gs eid k)) gs (keys (entity gs eid))))
+  ([gs eid & more]
+   (reduce delete (delete gs eid) more)))
 
-(defn del-entity
-  ([gs id]
-   (reduce-kv (fn [gs k _] (del-attr gs id k)) gs (pull gs id))))
-
-(defn replace-entity
+(defn add
   ([gs e]
-   (if-some [id (:id e)]
-     (-> (del-entity gs id)
-         (add-entity e))
-     (add-entity gs e))))
+   (let [{:keys [:entity/id]} e]
+     (reduce-kv (fn [gs k v] (assert gs id k v)) gs e)))
+  ([gs e & more]
+   (reduce add (add gs e) more)))
 
-(defn transact
-  [gs tx-data]
-  (reduce
-    (fn ! [db tx]
-      (if (map? tx)
-        (add-entity db tx)
-        (let [f (first tx)
-              args (rest tx)]
-          (apply f db args))))
-    gs
-    tx-data))
+;; Input
 
+(defn handle-input
+  [gs input]
+  (let [{:keys [hit pressed]
+         :or   {hit     #{}
+                pressed #{}}} input
+        {:keys [settings]
+         previous-input :input} gs
+        {:keys [binding]} settings
+        bind-active? (fn bind-active? [bind]
+                       (cond
+                         (map? bind)
+                         (let [{req-pressed :pressed
+                                req-hit     :hit} bind]
+                           (and
+                             (cond
+                               (keyword? req-pressed) (pressed req-pressed)
+                               (empty? req-pressed) true
+                               (set? req-pressed) (some pressed req-pressed)
+                               (vector? req-pressed) (every? pressed req-pressed))
+                             (cond
+                               (keyword? req-hit) (hit req-hit)
+                               (empty? req-hit) true
+                               (set? req-hit) (some hit req-hit)
+                               (vector? req-hit) (every? hit req-hit))))
+                         (vector? bind)
+                         (every? bind-active? bind)
+                         (set? bind)
+                         (some bind-active? bind)))
+        binds (reduce-kv
+                (fn [acc k bind]
+                  (if (bind-active? bind)
+                    (conj acc k)
+                    acc))
+                #{}
+                binding)]
+    (-> (assoc gs
+          :input input
+          :binds binds)
+        (pub {:event/type :event.type/new-input
+              :previous-input previous-input
+              :input input
+              :binds binds}))))
 
-(defn center-camera-on-pt
-  ([gs pt]
-   (let [[x y] pt]
-     (center-camera-on-pt gs x y)))
-  ([gs x y]
-   (let [{:keys [settings]} gs
-         {[cw ch] :cell-size
-          [sw sh] :resolution} settings]
-     (assoc gs :camera [(double (+ (/ sw 2) (* x (- cw)) (/ (- cw) 2)))
-                        (double (+ (/ sh 2) (* y (- ch)) (/ (- ch) 2)))]))))
+;; Locations
 
-(defn center-camera-on
-  [gs id]
-  (if-some [pt (:pt (pull gs id))]
-    (center-camera-on-pt gs pt)
-    gs))
+(defrecord Cell [area point])
 
-(defn solid?
-  [gs cell]
-  (some :solid? (pull-many gs (query gs :cell cell))))
+(defn cell?
+  [x]
+  (instance? Cell x))
 
-(defn party?
-  ([e]
-   (= (:type e) :party))
-  ([gs id]
-   (party? (pull gs id))))
+(defrecord Slice [area layer])
 
-(defn party-at
-  [gs cell]
-  (first (filter (partial party? gs) (query gs :cell cell))))
+(defn slice?
+  [x]
+  (instance? Slice x))
 
-(defn turn-of?
-  [gs id]
-  (= id (peek (:turn-queue gs))))
-
-(defn end-turn
-  [gs]
-  (update gs :turn-queue (fnil pop PersistentQueue/EMPTY)))
-
-(defn fresh-turn-queue
-  [gs]
-  (into PersistentQueue/EMPTY (query gs :type :party)))
-
-(defn corpse-of
-  [e]
-  (let [cell (:cell e)]
-    {:type   :corpse
-     :cell   cell
-     :pt     (:pt cell)
-     :offset (let [x (+ (rand 2) -1)
-                   y (+ (rand 2) -1)]
-               [x y])
-     :slice  {:level (:level cell)
-              :layer :corpse}
-     :level  (:level cell)
-     :layer  :corpse}))
-
-(defn melee-attack
-  [gs attacker defender]
-  (let [aparty (pull gs attacker)
-        dparty (pull gs defender)
-        aents (pull-many gs (query gs :party attacker))
-        dents (pull-many gs (query gs :party defender))]
-    (if (seq dents)
-      (-> gs
-          (del-entity (:id (rand-nth (vec dents))))
-          (add-entity (corpse-of dparty))
-          (cond->
-            (empty? (rest dents)) (del-entity defender)))
-      gs)))
-
-(defn- move-party*
-  [gs id cell]
-  (if (solid? gs cell)
-    (if-some [opposing-party (party-at gs cell)]
-      (melee-attack gs id opposing-party)
-      gs)
-    (let [{:keys [level pt]} cell]
-      (add-entity
-        gs
-        {:id    id
-         :cell  cell
-         :level level
-         :pt    pt
-         :layer :creature
-         :slice {:layer :creature
-                 :level level}}))))
-
-(defn move-party
-  [gs id cell]
-  (if (turn-of? gs id)
-    (-> (move-party* gs id cell) end-turn)
-    gs))
-
-(defn step-active-party
-  [gs direction]
-  (if (= direction [0 0])
-    gs
-    (let [{:keys [active-party]} gs
-          {:keys [id cell]} (pull gs active-party)
-          {:keys [level pt]} cell]
-      (if (and cell id)
-        (-> (move-party gs id {:level level
-                               :pt    (pt/add pt direction)})
-            (center-camera-on id))
-        gs))))
-
-(defn wait
-  [gs seconds]
-  (assoc gs :wait-seconds seconds
-            :waiting-for 0.0))
-
-(defn await-timeout
-  [gs seconds delta]
-  (if-some [waiting-for (:waiting-for gs)]
-    (if (< (+ waiting-for delta) seconds)
-      (assoc gs :waiting-for (+ waiting-for delta))
-      (dissoc gs :waiting-for :wait-seconds))
-    gs))
-
-(defn tick-ai
-  [gs id]
-  (let [dir (rand-nth pt/cardinals)
-        {:keys [cell pt level]} (pull gs id)
-        newpt (some-> pt (pt/add dir))
-        newcell (when newpt {:level level :pt newpt})]
-    (if newcell
-      (-> (move-party gs id newcell)
-          (wait 0.2))
-      (end-turn gs))))
-
-(defn handle-turn
-  [gs]
-  (let [{:keys [active-party
-                turn-queue]} gs
-        acting (peek turn-queue)]
-    (if (= active-party acting)
-      gs
-      (tick-ai gs acting))))
-
-(defn simulate
-  [gs delta]
+(defn cell-of
+  [gs x]
   (cond
-    (:wait-seconds gs) (await-timeout gs (:wait-seconds gs) delta)
-    (empty? (:turn-queue gs)) (if-some [tq (not-empty (fresh-turn-queue gs))]
-                                (recur (assoc gs :turn-queue tq) delta)
-                                gs)
-    :else (handle-turn gs)))
+    (cell? x) x
+    (entity? x) (attribute gs (:entity/id x) :entity/cell)
+    (eid? x) (attribute gs x :entity/cell)))
+
+(defn point-of
+  [gs x]
+  (if (pt/point? x)
+    x
+    (:point (cell-of gs x))))
+
+(defn screen-rect-of
+  [gs x]
+  (when-some [[x y] (point-of gs x)]
+    (let [{:keys [settings]} gs
+          {:keys [cell-size]
+           :or   {cell-size [64 64]}} settings
+          [w h] cell-size]
+      [(* x w) (* y h) w h])))
+
+;; Spawn
+
+(defmethod legal-command? :command.type/spawn
+  [gs {:keys [id]}]
+  (or (nil? id)
+      (not (exists? gs id))))
+
+(defmethod do-command :command.type/spawn
+  [gs {:keys [pos
+              eid
+              template]}]
+  (let [eid (or eid (generate-eid))
+        m template
+        e (merge
+            m
+            {:entity/id eid}
+            (when pos
+              (let [cell (cell-of gs pos)
+                    {:keys [area point]} cell
+                    {:keys [:entity/layer]} m]
+                {:entity/cell  cell
+                 :entity/area  area
+                 :entity/point point
+                 :entity/slice (->Slice area layer)})))]
+    (-> (add gs e)
+        (pub {:event/type :event.type/spawned
+              :eid eid}))))
+
+;; Put
+
+(defmethod do-command :command.type/put
+  [gs {:keys [eid pos]}]
+  (let [eid (eid-of gs eid)
+        cell (cell-of gs pos)
+        e (entity gs eid)
+        {:keys [area point]} cell
+        {:keys [:entity/layer] previous-cell :entity/cell} e]
+    (-> (assert gs eid
+                :entity/cell cell
+                :entity/area area
+                :entity/point point
+                :entity/slice (->Slice area layer))
+        (pub {:event/type :event.type/put
+              :eid eid
+              :previous-cell previous-cell
+              :cell cell}))))

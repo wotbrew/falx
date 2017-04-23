@@ -1,6 +1,5 @@
 (ns falx.util
-  (:require [clojure.pprint :refer [pprint]])
-  (:import (clojure.lang Keyword AFn IFn Sequential)))
+  (:require [clojure.pprint :refer [pprint]]))
 
 (defn disjoc
   [m k v]
